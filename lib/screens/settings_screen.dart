@@ -13,6 +13,7 @@ import 'package:finamp/screens/interaction_settings_screen.dart';
 import 'package:finamp/screens/language_selection_screen.dart';
 import 'package:finamp/screens/layout_settings_screen.dart';
 import 'package:finamp/screens/network_settings_screen.dart';
+import 'package:finamp/screens/catalog_settings_screen.dart';
 import 'package:finamp/screens/playback_reporting_settings_screen.dart';
 import 'package:finamp/screens/quick_settings_screen.dart';
 import 'package:finamp/screens/transcoding_settings_screen.dart';
@@ -163,6 +164,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             leading: const Icon(Icons.wifi),
             title: Text(AppLocalizations.of(context)!.networkSettingsTitle),
             onTap: () => Navigator.of(context).pushNamed(NetworkSettingsScreen.routeName),
+          ),
+          ListTile(
+            leading: const Icon(TablerIcons.world_search),
+            title: const Text('Catalog Discovery'),
+            subtitle: const Text('MusicBrainz & server discovery connection'),
+            onTap: () => Navigator.of(context).pushNamed(CatalogSettingsScreen.routeName),
           ),
           ListTile(
             leading: const Icon(Icons.music_note),

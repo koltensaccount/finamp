@@ -30,6 +30,26 @@ class CatalogApiClient {
     return CatalogAvailability.fromJson(_jsonObject(response));
   }
 
+  Future<CatalogArtist> getArtist(String artistMbid) async {
+    final response = await _get('/v1/artists/$artistMbid');
+    return CatalogArtist.fromJson(_jsonObject(response));
+  }
+
+  Future<CatalogAlbumGroup> getAlbumGroup(String releaseGroupMbid) async {
+    final response = await _get('/v1/albums/$releaseGroupMbid');
+    return CatalogAlbumGroup.fromJson(_jsonObject(response));
+  }
+
+  Future<CatalogRelease> getRelease(String releaseMbid) async {
+    final response = await _get('/v1/releases/$releaseMbid');
+    return CatalogRelease.fromJson(_jsonObject(response));
+  }
+
+  Future<CatalogRequestDetail?> getRequest(int requestId) async {
+    final response = await _get('/v1/requests/$requestId');
+    return CatalogRequestDetail.fromJson(_jsonObject(response));
+  }
+
   Future<CatalogRequestStatus> requestAlbum(String releaseId) async {
     final credentials = await _requireCredentials();
     final uri = credentials.endpoint.resolve('/v1/requests');
