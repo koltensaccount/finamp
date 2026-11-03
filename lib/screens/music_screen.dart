@@ -18,6 +18,9 @@ import 'package:finamp/services/item_by_id_provider.dart';
 import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:finamp/services/music_providers.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
+import 'package:finamp/components/navigation/apple_floating_bottom_bar.dart';
+import 'package:finamp/screens/library_screen_content.dart';
+import 'package:finamp/screens/settings_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +51,7 @@ class MusicScreen extends ConsumerStatefulWidget {
 }
 
 class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderStateMixin {
+  int _rootTabIndex = 0;
   bool isSearching = false;
   TextEditingController textEditingController = TextEditingController();
   String? searchQuery;
@@ -226,6 +230,89 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
 
     // If this setting changes, the appbar will change its preferred height, so we need to rebuild the scaffold.
     ref.watch(finampSettingsProvider.showQuickActionsBanner);
+
+    if (widget.singleTabConfig == null) {
+      refreshMap[ContentType.home] ??= MusicRefreshCallback();
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          extendBody: true,
+          appBar: _rootTabIndex == 2
+              ? null
+              : AppBar(
+                  automaticallyImplyLeading: false,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  backgroundColor: Colors.transparent,
+                  title: Text(
+                    _rootTabIndex == 0 ? 'Home' : 'Library',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final userInfo = ref.watch(UserInfoProviders.currentUserInfoProvider);
+                            final user = userInfo.value?.jellyfinUser;
+                            if (user?.primaryImageTag != null &&
+                                GetIt.instance.isRegistered<FinampUserHelper>() &&
+                                GetIt.instance<FinampUserHelper>().currentUser != null) {
+                              return ClipOval(
+                                child: Image.network(
+                                  GetIt.instance<JellyfinApiHelper>().getUserImageUrl(
+                                    baseUrl: Uri.parse(GetIt.instance<FinampUserHelper>().currentUser!.baseURL),
+                                    user: user!,
+                                  ).toString(),
+                                  width: 34,
+                                  height: 34,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => const CircleAvatar(
+                                    radius: 17,
+                                    child: Icon(Icons.person, size: 20),
+                                  ),
+                                ),
+                              );
+                            }
+                            return const CircleAvatar(
+                              radius: 17,
+                              child: Icon(Icons.person, size: 20),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          body: IndexedStack(
+            index: _rootTabIndex,
+            children: [
+              HomeScreenContent(refresh: refreshMap[ContentType.home]),
+              const LibraryScreenContent(),
+              const CatalogSearchScreen(isTab: true),
+            ],
+          ),
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const NowPlayingBar(),
+              AppleFloatingBottomBar(
+                selectedIndex: _rootTabIndex,
+                onDestinationSelected: (index) => setState(() => _rootTabIndex = index),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return PopScope(
       canPop: !isSearching,

@@ -208,7 +208,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               ),
             ),
           ],*/
-          SliverSafeArea(top: false, sliver: SliverPadding(padding: const EdgeInsets.only(bottom: 120.0))),
+          SliverSafeArea(top: false, sliver: SliverPadding(padding: const EdgeInsets.only(bottom: 160.0))),
         ],
       ),
     );

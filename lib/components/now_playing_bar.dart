@@ -1,12 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:finamp/components/AddToPlaylistScreen/add_to_playlist_button.dart';
 import 'package:finamp/components/global_snackbar.dart';
 import 'package:finamp/components/one_line_marquee_helper.dart';
-import 'package:finamp/components/print_duration.dart';
 import 'package:finamp/extensions/color_extensions.dart';
 import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/models/finamp_models.dart';
@@ -22,7 +19,6 @@ import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 import 'package:simple_gesture_detector/simple_gesture_detector.dart';
 
-import '../models/jellyfin_models.dart' as jellyfin_models;
 import '../screens/player_screen.dart';
 import '../services/current_album_image_provider.dart';
 import '../services/finamp_settings_helper.dart';
@@ -165,10 +161,6 @@ class NowPlayingBar extends ConsumerWidget {
     final queueService = GetIt.instance<QueueService>();
 
     Duration? playbackPosition;
-
-    final currentTrackBaseItem = currentTrack.item.extras?["itemJson"] != null
-        ? jellyfin_models.BaseItemDto.fromJson(currentTrack.item.extras!["itemJson"] as Map<String, dynamic>)
-        : null;
     var context = ref.context;
 
     final elapsedPartBackgroundColor = getProgressForegroundColor(ref);
@@ -184,7 +176,7 @@ class NowPlayingBar extends ConsumerWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(left: 12.0, bottom: 12.0, right: 12.0),
+      padding: const EdgeInsets.only(left: 20.0, bottom: 6.0, right: 20.0),
       child: Semantics.fromProperties(
         properties: SemanticsProperties(label: AppLocalizations.of(context)!.nowPlayingBarTooltip, button: true),
         child: SimpleGestureDetector(
@@ -325,151 +317,52 @@ class NowPlayingBar extends ConsumerWidget {
                                                   : FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  processArtist(currentTrack.item.artist, context),
-                                                  style: TextStyle(
-                                                    color: primaryTextColor,
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w400,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ),
-                                              StreamBuilder<Duration>(
-                                                stream: AudioService.position,
-                                                initialData: audioHandler.playbackState.value.position,
-                                                builder: (context, snapshot) {
-                                                  if (snapshot.hasData) {
-                                                    playbackPosition = snapshot.data;
-                                                    final showRemaining = Platform.isIOS || Platform.isMacOS;
-                                                    final positionFullMinutes = (playbackPosition?.inMinutes ?? 0) % 60;
-                                                    final positionFullHours = (playbackPosition?.inHours ?? 0);
-                                                    final positionSeconds = (playbackPosition?.inSeconds ?? 0) % 60;
-                                                    final durationFullHours =
-                                                        (currentTrack.item.duration?.inHours ?? 0);
-                                                    final durationFullMinutes =
-                                                        (currentTrack.item.duration?.inMinutes ?? 0) % 60;
-                                                    final durationSeconds =
-                                                        (currentTrack.item.duration?.inSeconds ?? 0) % 60;
-                                                    return Semantics.fromProperties(
-                                                      properties: SemanticsProperties(
-                                                        label:
-                                                            "${positionFullHours > 0 ? "$positionFullHours hours " : ""}${positionFullMinutes > 0 ? "$positionFullMinutes minutes " : ""}$positionSeconds seconds of ${durationFullHours > 0 ? "$durationFullHours hours " : ""}${durationFullMinutes > 0 ? "$durationFullMinutes minutes " : ""}$durationSeconds seconds",
-                                                      ),
-                                                      excludeSemantics: true,
-                                                      container: true,
-                                                      child: Row(
-                                                        children: [
-                                                          Text(
-                                                            printDuration(
-                                                              showRemaining
-                                                                  ? ((currentTrack.item.duration ?? Duration.zero) -
-                                                                        (playbackPosition ?? Duration.zero))
-                                                                  : playbackPosition,
-                                                              leadingZeroes: false,
-                                                              isRemaining: showRemaining,
-                                                            ),
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              fontWeight: FontWeight.w400,
-                                                              color: primaryTextColor.withOpacity(0.8),
-                                                              fontFeatures: const [
-                                                                // fixed-width digits
-                                                                FontFeature.tabularFigures(),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          if (!showRemaining) ...[
-                                                            const SizedBox(width: 2),
-                                                            Text(
-                                                              '/',
-                                                              style: TextStyle(
-                                                                color: primaryTextColor.withOpacity(0.8),
-                                                                fontSize: 14,
-                                                                fontWeight: FontWeight.w400,
-                                                                fontFeatures: const [
-                                                                  // fixed-width digits
-                                                                  FontFeature.tabularFigures(),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                            const SizedBox(width: 2),
-                                                            Text(
-                                                              // '3:44',
-                                                              (currentTrack.item.duration?.inHours ?? 0.0) >= 1.0
-                                                                  ? "${currentTrack.item.duration?.inHours.toString()}:${((currentTrack.item.duration?.inMinutes ?? 0) % 60).toString().padLeft(2, '0')}:${((currentTrack.item.duration?.inSeconds ?? 0) % 60).toString().padLeft(2, '0')}"
-                                                                  : "${currentTrack.item.duration?.inMinutes.toString()}:${((currentTrack.item.duration?.inSeconds ?? 0) % 60).toString().padLeft(2, '0')}",
-                                                              style: TextStyle(
-                                                                color: primaryTextColor.withOpacity(0.8),
-                                                                fontSize: 14,
-                                                                fontWeight: FontWeight.w400,
-                                                                fontFeatures: const [
-                                                                  // fixed-width digits
-                                                                  FontFeature.tabularFigures(),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ],
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    return const SizedBox.shrink();
-                                                  }
-                                                },
-                                              ),
-                                            ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            processArtist(currentTrack.item.artist, context),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: primaryTextColor.withValues(alpha: 0.8),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w400,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.only(right: 5.0),
+                                    padding: const EdgeInsets.only(right: 8.0),
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        AddToPlaylistButton(
-                                          item: currentTrackBaseItem,
-                                          queueItem: currentTrack,
+                                        IconButton(
+                                          tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
+                                          onPressed: () {
+                                            FeedbackHelper.feedback(FeedbackType.light);
+                                            unawaited(audioHandler.togglePlayback());
+                                          },
                                           color: primaryTextColor,
-                                          size: 28,
-                                          visualDensity: const VisualDensity(horizontal: -4),
+                                          visualDensity: VisualDensity.compact,
+                                          icon: Icon(
+                                            showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
+                                            size: 28,
+                                          ),
                                         ),
-
-                                        if (showPlayButtonAtEnd) ...[
-                                          IconButton(
-                                            tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
-                                            onPressed: () {
-                                              FeedbackHelper.feedback(FeedbackType.light);
-                                              unawaited(audioHandler.togglePlayback());
-                                            },
-                                            color: primaryTextColor,
-                                            visualDensity: VisualDensity.compact,
-                                            icon: Icon(
-                                              showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
-                                              size: 28,
-                                            ),
+                                        IconButton(
+                                          tooltip: 'Next',
+                                          onPressed: () {
+                                            FeedbackHelper.feedback(FeedbackType.light);
+                                            unawaited(audioHandler.skipToNext());
+                                          },
+                                          color: primaryTextColor,
+                                          visualDensity: VisualDensity.compact,
+                                          icon: const Icon(
+                                            TablerIcons.player_track_next,
+                                            size: 24,
                                           ),
-                                          IconButton(
-                                            tooltip: 'Next',
-                                            onPressed: () {
-                                              FeedbackHelper.feedback(FeedbackType.light);
-                                              unawaited(audioHandler.skipToNext());
-                                            },
-                                            color: primaryTextColor,
-                                            visualDensity: VisualDensity.compact,
-                                            icon: const Icon(
-                                              TablerIcons.player_track_next,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -501,6 +394,7 @@ class NowPlayingBar extends ConsumerWidget {
         // The now playing bar must be enclosed in a SafeArea at all times so that the enclosing scaffold properly adds
         // bottom padding, even if the now playing bar itself is empty.
         child: SafeArea(
+          bottom: false,
           // use consumer to obtain ref of correct (player screen theme) ProviderContainer
           child: Consumer(
             builder: (context, ref, child) {

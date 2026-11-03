@@ -34,8 +34,9 @@ class RecentSearchItem {
 }
 
 class CatalogSearchScreen extends StatefulWidget {
-  const CatalogSearchScreen({super.key});
+  const CatalogSearchScreen({super.key, this.isTab = false});
   static const routeName = '/catalog-search';
+  final bool isTab;
 
   @override
   State<CatalogSearchScreen> createState() => _CatalogSearchScreenState();
@@ -102,7 +103,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Search', style: TextStyle(fontWeight: FontWeight.bold)),
-      leading: const FinampAppBarBackButton(),
+      leading: widget.isTab ? null : const FinampAppBarBackButton(),
       actions: [
         IconButton(
           icon: const Icon(Icons.tune),
@@ -116,7 +117,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         ),
       ],
     ),
-    bottomNavigationBar: const NowPlayingBar(),
+    bottomNavigationBar: widget.isTab ? null : const NowPlayingBar(),
     body: Column(
       children: [
         Padding(
