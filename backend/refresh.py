@@ -20,20 +20,56 @@ def refresh(a):
     if (stat.st_size,stat.st_mtime_ns)!=baseline.get(path):ev['category']='ambiguous';ev['drift']='changed_since_inventory'
    except OSError:ev['category']='ambiguous';ev['drift']='source_unavailable'
   evidence[path.replace('/mnt/media/','/media/',1)]=ev
+ for p, tags_raw in inv.execute("SELECT path, tags_json FROM files WHERE scope='library' AND tags_json IS NOT NULL"):
+  jf_path = p.replace('/mnt/media/', '/media/', 1)
+  if jf_path not in evidence:
+   try:
+    tags = json.loads(tags_raw)
+    mb_track = (tags.get('musicbrainz_trackid') or tags.get('musicbrainz_recordingid') or [None])[0]
+    mb_album = (tags.get('musicbrainz_albumid') or [None])[0]
+    if mb_track or mb_album:
+     evidence[jf_path] = {
+      'category': 'verified_identity' if mb_track else 'ambiguous',
+      'identifiers': {'recording': [mb_track] if mb_track else [], 'release': [mb_album] if mb_album else []},
+      'release_track': None,
+      'source': 'inventory_tags'
+     }
+   except Exception:
+    pass
  jf=sqlite3.connect('file:'+str(Path.home()/'jellyfin/config/data/jellyfin.db')+'?mode=ro',uri=True)
  key=jf.execute('select AccessToken from ApiKeys limit 1').fetchone()
  if not key:key=jf.execute('select AccessToken from Devices where IsActive=1 order by DateLastActivity desc limit 1').fetchone()
  if not key:raise RuntimeError('no existing Jellyfin access')
+ album_providers = {}
+ try:
+  album_url = 'http://127.0.0.1:8096/Items?Recursive=true&IncludeItemTypes=MusicAlbum&Fields=ProviderIds&Limit=2000'
+  with urllib.request.urlopen(urllib.request.Request(album_url, headers={'X-Emby-Token': key[0]}), timeout=30) as response:
+   albums_data = json.load(response)
+  album_providers = {alb['Id']: alb.get('ProviderIds', {}) for alb in albums_data.get('Items', [])}
+ except Exception:
+  pass
  items=[];start=0
  while True:
-  url='http://127.0.0.1:8096/Items?Recursive=true&IncludeItemTypes=Audio&Fields=Path,ProviderIds,AlbumArtists,ArtistItems&Limit=500&StartIndex='+str(start)
+  url='http://127.0.0.1:8096/Items?Recursive=true&IncludeItemTypes=Audio&Fields=Path,ProviderIds,AlbumArtists,ArtistItems,AlbumId,Album,IndexNumber,ParentIndexNumber&Limit=500&StartIndex='+str(start)
   with urllib.request.urlopen(urllib.request.Request(url,headers={'X-Emby-Token':key[0]}),timeout=30) as response:page=json.load(response)
   batch=page['Items'];items.extend(batch);start+=len(batch)
   if start>=page['TotalRecordCount']:break
   if not batch:raise RuntimeError('incomplete Jellyfin enumeration; prior index retained')
  # Snapshot must not accidentally merge a server-wide virtual item without a playable path.
  items=[i for i in items if i.get('Path') and not Path(i['Path']).name.startswith('._')]
+ for it in items:
+  alb_id = it.get('AlbumId')
+  if alb_id and alb_id in album_providers:
+   alb_p = album_providers[alb_id]
+   prov = it.setdefault('ProviderIds', {})
+   if 'MusicBrainzAlbum' not in prov and 'MusicBrainzAlbum' in alb_p:
+    prov['MusicBrainzAlbum'] = alb_p['MusicBrainzAlbum']
+   if 'MusicBrainzReleaseGroup' not in prov and 'MusicBrainzReleaseGroup' in alb_p:
+    prov['MusicBrainzReleaseGroup'] = alb_p['MusicBrainzReleaseGroup']
  c.sync(items,evidence)
+ with c.db:
+  for rel_id, in c.db.execute("SELECT id FROM releases").fetchall():
+   c.reconcile_release(rel_id)
  summary={'jellyfin_audio_items':len(items),'public_recordings':c.db.execute("select count(*) from recordings where id not like 'local:%'").fetchone()[0],'confident_mappings':c.db.execute("select count(*) from mappings where confidence='verified'").fetchone()[0],'local_only_mappings':c.db.execute("select count(*) from mappings where confidence='local_identity'").fetchone()[0],'ambiguous_candidates':c.db.execute("select count(*) from mappings where confidence='ambiguous'").fetchone()[0]}
  old={p.replace('/mnt/media/','/media/',1) for p, in inv.execute("select path from files where scope='library'")};current={i['Path'] for i in items}
  summary.update(new_since_inventory=len(current-old),inventory_paths_not_in_jellyfin=len(old-current))

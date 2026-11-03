@@ -32,6 +32,60 @@ def provider(c,q):
    with c.db:
     if row:c.db.execute('UPDATE http_cache SET retry_at=? WHERE url=?',(time.time()+300,url))
     else:c.db.execute('INSERT INTO http_cache VALUES(?,?,?,?,?)',(url,0,'{}',0,time.time()+300))
+def fetch_mb_release(c, release_id):
+ global LAST
+ url = f'https://musicbrainz.org/ws/2/release/{release_id}?inc=artist-credits+recordings+release-groups&fmt=json'
+ row = c.db.execute('SELECT * FROM http_cache WHERE url=?', (url,)).fetchone()
+ if row and row['status'] == 200:
+  try:
+   c.release(json.loads(row['payload']))
+   return
+  except Exception:
+   pass
+ time.sleep(max(0, 1.1 - (time.monotonic() - LAST)))
+ try:
+  req = urllib.request.Request(url, headers={'User-Agent': 'PersonalMusicCatalog/0.1 (local self-hosted development)'})
+  with urllib.request.urlopen(req, timeout=10) as response:
+   raw = response.read().decode(); data = json.loads(raw)
+  LAST = time.monotonic()
+  with c.db:
+   c.db.execute('INSERT OR REPLACE INTO http_cache VALUES(?,?,?,?,?)', (url, 200, raw, time.time(), 0))
+   c.release(data)
+ except Exception:
+  LAST = time.monotonic()
+def fetch_mb_group(c, group_id):
+ global LAST
+ url = f'https://musicbrainz.org/ws/2/release-group/{group_id}?inc=artists+releases&fmt=json'
+ row = c.db.execute('SELECT * FROM http_cache WHERE url=?', (url,)).fetchone()
+ if row and row['status'] == 200:
+  try:
+   data = json.loads(row['payload'])
+   gid = data.get('id')
+   with c.db:
+    c.db.execute('INSERT OR REPLACE INTO release_groups VALUES(?,?,?,?)', (gid, data.get('title'), data.get('primary-type'), data.get('first-release-date')))
+    if data.get('artist-credit'): c.credits('group', gid, data['artist-credit'])
+    for rel in data.get('releases', []):
+     c.db.execute('INSERT OR REPLACE INTO releases VALUES(?,?,?)', (rel['id'], gid, rel.get('title')))
+     if rel.get('artist-credit'): c.credits('release', rel['id'], rel['artist-credit'])
+   return
+  except Exception:
+   pass
+ time.sleep(max(0, 1.1 - (time.monotonic() - LAST)))
+ try:
+  req = urllib.request.Request(url, headers={'User-Agent': 'PersonalMusicCatalog/0.1 (local self-hosted development)'})
+  with urllib.request.urlopen(req, timeout=10) as response:
+   raw = response.read().decode(); data = json.loads(raw)
+  LAST = time.monotonic()
+  with c.db:
+   c.db.execute('INSERT OR REPLACE INTO http_cache VALUES(?,?,?,?,?)', (url, 200, raw, time.time(), 0))
+   gid = data.get('id')
+   c.db.execute('INSERT OR REPLACE INTO release_groups VALUES(?,?,?,?)', (gid, data.get('title'), data.get('primary-type'), data.get('first-release-date')))
+   if data.get('artist-credit'): c.credits('group', gid, data['artist-credit'])
+   for rel in data.get('releases', []):
+    c.db.execute('INSERT OR REPLACE INTO releases VALUES(?,?,?)', (rel['id'], gid, rel.get('title')))
+    if rel.get('artist-credit'): c.credits('release', rel['id'], rel['artist-credit'])
+ except Exception:
+  LAST = time.monotonic()
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*args):pass
  def dispatch(self):
@@ -43,8 +97,21 @@ class Handler(BaseHTTPRequestHandler):
     text=q.get('q',[''])[0][:200]
     if q.get('refresh')==['true']:provider(c,text)
     result={'results':c.search(text),'cached':True}
-   elif parts[:2]==['v1','releases'] and len(parts)==3:result=c.album(parts[2])
-   elif parts[:2]==['v1','albums'] and len(parts)==3:result=c.group(parts[2])
+   elif parts[:2]==['v1','releases'] and len(parts)==3:
+    result=c.album(parts[2])
+    if result is None:
+     fetch_mb_release(c, parts[2])
+     result=c.album(parts[2])
+   elif parts[:2]==['v1','albums'] and len(parts)==3:
+    result=c.group(parts[2])
+    if result is None or not result.get('editions'):
+     fetch_mb_group(c, parts[2])
+     result=c.group(parts[2])
+     if result and result.get('editions'):
+      for ed in result['editions']:
+       if not ed.get('tracks'):
+        fetch_mb_release(c, ed['id'])
+      result=c.group(parts[2])
    elif parts[:2]==['v1','artists'] and len(parts)==3:result=c.artist(parts[2])
    elif parts[:2]==['v1','recordings'] and len(parts)==4 and parts[3]=='availability':result=c.availability(parts[2])
    elif route.path=='/v1/requests' and self.command=='POST':

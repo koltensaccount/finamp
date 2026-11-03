@@ -44,4 +44,17 @@ class Tests(unittest.TestCase):
  def test_complete_empty_snapshot_removes_last_available_item(self):
   self.c.sync([item()],evidence());self.c.sync([],{})
   self.assertEqual(self.c.availability('recording')['state'],'not_found')
+ def test_artist_credit_and_display_artist(self):
+  alb = self.c.album('edition')
+  self.assertEqual(alb['display_artist'], 'A')
+  track = alb['tracks'][0]
+  self.assertEqual(track['display_artist'], 'A feat. B')
+  self.assertEqual(len(track['artist_credit']), 2)
+  self.assertEqual(track['artist_credit'][0]['name'], 'A')
+  self.assertEqual(track['artist_credit'][0]['joinphrase'], ' feat. ')
+  self.assertEqual(track['artist_credit'][1]['name'], 'B')
+ def test_reconcile_release_by_context(self):
+  it = {'ServerId':'server','Id':'local-2','Path':'/media/Music/song2.flac','Name':'Song','Artists':['A','B'],'Album':'Album','IndexNumber':1,'ParentIndexNumber':1,'RunTimeTicks':1000000000}
+  self.c.sync([it], {})
+  self.assertEqual(self.c.album('edition')['ownership'], 'full')
 if __name__=='__main__':unittest.main()

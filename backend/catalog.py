@@ -3,6 +3,7 @@ import hashlib,json,sqlite3,time,unicodedata
 
 SCHEMA='''
 PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=30000;
 CREATE TABLE IF NOT EXISTS artists(id TEXT PRIMARY KEY,name TEXT);
 CREATE TABLE IF NOT EXISTS release_groups(id TEXT PRIMARY KEY,title TEXT,primary_type TEXT,first_date TEXT);
 CREATE TABLE IF NOT EXISTS releases(id TEXT PRIMARY KEY,group_id TEXT,title TEXT);
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS search_hits(query TEXT,kind TEXT,id TEXT,position INT
 def norm(s):return ' '.join(unicodedata.normalize('NFKC',s or '').casefold().split())
 class Catalog:
  def __init__(self,path):
-  self.db=sqlite3.connect(path);self.db.row_factory=sqlite3.Row;self.db.executescript(SCHEMA)
+  self.db=sqlite3.connect(path, timeout=30.0);self.db.row_factory=sqlite3.Row;self.db.executescript(SCHEMA)
  def credits(self,kind,ident,values):
   self.db.execute('DELETE FROM credits WHERE entity_type=? AND entity_id=?',(kind,ident))
   for i,v in enumerate(values or []):
@@ -27,6 +28,47 @@ class Catalog:
    if not aid:continue
    self.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)',(aid,a.get('name',v.get('name',''))))
    self.db.execute('INSERT INTO credits VALUES(?,?,?,?,?,?)',(kind,ident,aid,i,v.get('name',a.get('name','')),v.get('joinphrase','')))
+ def get_credits(self, entity_type, entity_id):
+  rows = self.db.execute("SELECT artist_id, display_name, joinphrase FROM credits WHERE entity_type=? AND entity_id=? ORDER BY position", (entity_type, entity_id)).fetchall()
+  credits_list = []
+  display_parts = []
+  for r in rows:
+   name = r['display_name'] or ''
+   joinphrase = r['joinphrase'] or ''
+   credits_list.append({'artist_id': r['artist_id'], 'name': name, 'joinphrase': joinphrase})
+   display_parts.append(name + joinphrase)
+  return credits_list, ''.join(display_parts).strip()
+ def reconcile_release(self, release_id):
+  release = self.db.execute('SELECT * FROM releases WHERE id=?', (release_id,)).fetchone()
+  if not release: return
+  r_tracks = self.db.execute('SELECT * FROM release_tracks WHERE release_id=?', (release_id,)).fetchall()
+  if not r_tracks: return
+  unmapped = [t for t in r_tracks if not self.db.execute("SELECT 1 FROM mappings WHERE recording_id=? AND confidence='verified'", (t['recording_id'],)).fetchone()]
+  if not unmapped: return
+  candidates = []
+  for row in self.db.execute("SELECT server_id, item_id, payload FROM local_items WHERE active=1 AND (payload LIKE ? OR payload LIKE ?)", (f'%"{release["title"]}"%', f'%"{release_id}"%')).fetchall():
+   candidates.append((row['server_id'], row['item_id'], json.loads(row['payload'])))
+  to_insert = []
+  for t in unmapped:
+   rec_id = t['recording_id']
+   matched = False
+   for srv_id, it_id, d in candidates:
+    disc = d.get('ParentIndexNumber') or 1
+    pos = d.get('IndexNumber') or 0
+    if disc == t['disc'] and pos == t['position']:
+     dur_ms = int(d.get('RunTimeTicks', 0) / 10000)
+     if norm(d.get('Name')) == norm(t['title']) or (not t['duration_ms'] or abs(dur_ms - t['duration_ms']) <= 4000):
+      to_insert.append((srv_id, it_id, rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by album track position and duration'})))
+      matched = True
+      break
+   if not matched:
+    row = self.db.execute("SELECT server_id, item_id FROM local_items WHERE active=1 AND (payload LIKE ? OR payload LIKE ?) LIMIT 1",
+     (f'%"MusicBrainzTrack": "{rec_id}"%', f'%"musicbrainz_trackid": ["{rec_id}"]%')).fetchone()
+    if row:
+     to_insert.append((row['server_id'], row['item_id'], rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by MusicBrainzTrack hint'})))
+  if to_insert:
+   with self.db:
+    self.db.executemany('INSERT OR REPLACE INTO mappings VALUES(?,?,?,?,?,?)', to_insert)
  def release(self,r):
   group=r.get('release-group',{});gid=group.get('id')
   if gid:
@@ -42,6 +84,7 @@ class Catalog:
     self.db.execute('INSERT OR REPLACE INTO recordings VALUES(?,?,?)',(rid,rec.get('title',t.get('title')),rec.get('length',t.get('length'))))
     self.db.execute('INSERT OR REPLACE INTO release_tracks VALUES(?,?,?,?,?,?,?)',(t['id'],r['id'],rid,medium['position'],t['position'],t.get('title'),t.get('length',rec.get('length'))))
     self.credits('recording',rid,rec.get('artist-credit') or t.get('artist-credit'))
+  self.reconcile_release(r['id'])
  def sync(self,items,evidence):
   """Complete API snapshot; only changed payloads rewritten; stale items deactivated."""
   with self.db:
@@ -91,33 +134,58 @@ class Catalog:
   if state=='not_found' and pending:state='pending'
   return {'state':state,'acquisition_pending':pending,'local_items':[{'server_id':r['server_id'],'item_id':r['item_id']} for r in exact],'playable_item_id':exact[0]['item_id'] if len(exact)==1 else None,'selection_required':len(exact)>1,'candidate_count':len(rows)}
  def album(self,release_id):
+  self.reconcile_release(release_id)
   release=self.db.execute('SELECT * FROM releases WHERE id=?',(release_id,)).fetchone()
   if not release:return None
   tracks=[]
   for t in self.db.execute('SELECT * FROM release_tracks WHERE release_id=? ORDER BY disc,position',(release_id,)):
-   row=dict(t);row['availability']=self.availability(t['recording_id'],release_id);tracks.append(row)
+   row=dict(t);row['availability']=self.availability(t['recording_id'],release_id)
+   c_list,disp=self.get_credits('recording',t['recording_id'])
+   row['artist_credit']=c_list;row['display_artist']=disp
+   tracks.append(row)
   available=sum(t['availability']['state']=='available' for t in tracks)
-  return {**dict(release),'tracks':tracks,'owned_tracks':available,'total_tracks':len(tracks),'ownership':'full' if tracks and available==len(tracks) else 'partial' if available else 'none'}
+  rel_dict=dict(release)
+  c_list,disp=self.get_credits('release',release_id)
+  if not c_list and release['group_id']:
+   c_list,disp=self.get_credits('group',release['group_id'])
+  rel_dict['artist_credit']=c_list;rel_dict['display_artist']=disp
+  return {**rel_dict,'tracks':tracks,'owned_tracks':available,'total_tracks':len(tracks),'ownership':'full' if tracks and available==len(tracks) else 'partial' if available else 'none'}
  def search(self,q):
   results=[]
   for table,kind in [('artists','artist'),('release_groups','album'),('recordings','track')]:
    column='name' if kind=='artist' else 'title'
    for r in self.db.execute('SELECT * FROM '+table+' WHERE '+column+' LIKE ? OR id IN (SELECT id FROM search_hits WHERE query=? AND kind=?) LIMIT 25',('%'+q+'%',norm(q),kind)):
     row=dict(r);row['kind']=kind
-    if kind=='track':row['availability']=self.availability(r['id'])
-    if kind=='album':row['edition_ids']=[x[0] for x in self.db.execute('SELECT id FROM releases WHERE group_id=?',(r['id'],))]
+    if kind=='track':
+     row['availability']=self.availability(r['id'])
+     c_list,disp=self.get_credits('recording',r['id'])
+     row['artist_credit']=c_list;row['display_artist']=disp
+    if kind=='album':
+     row['edition_ids']=[x[0] for x in self.db.execute('SELECT id FROM releases WHERE group_id=?',(r['id'],))]
+     c_list,disp=self.get_credits('group',r['id'])
+     row['artist_credit']=c_list;row['display_artist']=disp
+    if kind=='artist':
+     row['display_artist']=r['name']
+     row['artist_credit']=[{'artist_id':r['id'],'name':r['name'],'joinphrase':''}]
     results.append(row)
   return results
  def group(self,group_id):
   group=self.db.execute('SELECT * FROM release_groups WHERE id=?',(group_id,)).fetchone()
   if not group:return None
   editions=[self.album(r[0]) for r in self.db.execute('SELECT id FROM releases WHERE group_id=?',(group_id,))]
-  return {**dict(group),'editions':editions}
+  g_dict=dict(group)
+  c_list,disp=self.get_credits('group',group_id)
+  g_dict['artist_credit']=c_list;g_dict['display_artist']=disp
+  return {**g_dict,'editions':editions}
  def artist(self,artist_id):
   artist=self.db.execute('SELECT * FROM artists WHERE id=?',(artist_id,)).fetchone()
   if not artist:return None
-  groups=[dict(x) for x in self.db.execute("SELECT DISTINCT g.* FROM release_groups g JOIN credits c ON c.entity_id=g.id WHERE c.entity_type='group' AND c.artist_id=? ORDER BY first_date",(artist_id,))]
-  recordings=[dict(x) for x in self.db.execute("SELECT DISTINCT r.* FROM recordings r JOIN credits c ON c.entity_id=r.id WHERE c.entity_type='recording' AND c.artist_id=?",(artist_id,))]
+  groups=[]
+  for x in self.db.execute("SELECT DISTINCT g.* FROM release_groups g JOIN credits c ON c.entity_id=g.id WHERE c.entity_type='group' AND c.artist_id=? ORDER BY first_date",(artist_id,)):
+   d=dict(x);c_list,disp=self.get_credits('group',x['id']);d['artist_credit']=c_list;d['display_artist']=disp;groups.append(d)
+  recordings=[]
+  for x in self.db.execute("SELECT DISTINCT r.* FROM recordings r JOIN credits c ON c.entity_id=r.id WHERE c.entity_type='recording' AND c.artist_id=?",(artist_id,)):
+   d=dict(x);c_list,disp=self.get_credits('recording',x['id']);d['artist_credit']=c_list;d['display_artist']=disp;recordings.append(d)
   return {**dict(artist),'albums':groups,'recordings':recordings}
  def request(self,release_id,scope='album',origin='explicit_user'):
   if scope!='album':raise ValueError('single-song acquisition is not supported by the current backend')
