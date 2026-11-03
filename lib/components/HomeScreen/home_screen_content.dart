@@ -34,6 +34,7 @@ import 'package:logging/logging.dart';
 
 import '../../extensions/localizations.dart';
 import '../../services/finamp_user_helper.dart';
+import '../../services/liked_songs_service.dart';
 import '../../services/music_providers.dart';
 
 final _homeScreenLogger = Logger("HomeScreen");
@@ -53,12 +54,25 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
   @override
   bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (GetIt.instance.isRegistered<LikedSongsService>()) {
+        GetIt.instance<LikedSongsService>().syncWithJellyfin();
+      }
+    });
+  }
+
   void _refresh() async {
     for (var section in ref.watch(finampSettingsProvider.homeScreenConfiguration).sections) {
       final displayable = await ref.watch(resolveSectionProvider(section).future);
       ref.read(pagedContentProvider(displayable).notifier).refresh();
     }
     ref.invalidate(UserInfoProviders.userInfoProvider);
+    if (GetIt.instance.isRegistered<LikedSongsService>()) {
+      await ref.read(likedSongsProvider).syncWithJellyfin(force: true);
+    }
   }
 
   @override
@@ -346,6 +360,12 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
   }
 
   Widget _buildLikedSongsCard(BuildContext context) {
+    final likedSongs = ref.watch(likedSongsProvider);
+    final count = likedSongs.count;
+    final subtitle = count > 0
+        ? '$count favorite songs in Jellyfin'
+        : 'All your favorite tracks in one place';
+
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
       child: Container(
@@ -404,11 +424,11 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               ),
             ),
             const SizedBox(height: 3),
-            const Text(
-              'All your favorite tracks in one place',
+            Text(
+              subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12.5,
                 height: 1.25,
                 color: Color(0xFF98989F),

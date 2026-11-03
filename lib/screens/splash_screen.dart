@@ -6,6 +6,7 @@ import 'package:finamp/screens/music_screen.dart';
 import 'package:finamp/screens/view_selector.dart';
 import 'package:finamp/screens/catalog_artist_screen.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
+import 'package:finamp/screens/liked_songs_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -20,6 +21,9 @@ class SplashScreen extends StatelessWidget {
     }
     if (debugRoute == 'search') {
       return const CatalogSearchScreen();
+    }
+    if (debugRoute == 'liked-songs') {
+      return const LikedSongsScreen();
     }
 
     final finampUserHelper = GetIt.instance<FinampUserHelper>();

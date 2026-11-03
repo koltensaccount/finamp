@@ -58,6 +58,7 @@ import 'package:finamp/services/ios_helpers.dart';
 import 'package:finamp/services/item_by_id_provider.dart';
 import 'package:finamp/services/item_helper.dart';
 import 'package:finamp/services/keep_screen_on_helper.dart';
+import 'package:finamp/services/liked_songs_service.dart';
 import 'package:finamp/services/music_providers.dart';
 import 'package:finamp/services/network_manager.dart';
 import 'package:finamp/services/offline_listen_helper.dart';
@@ -242,6 +243,7 @@ Future<void> _setupEdgeToEdgeOverlayStyle() async {
 Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
   GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
+  GetIt.instance.registerSingleton(LikedSongsService());
 }
 
 void _setupOfflineListenLogHelper() {

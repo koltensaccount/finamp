@@ -10,6 +10,7 @@ import 'downloads_service.dart';
 import 'feedback_helper.dart';
 import 'finamp_settings_helper.dart';
 import 'jellyfin_api_helper.dart';
+import 'liked_songs_service.dart';
 
 part 'favorite_provider.g.dart';
 
@@ -74,6 +75,11 @@ class IsFavorite extends _$IsFavorite {
     ref.keepAlive();
     _changed = true;
 
+    // Instant optimistic update to LikedSongsService
+    if (GetIt.instance.isRegistered<LikedSongsService>() && item != null) {
+      GetIt.instance<LikedSongsService>().onFavoriteChanged(item!, isFavorite);
+    }
+
     Future.sync(() async {
       try {
         UserItemDataDto newUserData;
@@ -84,15 +90,22 @@ class IsFavorite extends _$IsFavorite {
         }
         state = newUserData.isFavorite;
 
+        if (GetIt.instance.isRegistered<LikedSongsService>() && item != null) {
+          GetIt.instance<LikedSongsService>().onFavoriteChanged(item!, newUserData.isFavorite);
+        }
+
         FeedbackHelper.feedback(FeedbackType.heavy);
       } catch (e) {
         state = oldState;
+        if (GetIt.instance.isRegistered<LikedSongsService>() && item != null) {
+          GetIt.instance<LikedSongsService>().onFavoriteChanged(item!, oldState);
+        }
         GlobalSnackbar.error(e);
       }
     });
     state = isFavorite;
     // If the current track is the one being toggled, update the playback state (and media notification)
-    if (item!.id == queueService.getCurrentTrack()?.baseItem?.id) {
+    if (item!.id == queueService.getCurrentTrack()?.baseItem.id) {
       audioHandler.refreshPlaybackStateAndMediaNotification();
     }
     return state;
