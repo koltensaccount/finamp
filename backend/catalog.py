@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS mappings(server_id TEXT,item_id TEXT,recording_id TEX
 CREATE TABLE IF NOT EXISTS requests(id INTEGER PRIMARY KEY,release_id TEXT,scope TEXT,state TEXT,origin TEXT,backend_id TEXT,created_at REAL);
 CREATE TABLE IF NOT EXISTS http_cache(url TEXT PRIMARY KEY,status INTEGER,payload TEXT,fetched_at REAL,retry_at REAL);
 CREATE TABLE IF NOT EXISTS sync_runs(id INTEGER PRIMARY KEY,started REAL,completed REAL,item_count INTEGER);
+CREATE TABLE IF NOT EXISTS search_hits(query TEXT,kind TEXT,id TEXT,position INTEGER,PRIMARY KEY(query,kind,id));
 '''
 def norm(s):return ' '.join(unicodedata.normalize('NFKC',s or '').casefold().split())
 class Catalog:
@@ -82,8 +83,9 @@ class Catalog:
   exact=[r for r in rows if r['confidence'] in ('verified','local_identity')];state='available' if exact else 'possibly_available' if rows else 'not_found'
   pending=False
   if release_id:pending=bool(self.db.execute("SELECT 1 FROM requests WHERE release_id=? AND state NOT IN ('failed','available')",(release_id,)).fetchone())
+  else:pending=bool(self.db.execute("SELECT 1 FROM requests q JOIN release_tracks t ON q.release_id=t.release_id WHERE t.recording_id=? AND q.state NOT IN ('failed','available')",(recording_id,)).fetchone())
   if state=='not_found' and pending:state='pending'
-  return {'state':state,'local_items':[{'server_id':r['server_id'],'item_id':r['item_id']} for r in exact],'playable_item_id':exact[0]['item_id'] if len(exact)==1 else None,'selection_required':len(exact)>1,'candidate_count':len(rows)}
+  return {'state':state,'acquisition_pending':pending,'local_items':[{'server_id':r['server_id'],'item_id':r['item_id']} for r in exact],'playable_item_id':exact[0]['item_id'] if len(exact)==1 else None,'selection_required':len(exact)>1,'candidate_count':len(rows)}
  def album(self,release_id):
   release=self.db.execute('SELECT * FROM releases WHERE id=?',(release_id,)).fetchone()
   if not release:return None
@@ -96,7 +98,7 @@ class Catalog:
   results=[]
   for table,kind in [('artists','artist'),('release_groups','album'),('recordings','track')]:
    column='name' if kind=='artist' else 'title'
-   for r in self.db.execute('SELECT * FROM '+table+' WHERE '+column+' LIKE ? LIMIT 25',('%'+q+'%',)):
+   for r in self.db.execute('SELECT * FROM '+table+' WHERE '+column+' LIKE ? OR id IN (SELECT id FROM search_hits WHERE query=? AND kind=?) LIMIT 25',('%'+q+'%',norm(q),kind)):
     row=dict(r);row['kind']=kind
     if kind=='track':row['availability']=self.availability(r['id'])
     if kind=='album':row['edition_ids']=[x[0] for x in self.db.execute('SELECT id FROM releases WHERE group_id=?',(r['id'],))]

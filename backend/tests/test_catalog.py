@@ -38,4 +38,7 @@ class Tests(unittest.TestCase):
   self.assertEqual(self.c.request('edition'),self.c.request('edition'))
  def test_inactive_never_available(self):
   self.c.sync([item()],evidence());self.c.db.execute('update local_items set active=0');self.assertEqual(self.c.availability('recording')['state'],'not_found')
+ def test_artist_query_keeps_provider_track_results(self):
+  self.c.db.execute('INSERT INTO search_hits VALUES(?,?,?,?)',('artist','track','recording',0))
+  self.assertIn('recording',[x['id'] for x in self.c.search('Artist')])
 if __name__=='__main__':unittest.main()

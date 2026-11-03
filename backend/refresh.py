@@ -9,9 +9,17 @@ def refresh(a):
   for raw, in cache.execute('SELECT body_json FROM api_cache WHERE status=200'):
    payload=json.loads(raw)
    if payload.get('id') and payload.get('media'):c.release(payload)
+ inv=sqlite3.connect('file:'+str(root/'inventory-v2.sqlite')+'?mode=ro',uri=True)
+ baseline={p:(size,mtime) for p,size,mtime in inv.execute("SELECT path,size_bytes,mtime_ns FROM files WHERE scope='library'")}
  evidence={};verified=sqlite3.connect('file:'+str(root/'phase4-verified.sqlite')+'?mode=ro',uri=True)
  for path,category,raw in verified.execute('SELECT path,category,evidence FROM results'):
-  ev=json.loads(raw);ev['category']=category;evidence[path.replace('/mnt/media/','/media/',1)]=ev
+  ev=json.loads(raw);ev['category']=category
+  if category=='verified_identity':
+   try:
+    stat=Path(path).stat()
+    if (stat.st_size,stat.st_mtime_ns)!=baseline.get(path):ev['category']='ambiguous';ev['drift']='changed_since_inventory'
+   except OSError:ev['category']='ambiguous';ev['drift']='source_unavailable'
+  evidence[path.replace('/mnt/media/','/media/',1)]=ev
  jf=sqlite3.connect('file:'+str(Path.home()/'jellyfin/config/data/jellyfin.db')+'?mode=ro',uri=True)
  key=jf.execute('select AccessToken from ApiKeys limit 1').fetchone()
  if not key:key=jf.execute('select AccessToken from Devices where IsActive=1 order by DateLastActivity desc limit 1').fetchone()
@@ -27,7 +35,6 @@ def refresh(a):
  items=[i for i in items if i.get('Path') and not Path(i['Path']).name.startswith('._')]
  c.sync(items,evidence)
  summary={'jellyfin_audio_items':len(items),'public_recordings':c.db.execute("select count(*) from recordings where id not like 'local:%'").fetchone()[0],'confident_mappings':c.db.execute("select count(*) from mappings where confidence='verified'").fetchone()[0],'local_only_mappings':c.db.execute("select count(*) from mappings where confidence='local_identity'").fetchone()[0],'ambiguous_candidates':c.db.execute("select count(*) from mappings where confidence='ambiguous'").fetchone()[0]}
- inv=sqlite3.connect('file:'+str(root/'inventory-v2.sqlite')+'?mode=ro',uri=True)
  old={p.replace('/mnt/media/','/media/',1) for p, in inv.execute("select path from files where scope='library'")};current={i['Path'] for i in items}
  summary.update(new_since_inventory=len(current-old),inventory_paths_not_in_jellyfin=len(old-current))
  print(json.dumps(summary));Path(a.database).with_suffix('.summary.json').write_text(json.dumps(summary,indent=2))

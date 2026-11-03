@@ -1,7 +1,7 @@
 """Loopback authenticated catalog API; no acquisition dispatch is enabled."""
 import argparse,json,os,time,urllib.request,urllib.parse,urllib.error,threading
 from http.server import BaseHTTPRequestHandler,HTTPServer
-from catalog import Catalog
+from catalog import Catalog,norm
 LAST=0
 def provider(c,q):
  global LAST
@@ -17,13 +17,16 @@ def provider(c,q):
    with c.db:
     c.db.execute('INSERT OR REPLACE INTO http_cache VALUES(?,?,?,?,?)',(url,200,raw,time.time(),0))
     if kind=='artist':
-     for x in data.get('artists',[]):c.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)',(x['id'],x['name']))
+     for i,x in enumerate(data.get('artists',[])):
+      c.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)',(x['id'],x['name']));c.db.execute('INSERT OR REPLACE INTO search_hits VALUES(?,?,?,?)',(norm(q),'artist',x['id'],i))
     elif kind=='release-group':
-     for x in data.get('release-groups',[]):
+     for i,x in enumerate(data.get('release-groups',[])):
       c.db.execute('INSERT OR REPLACE INTO release_groups VALUES(?,?,?,?)',(x['id'],x['title'],x.get('primary-type'),x.get('first-release-date')));c.credits('group',x['id'],x.get('artist-credit'))
+      c.db.execute('INSERT OR REPLACE INTO search_hits VALUES(?,?,?,?)',(norm(q),'album',x['id'],i))
     else:
-     for x in data.get('recordings',[]):
+     for i,x in enumerate(data.get('recordings',[])):
       c.db.execute('INSERT OR REPLACE INTO recordings VALUES(?,?,?)',(x['id'],x['title'],x.get('length')));c.credits('recording',x['id'],x.get('artist-credit'))
+      c.db.execute('INSERT OR REPLACE INTO search_hits VALUES(?,?,?,?)',(norm(q),'track',x['id'],i))
   except Exception:
    LAST=time.monotonic()
    with c.db:
