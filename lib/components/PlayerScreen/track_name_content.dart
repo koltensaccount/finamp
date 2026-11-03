@@ -1,4 +1,5 @@
 import 'package:finamp/components/AddToPlaylistScreen/add_to_playlist_button.dart';
+import 'package:finamp/components/favorite_button.dart';
 import 'package:finamp/components/PlayerScreen/album_chip.dart';
 import 'package:finamp/components/PlayerScreen/artist_chip.dart';
 import 'package:finamp/components/PlayerScreen/player_buttons_more.dart';
@@ -110,6 +111,11 @@ class TrackNameContent extends ConsumerWidget {
                 baseItem: trackBaseItemDto,
                 backgroundColor: IconTheme.of(context).color!.withOpacity(0.1),
               ),
+            ),
+            FavoriteButton(
+              item: trackBaseItemDto,
+              color: const Color(0xFF1DB954),
+              size: 24,
             ),
             AddToPlaylistButton(item: trackBaseItemDto, queueItem: currentTrack),
           ],

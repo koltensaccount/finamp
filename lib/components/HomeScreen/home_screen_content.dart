@@ -4,10 +4,8 @@ import 'dart:ui';
 import 'package:balanced_text/balanced_text.dart';
 import 'package:finamp/components/AlbumScreen/download_button.dart';
 import 'package:finamp/components/Buttons/cta_small.dart';
-import 'package:finamp/components/Buttons/simple_button.dart';
 import 'package:finamp/components/HomeScreen/home_screen_quick_action_button.dart';
 import 'package:finamp/components/HomeScreen/quick_action_editor.dart';
-import 'package:finamp/components/HomeScreen/show_all_button.dart';
 import 'package:finamp/components/MusicScreen/item_card.dart';
 import 'package:finamp/components/MusicScreen/item_wrapper.dart';
 import 'package:finamp/components/MusicScreen/music_screen_tab_view.dart';
@@ -16,9 +14,10 @@ import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/menus/components/icon_button_with_semantics.dart';
 import 'package:finamp/menus/home_section_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
-import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/models/music_models.dart';
 import 'package:finamp/screens/home_screen_settings_screen.dart';
+import 'package:finamp/screens/liked_songs_screen.dart';
+import 'package:finamp/services/audio_service_helper.dart';
 import 'package:finamp/screens/music_screen.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/music_screen_provider.dart';
@@ -69,6 +68,9 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
       onRefresh: () async => _refresh(),
       child: CustomScrollView(
         slivers: [
+          SliverToBoxAdapter(
+            child: _buildTopPicksSection(context),
+          ),
           if (ref.watch(finampSettingsProvider.homeScreenConfiguration).actions.isNotEmpty)
             SliverPadding(padding: const EdgeInsets.only(top: 10.0)),
           SliverLayoutBuilder(
@@ -190,6 +192,181 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           ],*/
           SliverSafeArea(top: false, sliver: SliverPadding(padding: const EdgeInsets.only(bottom: 40.0))),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopPicksSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Text(
+            'Top Picks for You',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+          ),
+        ),
+        SizedBox(
+          height: 300,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildLikedSongsCard(context),
+              const SizedBox(width: 14),
+              _buildEssentialsCard(context),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildLikedSongsCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
+      child: Container(
+        width: 230,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 175,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF4A148C),
+                    Color(0xFF1A237E),
+                    Color(0xFF1DB954),
+                  ],
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.favorite, size: 64, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Made By You',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Liked Songs',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'All your favorite tracks in one place',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEssentialsCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        GetIt.instance<AudioServiceHelper>().playRandomItem();
+      },
+      child: Container(
+        width: 230,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 175,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF0D47A1),
+                    Color(0xFF880E4F),
+                    Color(0xFFE65100),
+                  ],
+                ),
+              ),
+              child: const Center(
+                child: Icon(TablerIcons.flame, size: 64, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Made for You',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Heavy Rotation',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Instant mix from your music library',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
