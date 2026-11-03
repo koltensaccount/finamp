@@ -17,6 +17,7 @@ import 'package:finamp/services/finamp_user_helper.dart';
 import 'package:finamp/services/item_by_id_provider.dart';
 import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:finamp/services/music_providers.dart';
+import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -239,7 +240,8 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
           singleTabConfig: widget.singleTabConfig,
           sortedTabs: sortedTabs.toList(),
           tabController: _tabController,
-          onSearch: () => setState(() {
+          onSearch: () => Navigator.of(context).pushNamed(CatalogSearchScreen.routeName),
+          /*onSearch: () => setState(() {
             isSearching = true;
             if (_tabController != null &&
                 !_tabController!.indexIsChanging &&
@@ -249,7 +251,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                 (ContentType tabType) => tabType != ContentType.home,
               );
             }
-          }),
+          }),*/
           onStopSearch: _stopSearching,
           onUpdateSearchQuery: (value) {
             setState(() {

@@ -25,6 +25,7 @@ import 'package:finamp/screens/genre_settings_screen.dart';
 import 'package:finamp/screens/home_screen_settings_screen.dart';
 import 'package:finamp/screens/interaction_settings_screen.dart';
 import 'package:finamp/screens/login_screen.dart';
+import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:finamp/screens/lyrics_settings_screen.dart';
 import 'package:finamp/screens/network_settings_screen.dart';
 import 'package:finamp/screens/playback_history_screen.dart';
@@ -39,6 +40,8 @@ import 'package:finamp/services/audio_service_smtc.dart';
 import 'package:finamp/services/carplay_helper.dart';
 import 'package:finamp/services/client_certificate_installer.dart';
 import 'package:finamp/services/data_source_service.dart';
+import 'package:finamp/services/catalog_api_client.dart';
+import 'package:finamp/services/catalog_credential_store.dart';
 import 'package:finamp/services/dbus_manager.dart';
 import 'package:finamp/services/discord_rpc.dart';
 import 'package:finamp/services/downloads_service.dart';
@@ -233,6 +236,7 @@ Future<void> _setupEdgeToEdgeOverlayStyle() async {
 
 Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
+  GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
 }
 
 void _setupOfflineListenLogHelper() {
@@ -971,6 +975,7 @@ class FinampApp extends ConsumerWidget {
         AdvancedLoginOptionsScreen.routeName: (context) => const AdvancedLoginOptionsScreen(),
         ViewSelector.routeName: (context) => const ViewSelector(),
         MusicScreen.routeName: (context) => const MusicScreen(),
+        CatalogSearchScreen.routeName: (context) => const CatalogSearchScreen(),
         AlbumScreen.routeName: (context) => const AlbumScreen(),
         ArtistScreen.routeName: (context) => const ArtistScreen(),
         GenreScreen.routeName: (context) => const GenreScreen(),
