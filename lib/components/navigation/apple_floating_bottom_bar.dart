@@ -30,20 +30,20 @@ class AppleFloatingBottomBar extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xB81C1C1E)
-                    : const Color(0xD9FFFFFF),
+                    ? const Color(0x73141416)
+                    : const Color(0x99FFFFFF),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
+                      ? Colors.white.withValues(alpha: 0.18)
                       : Colors.black.withValues(alpha: 0.08),
                   width: 0.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),

@@ -79,12 +79,12 @@ class NowPlayingBar extends ConsumerWidget {
               height: 52,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xCC202022)
-                    : const Color(0xE8FFFFFF),
+                    ? const Color(0x73141416)
+                    : const Color(0x99FFFFFF),
                 borderRadius: BorderRadius.circular(14.0),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
+                      ? Colors.white.withValues(alpha: 0.18)
                       : Colors.black.withValues(alpha: 0.08),
                   width: 0.5,
                 ),
@@ -214,12 +214,12 @@ class NowPlayingBar extends ConsumerWidget {
                       padding: EdgeInsets.zero,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xB81C1C1E)
-                            : const Color(0xD9FFFFFF),
+                            ? const Color(0x73141416)
+                            : const Color(0x99FFFFFF),
                         borderRadius: BorderRadius.circular(12.0),
                         border: Border.all(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.12)
+                              ? Colors.white.withValues(alpha: 0.18)
                               : Colors.black.withValues(alpha: 0.08),
                           width: 0.5,
                         ),
