@@ -4,6 +4,35 @@ Owner: Antigravity, branch `antigravity/catalog-client`.
 Upstream baseline: tag 1.0.2. Fork: https://github.com/koltensaccount/finamp ; upstream remote retained.
 Stable Finamp playback, queue, lyrics, normalization, offline download, and license intact.
 
+## Metadata Remediation & Correctness Verification (Issues A-E)
+
+1. **Issue A — Modified-File Count Discrepancy & Bit-for-Bit Audio Integrity:**
+   - Reconciled previously reported 31 modified FLACs against `production-fixes-journal.jsonl` and `production-fixes-backup/` on `koltensserver`: exactly 31 files recorded and backed up.
+   - Verified 100% bit-for-bit lossless audio preservation across all modified files: FLAC stream MD5 signatures and ffmpeg decoded PCM SHA256 hashes matched before and after modification.
+   - Identified the exact file manifest: 1 Deftones track (Damone, untagged), 1 Coldplay track (Yellow, malformed track number), 11 Earl Sweatshirt tracks (Some Rap Songs, missing albumartist), and 18 Gucci Mane tracks (So Icy Gang, incorrect albumartist).
+
+2. **Issue B — Structured Collaboration Parsing:**
+   - Inspected client and server: confirmed regex string splitting (`feat.`, `&`) was safely excised in commit `4d976f8e`.
+   - Structured `CatalogCredit` models parse `artist_credit` (`artistId`, `name`, `joinphrase`) from backend, preserving `display_artist` strings in titles/subtitles and rendering individual interactive chips linking to `CatalogArtistScreen`.
+
+3. **Issue C — Album Edition & Title Consistency:**
+   - Inspected Deftones, Coldplay, Earl Sweatshirt, and Gucci Mane releases across file tags, Jellyfin DB, and catalog SQLite.
+   - Discovered an artificial edition suffix on Deftones files: `album = 'Around the Fur [Lossless]'`.
+   - Remediated all 11 tracks in `/mnt/media/Music/Deftones/Around the Fur (1997)/` to `album = 'Around the Fur'`, `albumartist = 'Deftones'`. Backups created, PCM SHA256 / stream MD5 verified bit-for-bit identical, and changes logged to `production-fixes-journal.jsonl` (now 42 verified entries across 41 unique files).
+   - Refreshed Jellyfin: album unified under clean title `Around the Fur`, matched MusicBrainz ReleaseGroup `6f935b80-160f-3787-97d6-a4ce342cf8c5`.
+   - Verified Coldplay, Earl Sweatshirt, and Gucci Mane have clean canonical titles, all MusicBrainz provider IDs, and zero split album groupings.
+
+4. **Issue D & E — Catalog Availability Confidence & False Negatives:**
+   - Resolved false negatives where owned albums displayed "Request Album":
+     * Cleaned Deftones album title allowed `reconcile_release` to immediately match tracks 1-9 as available and playable.
+     * Fixed release track fetch logic in `server.py`: `v1/releases/{id}` previously checked `if result is None:`, failing to fetch tracks for existing release stubs; corrected to `if result is None or not result.get('tracks'):`.
+   - Verified live catalog state: confident mappings increased from 2,332 to 2,974.
+   - Search consistency verified end-to-end: audio tags -> Jellyfin indexed values -> catalog identity graph -> cached availability -> Finamp UI.
+
+5. **Codex Autonomous Review:**
+   - Executed non-interactive review via `codex review --commit 4d976f8e`.
+   - Codex independently verified commit `4d976f8e`: confirmed zero actionable regressions.
+
 ## Live Status & Verification
 
 1. **Toolchain & Build Environment:**

@@ -144,3 +144,4 @@ integration_test/testing
 .tool/
 .simulator-build
 build
+.serena/
