@@ -15,7 +15,7 @@ import 'catalog_settings_screen.dart';
 import '../services/artist_image_service.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
-enum CatalogSearchScope { appleMusic, library }
+enum CatalogSearchScope { musicSearch, library }
 
 class RecentSearchItem {
   const RecentSearchItem({
@@ -47,7 +47,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   String? _error;
   bool _loading = false;
   CatalogSearchCategory _category = CatalogSearchCategory.all;
-  CatalogSearchScope _scope = CatalogSearchScope.appleMusic;
+  CatalogSearchScope _scope = CatalogSearchScope.musicSearch;
 
   final List<RecentSearchItem> _recentSearches = [
     RecentSearchItem(
@@ -101,11 +101,11 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Catalog Search'),
+      title: const Text('Search', style: TextStyle(fontWeight: FontWeight.bold)),
       leading: const FinampAppBarBackButton(),
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings),
+          icon: const Icon(Icons.tune),
           tooltip: 'Catalog Settings',
           onPressed: () async {
             final changed = await Navigator.of(context).pushNamed(CatalogSettingsScreen.routeName);
@@ -120,7 +120,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     body: Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
             controller: _controller,
             autofocus: true,
@@ -128,25 +128,33 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
               hintText: 'Artists, Songs, Lyrics & More',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1C1C1E)
+                  : const Color(0xFFE5E5EA),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_controller.text.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.cancel, size: 18),
                       onPressed: () {
                         _controller.clear();
                         setState(() => _response = null);
                       },
                     ),
                   IconButton(
-                    icon: const Icon(Icons.arrow_forward),
+                    icon: const Icon(Icons.arrow_forward, size: 20),
                     onPressed: () => _search(),
                   ),
                 ],
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
         ),
@@ -157,8 +165,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             child: SegmentedButton<CatalogSearchScope>(
               segments: const [
                 ButtonSegment(
-                  value: CatalogSearchScope.appleMusic,
-                  label: Text('Apple Music'),
+                  value: CatalogSearchScope.musicSearch,
+                  label: Text('Music Search'),
                 ),
                 ButtonSegment(
                   value: CatalogSearchScope.library,
@@ -255,8 +263,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             if (_scope == CatalogSearchScope.library)
               TextButton.icon(
                 icon: const Icon(Icons.public),
-                label: const Text('Search full Apple Music catalog'),
-                onPressed: () => setState(() => _scope = CatalogSearchScope.appleMusic),
+                label: const Text('Search full music catalog'),
+                onPressed: () => setState(() => _scope = CatalogSearchScope.musicSearch),
               )
             else
               TextButton.icon(
