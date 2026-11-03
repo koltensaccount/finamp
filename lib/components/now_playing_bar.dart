@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
@@ -15,7 +14,6 @@ import 'package:finamp/services/widget_bindings_observer_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 import 'package:simple_gesture_detector/simple_gesture_detector.dart';
 
@@ -60,8 +58,9 @@ class NowPlayingBar extends ConsumerWidget {
   }
 
   Widget buildLoadingQueueBar(WidgetRef ref, void Function()? retryCallback) {
-    final progressBackgroundColor = getProgressBackgroundColor(ref).withOpacity(0.5);
-    var context = ref.context;
+    final context = ref.context;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
 
     return SimpleGestureDetector(
       onVerticalSwipe: (direction) {
@@ -71,56 +70,54 @@ class NowPlayingBar extends ConsumerWidget {
       },
       onTap: retryCallback,
       child: Padding(
-        padding: const EdgeInsets.only(left: 12.0, bottom: 12.0, right: 12.0),
-        child: Container(
-          decoration: getShadow(ref.context),
-          child: Material(
-            shadowColor: ColorScheme.of(
-              context,
-            ).primary.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.75 : 0.3),
-            borderRadius: BorderRadius.circular(18.0),
-            clipBehavior: Clip.antiAlias,
-            color: Theme.brightnessOf(context) == Brightness.dark
-                ? IconTheme.of(context).color!.withOpacity(0.1)
-                : Theme.of(context).cardColor,
-            elevation: 8.0,
+        padding: const EdgeInsets.only(left: 16.0, bottom: 6.0, right: 16.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14.0),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
-              width: MediaQuery.widthOf(context),
-              height: albumImageSize,
-              padding: EdgeInsets.zero,
-              child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: ShapeDecoration(
-                  color: progressBackgroundColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
+              height: 52,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xCC202022)
+                    : const Color(0xE8FFFFFF),
+                borderRadius: BorderRadius.circular(14.0),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08),
+                  width: 0.5,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: albumImageSize,
-                      height: albumImageSize,
-                      decoration: const ShapeDecoration(shape: Border(), color: Color.fromRGBO(0, 0, 0, 0.3)),
-                      child: (retryCallback != null)
-                          ? const Icon(Icons.refresh, size: albumImageSize)
-                          : const Center(child: CircularProgressIndicator.adaptive()),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: albumImageSize,
-                        padding: const EdgeInsets.only(left: 12, right: 4),
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          (retryCallback != null)
-                              ? AppLocalizations.of(context)!.queueRetryMessage
-                              : AppLocalizations.of(context)!.queueLoadingMessage,
-                        ),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: (retryCallback != null)
+                        ? Icon(Icons.refresh_rounded, size: 22, color: primaryTextColor)
+                        : CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(primaryTextColor),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      (retryCallback != null)
+                          ? AppLocalizations.of(context)!.queueRetryMessage
+                          : AppLocalizations.of(context)!.queueLoadingMessage,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: primaryTextColor,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -159,13 +156,10 @@ class NowPlayingBar extends ConsumerWidget {
   Widget buildNowPlayingBar(WidgetRef ref, FinampQueueItem currentTrack) {
     final audioHandler = GetIt.instance<MusicPlayerBackgroundTask>();
     final queueService = GetIt.instance<QueueService>();
-
-    Duration? playbackPosition;
-    var context = ref.context;
+    final context = ref.context;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : Colors.black87;
-    final elapsedPartBackgroundColor = getProgressForegroundColor(ref);
 
     final showPauseButton = ref.watch(
       mediaStateProvider.select((x) => x.playbackState.playing && x.fadeDirection != FadeDirection.fadeOut),
@@ -211,18 +205,18 @@ class NowPlayingBar extends ConsumerWidget {
                   return false;
                 },
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18.0),
+                  borderRadius: BorderRadius.circular(14.0),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                    filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                     child: Container(
                       width: MediaQuery.widthOf(context),
-                      height: albumImageSize,
+                      height: 52,
                       padding: EdgeInsets.zero,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xB31C1C1E)
-                            : const Color(0xCCFFFFFF),
-                        borderRadius: BorderRadius.circular(18.0),
+                            ? const Color(0xCC202022)
+                            : const Color(0xE8FFFFFF),
+                        borderRadius: BorderRadius.circular(14.0),
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.12)
@@ -230,141 +224,127 @@ class NowPlayingBar extends ConsumerWidget {
                           width: 0.5,
                         ),
                       ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: SizedBox(
-                              width: albumImageSize - 10.0,
-                              height: albumImageSize - 10.0,
-                              child: AlbumImage(
-                                placeholderBuilder: (_) => const SizedBox.shrink(),
-                                imageListenable: currentAlbumImageProvider,
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Stack(
+                      child: Stack(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              if (ref.watch(finampSettingsProvider.showProgressOnNowPlayingBar))
-                                Positioned.fill(
-                                  child: StreamBuilder<Duration>(
-                                    stream: AudioService.position,
-                                    initialData: audioHandler.playbackState.value.position,
-                                    builder: (context, snapshot) {
-                                      if (snapshot.hasData) {
-                                        playbackPosition = snapshot.data;
-                                        var itemLength = currentTrack.item.duration;
-                                        return FractionallySizedBox(
-                                          alignment: AlignmentDirectional.centerStart,
-                                          widthFactor: itemLength == null
-                                              ? 0
-                                              : max(0, playbackPosition!.inMilliseconds / itemLength.inMilliseconds),
-                                          child: DecoratedBox(
-                                            decoration: ShapeDecoration(
-                                              color: elapsedPartBackgroundColor,
-                                              shape: const RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.only(
-                                                  topRight: Radius.circular(12),
-                                                  bottomRight: Radius.circular(12),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      } else {
-                                        return SizedBox.shrink();
-                                      }
-                                    },
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 7.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6.0),
+                                  child: SizedBox(
+                                    width: 38,
+                                    height: 38,
+                                    child: AlbumImage(
+                                      placeholderBuilder: (_) => const SizedBox.shrink(),
+                                      imageListenable: currentAlbumImageProvider,
+                                      borderRadius: BorderRadius.circular(6.0),
+                                    ),
                                   ),
                                 ),
-                              Row(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: albumImageSize,
-                                      padding: const EdgeInsets.only(left: 12, right: 4),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          OneLineMarqueeHelper(
-                                            key: ValueKey(currentTrack.item.id),
-                                            text: currentTrack.item.title,
-                                            style: TextStyle(
-                                              fontSize: 14.5,
-                                              height: 26 / 20,
-                                              color: primaryTextColor,
-                                              fontWeight: Theme.brightnessOf(context) == Brightness.light
-                                                  ? FontWeight.w500
-                                                  : FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            processArtist(currentTrack.item.artist, context),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: primaryTextColor.withValues(alpha: 0.8),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                        ],
+                              ),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.only(left: 4, right: 4),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      OneLineMarqueeHelper(
+                                        key: ValueKey(currentTrack.item.id),
+                                        text: currentTrack.item.title,
+                                        style: TextStyle(
+                                          fontSize: 14.0,
+                                          color: primaryTextColor,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        processArtist(currentTrack.item.artist, context),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: isDark ? Colors.white60 : Colors.black54,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
+                                      onPressed: () {
+                                        FeedbackHelper.feedback(FeedbackType.light);
+                                        unawaited(audioHandler.togglePlayback());
+                                      },
+                                      color: primaryTextColor,
+                                      visualDensity: VisualDensity.compact,
+                                      icon: Icon(
+                                        showPauseButton ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                        size: 28,
                                       ),
                                     ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        IconButton(
-                                          tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
-                                          onPressed: () {
-                                            FeedbackHelper.feedback(FeedbackType.light);
-                                            unawaited(audioHandler.togglePlayback());
-                                          },
-                                          color: primaryTextColor,
-                                          visualDensity: VisualDensity.compact,
-                                          icon: Icon(
-                                            showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
-                                            size: 28,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Next',
-                                          onPressed: () {
-                                            FeedbackHelper.feedback(FeedbackType.light);
-                                            unawaited(audioHandler.skipToNext());
-                                          },
-                                          color: primaryTextColor,
-                                          visualDensity: VisualDensity.compact,
-                                          icon: const Icon(
-                                            TablerIcons.player_track_next,
-                                            size: 24,
-                                          ),
-                                        ),
-                                      ],
+                                    IconButton(
+                                      tooltip: 'Next',
+                                      onPressed: () {
+                                        FeedbackHelper.feedback(FeedbackType.light);
+                                        unawaited(audioHandler.skipToNext());
+                                      },
+                                      color: primaryTextColor,
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(
+                                        Icons.fast_forward_rounded,
+                                        size: 24,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          // Subtle Apple-style 2px hairline progress at bottom
+                          if (ref.watch(finampSettingsProvider.showProgressOnNowPlayingBar))
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              height: 2,
+                              child: StreamBuilder<Duration>(
+                                stream: AudioService.position,
+                                initialData: audioHandler.playbackState.value.position,
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasData) {
+                                    final position = snapshot.data!;
+                                    final itemLength = currentTrack.item.duration;
+                                    return FractionallySizedBox(
+                                      alignment: AlignmentDirectional.centerStart,
+                                      widthFactor: itemLength == null
+                                          ? 0
+                                          : (position.inMilliseconds / itemLength.inMilliseconds).clamp(0.0, 1.0),
+                                      child: Container(
+                                        color: const Color(0xFFFA2D48),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -373,8 +353,7 @@ class NowPlayingBar extends ConsumerWidget {
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   @override

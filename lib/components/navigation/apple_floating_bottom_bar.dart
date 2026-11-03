@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class AppleFloatingBottomBar extends StatelessWidget {
   const AppleFloatingBottomBar({
@@ -22,53 +21,53 @@ class AppleFloatingBottomBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(26),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
-              height: 58,
+              height: 52,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xB81C1C1E)
-                    : const Color(0xD9FFFFFF),
-                borderRadius: BorderRadius.circular(30),
+                    ? const Color(0xCC202022)
+                    : const Color(0xE8FFFFFF),
+                borderRadius: BorderRadius.circular(26),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.14)
+                      ? Colors.white.withValues(alpha: 0.12)
                       : Colors.black.withValues(alpha: 0.08),
                   width: 0.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                    blurRadius: 20,
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   _buildTabItem(
                     index: 0,
-                    icon: TablerIcons.home,
-                    activeIcon: TablerIcons.home_filled,
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
                     label: 'Home',
                     isDark: isDark,
                   ),
                   _buildTabItem(
                     index: 1,
-                    icon: TablerIcons.books,
-                    activeIcon: TablerIcons.books,
+                    icon: Icons.library_music_outlined,
+                    activeIcon: Icons.library_music_rounded,
                     label: 'Library',
                     isDark: isDark,
                   ),
                   _buildTabItem(
                     index: 2,
-                    icon: TablerIcons.search,
-                    activeIcon: TablerIcons.search,
+                    icon: Icons.search_rounded,
+                    activeIcon: Icons.search_rounded,
                     label: 'Search',
                     isDark: isDark,
                   ),
@@ -91,48 +90,34 @@ class AppleFloatingBottomBar extends StatelessWidget {
     final isSelected = selectedIndex == index;
     final color = isSelected
         ? appleAccentColor
-        : (isDark ? Colors.white60 : Colors.black54);
+        : (isDark ? Colors.white54 : Colors.black45);
 
     return Expanded(
       child: Center(
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => onDestinationSelected(index),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            constraints: const BoxConstraints(minWidth: 64),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? (isDark
-                      ? Colors.white.withValues(alpha: 0.14)
-                      : Colors.black.withValues(alpha: 0.07))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isSelected ? activeIcon : icon,
+                color: color,
+                size: 22,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
                   color: color,
-                  size: 22,
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: -0.2,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 10.5,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -212,9 +212,9 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF4A148C),
-                    Color(0xFF1A237E),
-                    Color(0xFF1DB954),
+                    Color(0xFF6B11FF),
+                    Color(0xFFFA2D48),
+                    Color(0xFFFF5252),
                   ],
                 ),
               ),
