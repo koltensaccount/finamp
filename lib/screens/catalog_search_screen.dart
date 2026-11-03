@@ -12,6 +12,7 @@ import '../services/catalog_playback_helper.dart';
 import 'catalog_album_screen.dart';
 import 'catalog_artist_screen.dart';
 import 'catalog_settings_screen.dart';
+import '../services/artist_image_service.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
 enum CatalogSearchScope { appleMusic, library }
@@ -22,12 +23,14 @@ class RecentSearchItem {
     required this.title,
     required this.subtitle,
     required this.kind,
+    this.imageUrl,
   });
 
   final String id;
   final String title;
   final String subtitle;
   final String kind;
+  final String? imageUrl;
 }
 
 class CatalogSearchScreen extends StatefulWidget {
@@ -47,17 +50,19 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   CatalogSearchScope _scope = CatalogSearchScope.appleMusic;
 
   final List<RecentSearchItem> _recentSearches = [
-    const RecentSearchItem(
+    RecentSearchItem(
       id: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
       title: 'Geese',
       subtitle: 'Artist',
       kind: 'artist',
+      imageUrl: ArtistImageService.getKnownArtistImageUrl('geese'),
     ),
-    const RecentSearchItem(
+    RecentSearchItem(
       id: 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
       title: 'The Beatles',
       subtitle: 'Artist',
       kind: 'artist',
+      imageUrl: ArtistImageService.getKnownArtistImageUrl('the beatles'),
     ),
   ];
 
@@ -369,38 +374,57 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
           ],
         ),
         const SizedBox(height: 4),
-        ..._recentSearches.map((item) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: item.kind == 'artist'
-                  ? CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: const Icon(TablerIcons.user, size: 22),
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        child: const Icon(TablerIcons.disc, size: 24),
-                      ),
+        ..._recentSearches.map((item) {
+          final artistImg = item.imageUrl ??
+              ArtistImageService.getKnownArtistImageUrl(item.title) ??
+              ArtistImageService.getKnownArtistImageUrl(item.id);
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: item.kind == 'artist'
+                ? ClipOval(
+                    child: artistImg != null
+                        ? Image.network(
+                            artistImg,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              child: const Icon(TablerIcons.user, size: 22),
+                            ),
+                          )
+                        : CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: const Icon(TablerIcons.user, size: 22),
+                          ),
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(TablerIcons.disc, size: 24),
                     ),
-              title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-              subtitle: Text(item.subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-              onTap: () {
-                if (item.kind == 'artist') {
-                  Navigator.of(context).pushNamed(
-                    CatalogArtistScreen.routeName,
-                    arguments: CatalogArtistScreenArguments(artistMbid: item.id, initialName: item.title),
-                  );
-                } else {
-                  _controller.text = item.title;
-                  _search();
-                }
-              },
-            )),
+                  ),
+            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            subtitle: Text(item.subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            onTap: () {
+              if (item.kind == 'artist') {
+                Navigator.of(context).pushNamed(
+                  CatalogArtistScreen.routeName,
+                  arguments: CatalogArtistScreenArguments(artistMbid: item.id, initialName: item.title),
+                );
+              } else {
+                _controller.text = item.title;
+                _search();
+              }
+            },
+          );
+        }),
       ],
     );
   }
@@ -502,6 +526,9 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _buildTopResultCard(CatalogSearchResult result) {
     if (result.kind == 'artist') {
+      final artistImg = result.imageUrl ??
+          ArtistImageService.getKnownArtistImageUrl(result.title) ??
+          ArtistImageService.getKnownArtistImageUrl(result.id);
       return Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -513,6 +540,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               title: result.title,
               subtitle: 'Artist',
               kind: 'artist',
+              imageUrl: artistImg,
             ));
             Navigator.of(context).pushNamed(
               CatalogArtistScreen.routeName,
@@ -523,10 +551,24 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: const Icon(TablerIcons.user, size: 36),
+                ClipOval(
+                  child: artistImg != null
+                      ? Image.network(
+                          artistImg,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => CircleAvatar(
+                            radius: 36,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: const Icon(TablerIcons.user, size: 36),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 36,
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          child: const Icon(TablerIcons.user, size: 36),
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -688,10 +730,26 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _tile(CatalogSearchResult result) {
     if (result.kind == 'artist') {
+      final artistImg = result.imageUrl ??
+          ArtistImageService.getKnownArtistImageUrl(result.title) ??
+          ArtistImageService.getKnownArtistImageUrl(result.id);
       return ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: const Icon(TablerIcons.user, size: 20),
+        leading: ClipOval(
+          child: artistImg != null
+              ? Image.network(
+                  artistImg,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    child: const Icon(TablerIcons.user, size: 20),
+                  ),
+                )
+              : CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: const Icon(TablerIcons.user, size: 20),
+                ),
         ),
         title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: const Text('Artist'),
@@ -702,6 +760,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             title: result.title,
             subtitle: 'Artist',
             kind: 'artist',
+            imageUrl: artistImg,
           ));
           Navigator.of(context).pushNamed(
             CatalogArtistScreen.routeName,

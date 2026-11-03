@@ -194,7 +194,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               ),
             ),
           ],*/
-          SliverSafeArea(top: false, sliver: SliverPadding(padding: const EdgeInsets.only(bottom: 40.0))),
+          SliverSafeArea(top: false, sliver: SliverPadding(padding: const EdgeInsets.only(bottom: 120.0))),
         ],
       ),
     );
@@ -215,7 +215,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           ),
         ),
         SizedBox(
-          height: 300,
+          height: 308,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -233,8 +233,41 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
 
   Widget _buildFeaturedArtistsSection(BuildContext context) {
     final featured = [
-      {'name': 'The Beatles', 'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d'},
-      {'name': 'Geese', 'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3'},
+      {
+        'name': 'The Beatles',
+        'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
+        'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'Geese',
+        'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
+        'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'Radiohead',
+        'mbid': 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
+        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0d58cfbc90f2e776608bcdc0c45a4711/500x500-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'Pink Floyd',
+        'mbid': '83d91898-7763-47d7-b03b-b92132375c47',
+        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/250x250-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'Black Country, New Road',
+        'mbid': 'f72671c6-11f2-452f-87a3-4889c6569106',
+        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/250x250-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'Led Zeppelin',
+        'mbid': '678d88b2-87b0-403b-b63d-5da7465aecc3',
+        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/2cf138b96a63da677ac6fb79846607c8/500x500-000000-80-0-0.jpg',
+      },
+      {
+        'name': 'The Rolling Stones',
+        'mbid': 'b071f9f8-14b0-4217-8e97-eb41da73f59e',
+        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/500x500-000000-80-0-0.jpg',
+      },
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,37 +289,58 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           ),
         ),
         SizedBox(
-          height: 120,
+          height: 135,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: featured.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 24),
+            separatorBuilder: (_, _) => const SizedBox(width: 18),
             itemBuilder: (context, i) {
               final a = featured[i];
               return InkWell(
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(44),
                 onTap: () => Navigator.of(context).pushNamed(
                   CatalogArtistScreen.routeName,
                   arguments: CatalogArtistScreenArguments(artistMbid: a['mbid']!, initialName: a['name']!),
                 ),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 36,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: const Icon(TablerIcons.user, size: 36),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(a['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const Text('Artist', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  ],
+                child: SizedBox(
+                  width: 82,
+                  child: Column(
+                    children: [
+                      ClipOval(
+                        child: Image.network(
+                          a['imageUrl']!,
+                          width: 76,
+                          height: 76,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => CircleAvatar(
+                            radius: 38,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: const Icon(TablerIcons.user, size: 36),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        a['name']!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Artist',
+                        style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
       ],
     );
   }
@@ -295,24 +349,25 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
       child: Container(
-        width: 230,
+        width: 236,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF222226),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 175,
+              height: 156,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
@@ -327,33 +382,36 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 ),
               ),
               child: const Center(
-                child: Icon(Icons.favorite, size: 64, color: Colors.white),
+                child: Icon(Icons.favorite, size: 60, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'Made By You',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Color(0xFF8E8E93),
               ),
             ),
             const SizedBox(height: 2),
-            Text(
+            const Text(
               'Liked Songs',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
+            const SizedBox(height: 3),
+            const Text(
               'All your favorite tracks in one place',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12.5,
+                height: 1.25,
+                color: Color(0xFF98989F),
               ),
             ),
           ],
@@ -368,24 +426,25 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
         GetIt.instance<AudioServiceHelper>().playRandomItem();
       },
       child: Container(
-        width: 230,
+        width: 236,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF222226),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 175,
+              height: 156,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
@@ -400,33 +459,36 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 ),
               ),
               child: const Center(
-                child: Icon(TablerIcons.flame, size: 64, color: Colors.white),
+                child: Icon(TablerIcons.flame, size: 60, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'Made for You',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Color(0xFF8E8E93),
               ),
             ),
             const SizedBox(height: 2),
-            Text(
+            const Text(
               'Heavy Rotation',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
+            const SizedBox(height: 3),
+            const Text(
               'Instant mix from your music library',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12.5,
+                height: 1.25,
+                color: Color(0xFF98989F),
               ),
             ),
           ],

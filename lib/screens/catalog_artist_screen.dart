@@ -11,6 +11,7 @@ import '../services/catalog_api_client.dart';
 import '../services/catalog_playback_helper.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
+import '../services/artist_image_service.dart';
 import 'catalog_album_screen.dart';
 import 'catalog_discography_screen.dart';
 
@@ -245,12 +246,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
       latestRelease = sortedByDate.first;
     }
 
-    // Backdrop image: pick first album with a valid imageUrl
+    // Hero backdrop image: prioritize real artist photo, fallback to top album art
+    final artistPhoto = ArtistImageService.getKnownArtistImageUrl(artist.name) ??
+        ArtistImageService.getKnownArtistImageUrl(artist.id);
     final heroImageAlbum = artist.albums.cast<CatalogSearchResult?>().firstWhere(
           (a) => a?.imageUrl != null && a!.imageUrl!.isNotEmpty,
           orElse: () => null,
         );
-    final heroImageUrl = heroImageAlbum?.imageUrl;
+    final heroImageUrl = artistPhoto ?? heroImageAlbum?.imageUrl;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -302,7 +305,136 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             items: liveAndOther,
           ),
 
+        _buildSimilarArtistsSection(artist),
+
         const SizedBox(height: 36),
+      ],
+    );
+  }
+
+  Widget _buildSimilarArtistsSection(CatalogArtist artist) {
+    final Map<String, List<Map<String, String>>> similarMapping = {
+      'geese': [
+        {
+          'name': 'Cameron Winter',
+          'mbid': '5b116773-5182-4df4-a14a-10114ea0cb13',
+          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/80284da7bfe0aee61d2299c37a9a76f4/250x250-000000-80-0-0.jpg',
+        },
+        {
+          'name': 'Black Country, New Road',
+          'mbid': 'f72671c6-11f2-452f-87a3-4889c6569106',
+          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/250x250-000000-80-0-0.jpg',
+        },
+        {
+          'name': 'MJ Lenderman',
+          'mbid': '96ee86f7-9c9c-4903-8d62-5fcfe0c0d164',
+          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/99d12aa8eef867cc63f2e7ba80414b88/250x250-000000-80-0-0.jpg',
+        },
+      ],
+      'the beatles': [
+        {
+          'name': 'The Rolling Stones',
+          'mbid': 'b071f9f8-14b0-4217-8e97-eb41da73f59e',
+          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f773418ba6a12781463cf17d23d9b4db/500x500-000000-80-0-0.jpg',
+        },
+        {
+          'name': 'Pink Floyd',
+          'mbid': '83d91898-7763-47d7-b03b-b92132375c47',
+          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/250x250-000000-80-0-0.jpg',
+        },
+        {
+          'name': 'Queen',
+          'mbid': '0383dadf-2a4e-4d10-a46a-e9e041da8eb3',
+          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/61b7f9408b049d5a7d65fc9fae6da62a/500x500-000000-80-0-0.jpg',
+        },
+        {
+          'name': 'David Bowie',
+          'mbid': '5441c29d-3602-4898-b1a1-b77fa23b8e50',
+          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/720074e6451eeb22ae7cb210ec947dfb/500x500-000000-80-0-0.jpg',
+        },
+      ],
+    };
+
+    final list = similarMapping[artist.name.toLowerCase()] ??
+        [
+          {
+            'name': 'The Beatles',
+            'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
+            'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
+          },
+          {
+            'name': 'Geese',
+            'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
+            'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
+          },
+        ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+          child: Row(
+            children: [
+              Text(
+                'Similar Artists',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: list.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 20),
+            itemBuilder: (context, i) {
+              final a = list[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(44),
+                onTap: () => Navigator.of(context).pushNamed(
+                  CatalogArtistScreen.routeName,
+                  arguments: CatalogArtistScreenArguments(artistMbid: a['mbid']!, initialName: a['name']!),
+                ),
+                child: SizedBox(
+                  width: 90,
+                  child: Column(
+                    children: [
+                      ClipOval(
+                        child: Image.network(
+                          a['imageUrl']!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: const Icon(TablerIcons.user, size: 36),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        a['name']!,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
