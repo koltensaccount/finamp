@@ -15,6 +15,7 @@ import 'package:finamp/menus/components/icon_button_with_semantics.dart';
 import 'package:finamp/menus/home_section_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/music_models.dart';
+import 'package:finamp/screens/catalog_artist_screen.dart';
 import 'package:finamp/screens/home_screen_settings_screen.dart';
 import 'package:finamp/screens/liked_songs_screen.dart';
 import 'package:finamp/services/audio_service_helper.dart';
@@ -70,6 +71,9 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
         slivers: [
           SliverToBoxAdapter(
             child: _buildTopPicksSection(context),
+          ),
+          SliverToBoxAdapter(
+            child: _buildFeaturedArtistsSection(context),
           ),
           if (ref.watch(finampSettingsProvider.homeScreenConfiguration).actions.isNotEmpty)
             SliverPadding(padding: const EdgeInsets.only(top: 10.0)),
@@ -220,6 +224,66 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               const SizedBox(width: 14),
               _buildEssentialsCard(context),
             ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildFeaturedArtistsSection(BuildContext context) {
+    final featured = [
+      {'name': 'The Beatles', 'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d'},
+      {'name': 'Geese', 'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3'},
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Row(
+            children: [
+              Text(
+                'Featured Artists',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: featured.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 24),
+            itemBuilder: (context, i) {
+              final a = featured[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(40),
+                onTap: () => Navigator.of(context).pushNamed(
+                  CatalogArtistScreen.routeName,
+                  arguments: CatalogArtistScreenArguments(artistMbid: a['mbid']!, initialName: a['name']!),
+                ),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(TablerIcons.user, size: 36),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(a['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const Text('Artist', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),

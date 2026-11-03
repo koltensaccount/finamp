@@ -14,6 +14,21 @@ import 'catalog_artist_screen.dart';
 import 'catalog_settings_screen.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
+enum CatalogSearchScope { appleMusic, library }
+
+class RecentSearchItem {
+  const RecentSearchItem({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.kind,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final String kind;
+}
 
 class CatalogSearchScreen extends StatefulWidget {
   const CatalogSearchScreen({super.key});
@@ -29,6 +44,28 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   String? _error;
   bool _loading = false;
   CatalogSearchCategory _category = CatalogSearchCategory.all;
+  CatalogSearchScope _scope = CatalogSearchScope.appleMusic;
+
+  final List<RecentSearchItem> _recentSearches = [
+    const RecentSearchItem(
+      id: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
+      title: 'Geese',
+      subtitle: 'Artist',
+      kind: 'artist',
+    ),
+    const RecentSearchItem(
+      id: 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
+      title: 'The Beatles',
+      subtitle: 'Artist',
+      kind: 'artist',
+    ),
+  ];
+
+  void _addRecentSearch(RecentSearchItem item) {
+    _recentSearches.removeWhere((x) => x.id == item.id || x.title.toLowerCase() == item.title.toLowerCase());
+    _recentSearches.insert(0, item);
+    if (_recentSearches.length > 12) _recentSearches.removeLast();
+  }
 
   Future<void> _search({bool refresh = false}) async {
     final query = _controller.text.trim();
@@ -85,7 +122,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
-              hintText: 'Artists, albums, and tracks',
+              hintText: 'Artists, Songs, Lyrics & More',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -105,6 +142,28 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                 ],
               ),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<CatalogSearchScope>(
+              segments: const [
+                ButtonSegment(
+                  value: CatalogSearchScope.appleMusic,
+                  label: Text('Apple Music'),
+                ),
+                ButtonSegment(
+                  value: CatalogSearchScope.library,
+                  label: Text('Library'),
+                ),
+              ],
+              selected: {_scope},
+              onSelectionChanged: (newSelection) {
+                setState(() => _scope = newSelection.first);
+              },
             ),
           ),
         ),
@@ -166,27 +225,40 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _buildBodyContent() {
     if (_response == null && !_loading && _error == null) {
-      return const Center(
-        child: Text(
-          'Search MusicBrainz and your Jellyfin library from one catalog.',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
+      return _buildRecentlySearchedView();
     }
 
-    final results = _response?.results ?? const [];
+    final allResults = _response?.results ?? const [];
+    final results = _scope == CatalogSearchScope.library
+        ? allResults
+            .where((r) => r.isFullyOwned || r.isPartiallyOwned || (r.availability?.canPlay ?? false))
+            .toList()
+        : allResults;
+
     if (results.isEmpty && !_loading) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('No catalog results found.'),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              icon: const Icon(Icons.refresh),
-              label: const Text('Fetch live MusicBrainz results'),
-              onPressed: () => _search(refresh: true),
+            Text(
+              _scope == CatalogSearchScope.library
+                  ? 'No matching items found in your library.'
+                  : 'No catalog results found.',
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
+            const SizedBox(height: 8),
+            if (_scope == CatalogSearchScope.library)
+              TextButton.icon(
+                icon: const Icon(Icons.public),
+                label: const Text('Search full Apple Music catalog'),
+                onPressed: () => setState(() => _scope = CatalogSearchScope.appleMusic),
+              )
+            else
+              TextButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('Fetch live MusicBrainz results'),
+                onPressed: () => _search(refresh: true),
+              ),
           ],
         ),
       );
@@ -263,6 +335,72 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               ),
           },
         ),
+      ],
+    );
+  }
+
+  Widget _buildRecentlySearchedView() {
+    if (_recentSearches.isEmpty) {
+      return const Center(
+        child: Text(
+          'Artists, Songs, Lyrics & More',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recently Searched',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _recentSearches.clear()),
+              child: const Text(
+                'Clear',
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ..._recentSearches.map((item) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: item.kind == 'artist'
+                  ? CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(TablerIcons.user, size: 22),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        child: const Icon(TablerIcons.disc, size: 24),
+                      ),
+                    ),
+              title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              subtitle: Text(item.subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              onTap: () {
+                if (item.kind == 'artist') {
+                  Navigator.of(context).pushNamed(
+                    CatalogArtistScreen.routeName,
+                    arguments: CatalogArtistScreenArguments(artistMbid: item.id, initialName: item.title),
+                  );
+                } else {
+                  _controller.text = item.title;
+                  _search();
+                }
+              },
+            )),
       ],
     );
   }
@@ -369,10 +507,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.of(context).pushNamed(
-            CatalogArtistScreen.routeName,
-            arguments: CatalogArtistScreenArguments.fromSearchResult(result),
-          ),
+          onTap: () {
+            _addRecentSearch(RecentSearchItem(
+              id: result.id,
+              title: result.title,
+              subtitle: 'Artist',
+              kind: 'artist',
+            ));
+            Navigator.of(context).pushNamed(
+              CatalogArtistScreen.routeName,
+              arguments: CatalogArtistScreenArguments.fromSearchResult(result),
+            );
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -425,10 +571,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.of(context).pushNamed(
-          CatalogAlbumScreen.routeName,
-          arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
-        ),
+        onTap: () {
+          _addRecentSearch(RecentSearchItem(
+            id: result.id,
+            title: result.title,
+            subtitle: result.displayArtist ?? 'Album',
+            kind: 'album',
+          ));
+          Navigator.of(context).pushNamed(
+            CatalogAlbumScreen.routeName,
+            arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -542,10 +696,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: const Text('Artist'),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).pushNamed(
-          CatalogArtistScreen.routeName,
-          arguments: CatalogArtistScreenArguments.fromSearchResult(result),
-        ),
+        onTap: () {
+          _addRecentSearch(RecentSearchItem(
+            id: result.id,
+            title: result.title,
+            subtitle: 'Artist',
+            kind: 'artist',
+          ));
+          Navigator.of(context).pushNamed(
+            CatalogArtistScreen.routeName,
+            arguments: CatalogArtistScreenArguments.fromSearchResult(result),
+          );
+        },
       );
     }
 
@@ -637,10 +799,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(info.isNotEmpty ? info : 'Album concept'),
         trailing: trailingWidget,
-        onTap: () => Navigator.of(context).pushNamed(
-          CatalogAlbumScreen.routeName,
-          arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
-        ),
+        onTap: () {
+          _addRecentSearch(RecentSearchItem(
+            id: result.id,
+            title: result.title,
+            subtitle: result.displayArtist ?? 'Album',
+            kind: 'album',
+          ));
+          Navigator.of(context).pushNamed(
+            CatalogAlbumScreen.routeName,
+            arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
+          );
+        },
       );
     }
 

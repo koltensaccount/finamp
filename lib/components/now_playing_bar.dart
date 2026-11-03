@@ -3,9 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:finamp/color_schemes.g.dart';
 import 'package:finamp/components/AddToPlaylistScreen/add_to_playlist_button.dart';
-import 'package:finamp/components/audio_fade_progress_visualizer_container.dart';
 import 'package:finamp/components/global_snackbar.dart';
 import 'package:finamp/components/one_line_marquee_helper.dart';
 import 'package:finamp/components/print_duration.dart';
@@ -38,18 +36,17 @@ class NowPlayingBar extends ConsumerWidget {
   const NowPlayingBar({super.key});
 
   static const horizontalPadding = 8.0;
-  static const albumImageSize = 64.0;
-  static const showPlayButtonAtEnd = false;
+  static const albumImageSize = 58.0;
+  static const showPlayButtonAtEnd = true;
 
   BoxDecoration? getShadow(BuildContext context) => BoxDecoration(
-    borderRadius: const BorderRadius.all(Radius.circular(12.0)),
+    borderRadius: const BorderRadius.all(Radius.circular(18.0)),
     boxShadow: [
       BoxShadow(
-        blurRadius: 12.0,
-        spreadRadius: 8.0,
-        color: Theme.brightnessOf(context) == Brightness.light
-            ? darkColorScheme.surface.withOpacity(0.15)
-            : darkColorScheme.surface.withOpacity(0.7),
+        blurRadius: 16.0,
+        spreadRadius: 2.0,
+        color: Colors.black.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.12 : 0.45),
+        offset: const Offset(0, 4),
       ),
     ],
   );
@@ -85,7 +82,7 @@ class NowPlayingBar extends ConsumerWidget {
             shadowColor: ColorScheme.of(
               context,
             ).primary.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.75 : 0.3),
-            borderRadius: BorderRadius.circular(12.0),
+            borderRadius: BorderRadius.circular(18.0),
             clipBehavior: Clip.antiAlias,
             color: Theme.brightnessOf(context) == Brightness.dark
                 ? IconTheme.of(context).color!.withOpacity(0.1)
@@ -99,7 +96,7 @@ class NowPlayingBar extends ConsumerWidget {
                 clipBehavior: Clip.antiAlias,
                 decoration: ShapeDecoration(
                   color: progressBackgroundColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -230,7 +227,7 @@ class NowPlayingBar extends ConsumerWidget {
                   shadowColor: ColorScheme.of(
                     context,
                   ).primary.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.75 : 0.3),
-                  borderRadius: BorderRadius.circular(12.0),
+                  borderRadius: BorderRadius.circular(18.0),
                   clipBehavior: Clip.antiAlias,
                   color: Theme.brightnessOf(context) == Brightness.dark
                       ? IconTheme.of(context).color!.withOpacity(0.1)
@@ -246,47 +243,27 @@ class NowPlayingBar extends ConsumerWidget {
                     clipBehavior: Clip.antiAlias,
                     decoration: ShapeDecoration(
                       color: remainingPartBackgroundColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            if (ref.watch(finampSettingsProvider.showProgressOnNowPlayingBar))
-                              Positioned.fill(child: ColoredBox(color: remainingPartBackgroundColor)),
-                            AlbumImage(
-                              placeholderBuilder: (_) => const SizedBox.shrink(),
-                              imageListenable: currentAlbumImageProvider,
-                              borderRadius: BorderRadius.zero,
-                            ),
-                            if (!showPlayButtonAtEnd)
-                              AudioFadeProgressVisualizerContainer(
-                                key: const Key("AlbumArtAudioFadeProgressVisualizer"),
-                                width: albumImageSize,
-                                height: albumImageSize,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(12.0),
-                                  bottomLeft: Radius.circular(12.0),
-                                ),
-                                child: IconButton(
-                                  tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
-                                  onPressed: () {
-                                    FeedbackHelper.feedback(FeedbackType.light);
-                                    unawaited(audioHandler.togglePlayback());
-                                  },
-                                  color: Colors.white,
-                                  icon: Icon(
-                                    showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
-                                    shadows: <Shadow>[Shadow(color: Colors.black, blurRadius: 10.0)],
-                                    size: 32,
-                                  ),
-                                ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: SizedBox(
+                              width: albumImageSize - 10.0,
+                              height: albumImageSize - 10.0,
+                              child: AlbumImage(
+                                placeholderBuilder: (_) => const SizedBox.shrink(),
+                                imageListenable: currentAlbumImageProvider,
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
-                          ],
+                            ),
+                          ),
                         ),
                         Expanded(
                           child: Stack(
@@ -465,33 +442,34 @@ class NowPlayingBar extends ConsumerWidget {
                                           visualDensity: const VisualDensity(horizontal: -4),
                                         ),
 
-                                        if (showPlayButtonAtEnd)
-                                          Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              AudioFadeProgressVisualizerContainer(
-                                                key: const Key("AlbumArtAudioFadeProgressVisualizer"),
-                                                color: primaryTextColor.withOpacity(0.5),
-                                                width: albumImageSize,
-                                                height: albumImageSize,
-                                                borderRadius: BorderRadius.circular(12.0),
-                                                child: SizedBox.shrink(),
-                                              ),
-                                              IconButton(
-                                                tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
-                                                onPressed: () {
-                                                  FeedbackHelper.feedback(FeedbackType.light);
-                                                  unawaited(audioHandler.togglePlayback());
-                                                },
-                                                color: primaryTextColor,
-                                                visualDensity: VisualDensity.compact,
-                                                icon: Icon(
-                                                  showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
-                                                  size: 28,
-                                                ),
-                                              ),
-                                            ],
+                                        if (showPlayButtonAtEnd) ...[
+                                          IconButton(
+                                            tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
+                                            onPressed: () {
+                                              FeedbackHelper.feedback(FeedbackType.light);
+                                              unawaited(audioHandler.togglePlayback());
+                                            },
+                                            color: primaryTextColor,
+                                            visualDensity: VisualDensity.compact,
+                                            icon: Icon(
+                                              showPauseButton ? TablerIcons.player_pause : TablerIcons.player_play,
+                                              size: 28,
+                                            ),
                                           ),
+                                          IconButton(
+                                            tooltip: 'Next',
+                                            onPressed: () {
+                                              FeedbackHelper.feedback(FeedbackType.light);
+                                              unawaited(audioHandler.skipToNext());
+                                            },
+                                            color: primaryTextColor,
+                                            visualDensity: VisualDensity.compact,
+                                            icon: const Icon(
+                                              TablerIcons.player_track_next,
+                                              size: 24,
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
