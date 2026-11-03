@@ -28,9 +28,16 @@ are represented. Missing-ID and import transitions are covered by tests; a
 real API item was also replayed through an isolated in-memory import transition.
 No acquisition was triggered to manufacture a new import demonstration.
 
-Verified: 12 backend tests, including authenticated HTTP search/request/status/
+Verified: 13 backend tests, including authenticated HTTP search/request/status/
 import availability slice. Live Jellyfin API pagination and evidence ingestion
 passed. Production media and application settings were not changed for this app.
+
+Latest drift-aware refresh saw 8,977 items (27 above the old inventory),
+demonstrating a new live item appearing during development. Public search for
+Green Light returned one confidently available recording alongside unavailable
+catalog recordings through the same result contract. Both initial GitHub
+Catalog identity CI runs passed. Main is protected against force pushes and
+deletion and requires catalog-tests. Its stable baseline is 1.0.2.
 
 Not complete: iOS UI connection, physical-device installation, full absence
 demonstration, live acquisition request dispatch, public catalog detail hydration,
