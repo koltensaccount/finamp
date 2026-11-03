@@ -139,3 +139,6 @@ integration_test/testing
 
 # FVM Version Cache
 .fvm/
+
+# Local Flutter SDK used for the pinned project toolchain.
+.tool/
