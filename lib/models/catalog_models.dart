@@ -1,3 +1,29 @@
+import 'dart:convert';
+
+List<String> _parseStringList(dynamic raw) {
+  if (raw == null) return const [];
+  if (raw is List) {
+    return raw.map((e) => e.toString()).toList(growable: false);
+  }
+  if (raw is String) {
+    final trimmed = raw.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          return decoded.map((e) => e.toString()).toList(growable: false);
+        }
+      } catch (_) {
+        return const [];
+      }
+    }
+    if (trimmed.isNotEmpty) {
+      return [trimmed];
+    }
+  }
+  return const [];
+}
+
 enum CatalogAvailabilityState { available, possiblyAvailable, notFound, pending }
 
 CatalogAvailabilityState catalogAvailabilityStateFromJson(Object? value) {
@@ -86,11 +112,16 @@ class CatalogSearchResult {
     this.durationMs,
     this.displayArtist,
     this.artistCredits = const [],
+    this.secondaryTypes = const [],
+    this.category,
+    this.imageUrl,
+    this.ownership,
   });
 
   factory CatalogSearchResult.fromJson(Map<String, dynamic> json) {
     final rawEditions = json['edition_ids'] as List<dynamic>? ?? const [];
     final rawCredits = json['artist_credit'] as List<dynamic>? ?? const [];
+    final secondaryTypes = _parseStringList(json['secondary_types']);
     return CatalogSearchResult(
       id: json['id'] as String,
       kind: json['kind'] as String,
@@ -107,6 +138,10 @@ class CatalogSearchResult {
           .whereType<Map<String, dynamic>>()
           .map((c) => CatalogCredit.fromJson(c))
           .toList(growable: false),
+      secondaryTypes: secondaryTypes,
+      category: json['category'] as String?,
+      imageUrl: json['image_url'] as String?,
+      ownership: json['ownership'] as String?,
     );
   }
 
@@ -120,6 +155,14 @@ class CatalogSearchResult {
   final int? durationMs;
   final String? displayArtist;
   final List<CatalogCredit> artistCredits;
+  final List<String> secondaryTypes;
+  final String? category;
+  final String? imageUrl;
+  final String? ownership;
+
+  bool get isFullyOwned => ownership == 'full';
+  bool get isPartiallyOwned => ownership == 'partial';
+  bool get isNoneOwned => ownership == null || ownership == 'none';
 
   String get formattedDuration {
     if (durationMs == null) return '';
@@ -210,6 +253,8 @@ class CatalogRelease {
     this.ownership = 'none',
     this.displayArtist,
     this.artistCredits = const [],
+    this.imageUrl,
+    this.groupImageUrl,
   });
 
   factory CatalogRelease.fromJson(Map<String, dynamic> json) {
@@ -231,6 +276,8 @@ class CatalogRelease {
           .whereType<Map<String, dynamic>>()
           .map((c) => CatalogCredit.fromJson(c))
           .toList(growable: false),
+      imageUrl: json['image_url'] as String?,
+      groupImageUrl: json['group_image_url'] as String?,
     );
   }
 
@@ -243,6 +290,8 @@ class CatalogRelease {
   final String ownership;
   final String? displayArtist;
   final List<CatalogCredit> artistCredits;
+  final String? imageUrl;
+  final String? groupImageUrl;
 
   bool get isFullyOwned => ownership == 'full';
   bool get isPartiallyOwned => ownership == 'partial';
@@ -258,11 +307,15 @@ class CatalogAlbumGroup {
     this.editions = const [],
     this.displayArtist,
     this.artistCredits = const [],
+    this.imageUrl,
+    this.ownership,
+    this.secondaryTypes = const [],
   });
 
   factory CatalogAlbumGroup.fromJson(Map<String, dynamic> json) {
     final rawEditions = json['editions'] as List<dynamic>? ?? const [];
     final rawCredits = json['artist_credit'] as List<dynamic>? ?? const [];
+    final secondaryTypes = _parseStringList(json['secondary_types']);
     return CatalogAlbumGroup(
       id: json['id'] as String,
       title: (json['title'] ?? '') as String,
@@ -277,6 +330,9 @@ class CatalogAlbumGroup {
           .whereType<Map<String, dynamic>>()
           .map((c) => CatalogCredit.fromJson(c))
           .toList(growable: false),
+      imageUrl: json['image_url'] as String?,
+      ownership: json['ownership'] as String?,
+      secondaryTypes: secondaryTypes,
     );
   }
 
@@ -287,6 +343,13 @@ class CatalogAlbumGroup {
   final List<CatalogRelease> editions;
   final String? displayArtist;
   final List<CatalogCredit> artistCredits;
+  final String? imageUrl;
+  final String? ownership;
+  final List<String> secondaryTypes;
+
+  bool get isFullyOwned => ownership == 'full';
+  bool get isPartiallyOwned => ownership == 'partial';
+  bool get isNoneOwned => ownership == null || ownership == 'none';
 }
 
 class CatalogArtist {

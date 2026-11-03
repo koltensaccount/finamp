@@ -214,14 +214,31 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(TablerIcons.disc, size: 40),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: ((release.imageUrl != null && release.imageUrl!.isNotEmpty) ||
+                              (_albumGroup?.imageUrl != null && _albumGroup!.imageUrl!.isNotEmpty))
+                          ? Image.network(
+                              release.imageUrl ?? _albumGroup!.imageUrl!,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 80,
+                                height: 80,
+                                color: Theme.of(context).colorScheme.primaryContainer,
+                                child: const Icon(TablerIcons.disc, size: 40),
+                              ),
+                            )
+                          : Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(TablerIcons.disc, size: 40),
+                            ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(

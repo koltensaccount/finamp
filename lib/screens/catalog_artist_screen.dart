@@ -8,6 +8,7 @@ import '../models/catalog_models.dart';
 import '../services/catalog_api_client.dart';
 import '../services/catalog_playback_helper.dart';
 import 'catalog_album_screen.dart';
+import 'catalog_discography_screen.dart';
 
 class CatalogArtistScreenArguments {
   const CatalogArtistScreenArguments({required this.artistMbid, this.initialName});
@@ -128,6 +129,17 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
 
     final artist = _artist!;
 
+    final studioAlbums = artist.albums.where((a) => a.category == 'album').toList();
+    final eps = artist.albums.where((a) => a.category == 'ep').toList();
+    final singles = artist.albums.where((a) => a.category == 'single').toList();
+    final compilations = artist.albums.where((a) => a.category == 'compilation').toList();
+    final liveAndOther = artist.albums.where((a) =>
+        a.category == 'live' ||
+        a.category == 'other' ||
+        (a.category == null && !['album', 'ep', 'single', 'compilation'].contains(a.category))).toList();
+
+    final hasCategorizedSections = studioAlbums.isNotEmpty || eps.isNotEmpty || singles.isNotEmpty || compilations.isNotEmpty || liveAndOther.isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       children: [
@@ -152,7 +164,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${artist.albums.length} releases • ${artist.recordings.length} recordings',
+                        [
+                          if (studioAlbums.isNotEmpty) '${studioAlbums.length} studio albums',
+                          '${artist.albums.length} total releases',
+                          if (artist.recordings.isNotEmpty) '${artist.recordings.length} in library',
+                        ].join(' • '),
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ],
@@ -162,37 +178,53 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             ),
           ),
         ),
-        if (artist.albums.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text(
-            'Albums & Releases',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+
+        if (hasCategorizedSections) ...[
+          _buildDiscographySection(
+            title: 'Albums',
+            artistName: artist.name,
+            items: studioAlbums,
+            limit: 5,
           ),
-          const SizedBox(height: 8),
-          ...artist.albums.map((album) => ListTile(
-                leading: const Icon(TablerIcons.disc),
-                title: Text(album.title),
-                subtitle: Text(
-                  [
-                    if (album.primaryType != null) album.primaryType,
-                    if (album.firstDate != null) album.firstDate,
-                  ].join(' • '),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).pushNamed(
-                  CatalogAlbumScreen.routeName,
-                  arguments: CatalogAlbumScreenArguments.fromSearchResult(album),
-                ),
-              )),
+          _buildDiscographySection(
+            title: 'EPs',
+            artistName: artist.name,
+            items: eps,
+            limit: 4,
+          ),
+          _buildDiscographySection(
+            title: 'Singles',
+            artistName: artist.name,
+            items: singles,
+            limit: 4,
+          ),
+          _buildDiscographySection(
+            title: 'Compilations',
+            artistName: artist.name,
+            items: compilations,
+            limit: 3,
+          ),
+          _buildDiscographySection(
+            title: 'Live & Other Releases',
+            artistName: artist.name,
+            items: liveAndOther,
+            limit: 3,
+          ),
+        ] else if (artist.albums.isNotEmpty) ...[
+          _buildDiscographySection(
+            title: 'Albums & Releases',
+            artistName: artist.name,
+            items: artist.albums,
+            limit: 5,
+          ),
         ],
+
         if (artist.recordings.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          Text(
-            'Recordings',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          _buildSectionHeader(
+            'Available Songs in Library',
+            artist.recordings.length,
           ),
-          const SizedBox(height: 8),
-          ...artist.recordings.map((rec) => ListTile(
+          ...artist.recordings.take(8).map((rec) => ListTile(
                 leading: const Icon(TablerIcons.music),
                 title: Text(rec.title),
                 subtitle: rec.formattedDuration.isNotEmpty ? Text(rec.formattedDuration) : null,
@@ -205,8 +237,208 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                   availability: rec.availability,
                 ),
               )),
+          if (artist.recordings.length > 8)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Center(
+                child: Text(
+                  '+ ${artist.recordings.length - 8} more songs available in library',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                ),
+              ),
+            ),
         ],
+        const SizedBox(height: 24),
       ],
+    );
+  }
+
+  Widget _buildDiscographySection({
+    required String title,
+    required String artistName,
+    required List<CatalogSearchResult> items,
+    int limit = 5,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final visible = items.take(limit).toList();
+    final hasMore = items.length > limit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title,
+          items.length,
+          onSeeAll: hasMore
+              ? () => Navigator.of(context).pushNamed(
+                    CatalogDiscographyScreen.routeName,
+                    arguments: CatalogDiscographyScreenArguments(
+                      title: title,
+                      artistName: artistName,
+                      items: items,
+                    ),
+                  )
+              : null,
+        ),
+        ...visible.map(_buildAlbumTile),
+        if (hasMore)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: Center(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: Text('Show all ${items.length} ${title.toLowerCase()}'),
+                onPressed: () => Navigator.of(context).pushNamed(
+                  CatalogDiscographyScreen.routeName,
+                  arguments: CatalogDiscographyScreenArguments(
+                    title: title,
+                    artistName: artistName,
+                    items: items,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, int count, {VoidCallback? onSeeAll}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const Spacer(),
+          if (onSeeAll != null)
+            TextButton(
+              onPressed: onSeeAll,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('See All'),
+                  SizedBox(width: 2),
+                  Icon(Icons.chevron_right, size: 16),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlbumTile(CatalogSearchResult album) {
+    Widget leadingWidget;
+    if (album.imageUrl != null && album.imageUrl!.isNotEmpty) {
+      leadingWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Image.network(
+          album.imageUrl!,
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            width: 50,
+            height: 50,
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: const Icon(TablerIcons.disc, size: 28),
+          ),
+        ),
+      );
+    } else {
+      leadingWidget = Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Icon(TablerIcons.disc, size: 28),
+      );
+    }
+
+    Widget trailingWidget;
+    if (album.isFullyOwned) {
+      trailingWidget = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green, width: 1),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, size: 12, color: Colors.green),
+            SizedBox(width: 4),
+            Text('In Library', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    } else if (album.isPartiallyOwned) {
+      trailingWidget = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.shade800, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pie_chart, size: 12, color: Colors.amber.shade800),
+            const SizedBox(width: 4),
+            Text('Partial', style: TextStyle(color: Colors.amber.shade800, fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    } else {
+      trailingWidget = const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_outlined, size: 16, color: Colors.grey),
+          SizedBox(width: 4),
+          Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+        ],
+      );
+    }
+
+    final year = album.firstDate != null && album.firstDate!.length >= 4 ? album.firstDate!.substring(0, 4) : null;
+    final info = [
+      ?year,
+      if (album.primaryType != null) album.primaryType,
+      if (album.secondaryTypes.isNotEmpty) album.secondaryTypes.join(', '),
+    ].join(' • ');
+
+    return ListTile(
+      leading: leadingWidget,
+      title: Text(album.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(info.isNotEmpty ? info : 'Album', maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: trailingWidget,
+      onTap: () => Navigator.of(context).pushNamed(
+        CatalogAlbumScreen.routeName,
+        arguments: CatalogAlbumScreenArguments.fromSearchResult(album),
+      ),
     );
   }
 }

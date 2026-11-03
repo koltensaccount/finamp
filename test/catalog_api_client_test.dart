@@ -257,6 +257,34 @@ void main() {
     expect(result.artistCredits[1].artistId, 'artist-2');
     expect(result.artistCredits[1].name, 'Melody');
   });
+
+  test('parses album categories, ownership, and artwork URLs', () {
+    final album = CatalogSearchResult.fromJson({
+      'id': 'rg-abbey-road',
+      'kind': 'album',
+      'title': 'Abbey Road',
+      'category': 'album',
+      'primary_type': 'Album',
+      'secondary_types': <String>[],
+      'ownership': 'full',
+      'image_url': 'https://coverartarchive.org/release-group/rg-abbey-road/front-250',
+    });
+    expect(album.category, 'album');
+    expect(album.isFullyOwned, isTrue);
+    expect(album.isPartiallyOwned, isFalse);
+    expect(album.imageUrl, 'https://coverartarchive.org/release-group/rg-abbey-road/front-250');
+
+    final unowned = CatalogSearchResult.fromJson({
+      'id': 'rg-revolver',
+      'kind': 'album',
+      'title': 'Revolver',
+      'category': 'album',
+      'primary_type': 'Album',
+      'ownership': 'none',
+    });
+    expect(unowned.isNoneOwned, isTrue);
+    expect(unowned.isFullyOwned, isFalse);
+  });
 }
 
 class _Credentials implements CatalogCredentialStore {
