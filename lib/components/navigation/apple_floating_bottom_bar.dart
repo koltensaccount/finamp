@@ -22,17 +22,17 @@ class AppleFloatingBottomBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(32),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
             child: Container(
-              height: 60,
+              height: 56,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xE61C1C1E)
-                    : const Color(0xEBF8F8F8),
+                    ? const Color(0xB31C1C1E)
+                    : const Color(0xCCFFFFFF),
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(
                   color: isDark
@@ -42,9 +42,9 @@ class AppleFloatingBottomBar extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),

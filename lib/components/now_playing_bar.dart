@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:finamp/components/global_snackbar.dart';
 import 'package:finamp/components/one_line_marquee_helper.dart';
-import 'package:finamp/extensions/color_extensions.dart';
 import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/services/current_track_metadata_provider.dart';
@@ -163,20 +163,16 @@ class NowPlayingBar extends ConsumerWidget {
     Duration? playbackPosition;
     var context = ref.context;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
     final elapsedPartBackgroundColor = getProgressForegroundColor(ref);
-    final remainingPartBackgroundColor = getProgressBackgroundColor(ref);
-    final averageBackgroundColor = Color.alphaBlend(
-      elapsedPartBackgroundColor.withOpacity(0.5),
-      remainingPartBackgroundColor,
-    );
-    Color primaryTextColor = AtContrast.getContrastiveTintedTextColor(onBackground: averageBackgroundColor);
 
     final showPauseButton = ref.watch(
       mediaStateProvider.select((x) => x.playbackState.playing && x.fadeDirection != FadeDirection.fadeOut),
     );
 
     return Padding(
-      padding: const EdgeInsets.only(left: 20.0, bottom: 6.0, right: 20.0),
+      padding: const EdgeInsets.only(left: 16.0, bottom: 6.0, right: 16.0),
       child: Semantics.fromProperties(
         properties: SemanticsProperties(label: AppLocalizations.of(context)!.nowPlayingBarTooltip, button: true),
         child: SimpleGestureDetector(
@@ -199,7 +195,6 @@ class NowPlayingBar extends ConsumerWidget {
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: getShadow(context),
-              //TODO use a PageView instead of a Dismissible, and only wrap dynamic items (not the buttons)
               child: Dismissible(
                 key: const Key("NowPlayingBar"),
                 direction: ref.watch(finampSettingsProvider.disableGesture)
@@ -215,28 +210,26 @@ class NowPlayingBar extends ConsumerWidget {
                   }
                   return false;
                 },
-                child: Material(
-                  shadowColor: ColorScheme.of(
-                    context,
-                  ).primary.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.75 : 0.3),
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(18.0),
-                  clipBehavior: Clip.antiAlias,
-                  color: Theme.brightnessOf(context) == Brightness.dark
-                      ? IconTheme.of(context).color!.withOpacity(0.1)
-                      : Theme.of(context).cardColor,
-                  elevation: 8.0,
-                  // If we have a media item and the player hasn't finished, show
-                  // the now playing bar.
-                  child: //TODO move into separate component and share with queue list
-                  Container(
-                    width: MediaQuery.widthOf(context),
-                    height: albumImageSize,
-                    padding: EdgeInsets.zero,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: ShapeDecoration(
-                      color: remainingPartBackgroundColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
-                    ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                    child: Container(
+                      width: MediaQuery.widthOf(context),
+                      height: albumImageSize,
+                      padding: EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xB31C1C1E)
+                            : const Color(0xCCFFFFFF),
+                        borderRadius: BorderRadius.circular(18.0),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.08),
+                          width: 0.5,
+                        ),
+                      ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -380,7 +373,8 @@ class NowPlayingBar extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   @override

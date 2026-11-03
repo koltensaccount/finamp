@@ -4,8 +4,6 @@ import 'dart:ui';
 import 'package:balanced_text/balanced_text.dart';
 import 'package:finamp/components/AlbumScreen/download_button.dart';
 import 'package:finamp/components/Buttons/cta_small.dart';
-import 'package:finamp/components/HomeScreen/home_screen_quick_action_button.dart';
-import 'package:finamp/components/HomeScreen/quick_action_editor.dart';
 import 'package:finamp/components/MusicScreen/item_card.dart';
 import 'package:finamp/components/MusicScreen/item_wrapper.dart';
 import 'package:finamp/components/MusicScreen/music_screen_tab_view.dart';
@@ -15,7 +13,6 @@ import 'package:finamp/menus/components/icon_button_with_semantics.dart';
 import 'package:finamp/menus/home_section_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/music_models.dart';
-import 'package:finamp/screens/catalog_artist_screen.dart';
 import 'package:finamp/screens/home_screen_settings_screen.dart';
 import 'package:finamp/screens/liked_songs_screen.dart';
 import 'package:finamp/services/audio_service_helper.dart';
@@ -23,8 +20,6 @@ import 'package:finamp/screens/music_screen.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/music_screen_provider.dart';
 import 'package:finamp/services/queue_service.dart';
-import 'package:finamp/services/quick_actions_service.dart';
-import 'package:finamp/utils/platform_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -86,76 +81,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           SliverToBoxAdapter(
             child: _buildTopPicksSection(context),
           ),
-          SliverToBoxAdapter(
-            child: _buildFeaturedArtistsSection(context),
-          ),
-          if (ref.watch(finampSettingsProvider.homeScreenConfiguration).actions.isNotEmpty)
-            SliverPadding(padding: const EdgeInsets.only(top: 10.0)),
-          SliverLayoutBuilder(
-            builder: (context, constraints) {
-              final double maxWidth = isDesktop ? 800.0 : 600.0;
-              final viewPadding = MediaQuery.paddingOf(context);
-              final usableWidth = constraints.crossAxisExtent - viewPadding.left - viewPadding.right;
-              // center action buttons
-              // Mandatory padding should be enough to clear scrollbar
-              final horizontalPadding = max(0, (usableWidth - maxWidth) / 2) + 14.0;
-              final configuredQuickActions = ref.watch(finampSettingsProvider.homeScreenConfiguration).actions;
-              return SliverPadding(
-                padding: EdgeInsets.only(
-                  left: horizontalPadding + viewPadding.left,
-                  right: horizontalPadding + viewPadding.right,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Wrap(
-                    spacing: isDesktop ? 4.0 : 0,
-                    runSpacing: 8,
-                    direction: Axis.horizontal,
-                    alignment: WrapAlignment.spaceBetween,
-                    runAlignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.start,
-                    children: configuredQuickActions.indexed.map((indexedAction) {
-                      final (index, action) = indexedAction;
-                      //!!! custom adaptive grid
-                      // calculate button width based on available space and number of actions per row
-                      final double quickActionsWidth = min(
-                        usableWidth - horizontalPadding - horizontalPadding,
-                        maxWidth,
-                      );
-                      double verticalButtonWidth = (quickActionsWidth / 3) - 2 * (5.0);
-                      double horizontalButtonWidth = (quickActionsWidth / 2) - 1 * (8.0);
-                      double singleButtonWidth = quickActionsWidth;
-                      double buttonWidth;
-                      // always fill each row completely
-                      if (configuredQuickActions.length == 1) {
-                        buttonWidth = singleButtonWidth;
-                      } else if (configuredQuickActions.length % 3 == 0) {
-                        buttonWidth = verticalButtonWidth;
-                      } else if (configuredQuickActions.length == 4) {
-                        buttonWidth = horizontalButtonWidth;
-                      } else if ((configuredQuickActions.length % 3 == 1 &&
-                              configuredQuickActions.length - index <= 4) ||
-                          (configuredQuickActions.length % 3 == 2 && configuredQuickActions.length - index < 3)) {
-                        buttonWidth = horizontalButtonWidth;
-                      } else {
-                        buttonWidth = verticalButtonWidth;
-                      }
-                      //TODO possibly use CustomMultiChildLayout instead of Wrap to allow actions to stretch in height to fill each row, in case of multi-line actions
-                      return HomeScreenQuickActionButton(
-                        width: buttonWidth,
-                        text: action.getTitle(context.l10n),
-                        label: action.action.getDescription(context),
-                        icon: action.action.getIcon(),
-                        vertical: buttonWidth == verticalButtonWidth,
-                        onPressed: () async => QuickActionsService.handleAction(action, context),
-                        onSecondaryPressed: () => editQuickAction(context, index),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SliverPadding(padding: EdgeInsets.only(top: 4.0)),
+          const SliverPadding(padding: EdgeInsets.only(top: 8.0)),
           SliverMainAxisGroup(
             slivers: ref
                 .watch(finampSettingsProvider.homeScreenConfiguration)
@@ -245,121 +171,8 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     );
   }
 
-  Widget _buildFeaturedArtistsSection(BuildContext context) {
-    final featured = [
-      {
-        'name': 'The Beatles',
-        'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
-        'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'Geese',
-        'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
-        'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'Radiohead',
-        'mbid': 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
-        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0d58cfbc90f2e776608bcdc0c45a4711/500x500-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'Pink Floyd',
-        'mbid': '83d91898-7763-47d7-b03b-b92132375c47',
-        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/250x250-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'Black Country, New Road',
-        'mbid': 'f72671c6-11f2-452f-87a3-4889c6569106',
-        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/250x250-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'Led Zeppelin',
-        'mbid': '678d88b2-87b0-403b-b63d-5da7465aecc3',
-        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/2cf138b96a63da677ac6fb79846607c8/500x500-000000-80-0-0.jpg',
-      },
-      {
-        'name': 'The Rolling Stones',
-        'mbid': 'b071f9f8-14b0-4217-8e97-eb41da73f59e',
-        'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/500x500-000000-80-0-0.jpg',
-      },
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-          child: Row(
-            children: [
-              Text(
-                'Featured Artists',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 135,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: featured.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 18),
-            itemBuilder: (context, i) {
-              final a = featured[i];
-              return InkWell(
-                borderRadius: BorderRadius.circular(44),
-                onTap: () => Navigator.of(context).pushNamed(
-                  CatalogArtistScreen.routeName,
-                  arguments: CatalogArtistScreenArguments(artistMbid: a['mbid']!, initialName: a['name']!),
-                ),
-                child: SizedBox(
-                  width: 82,
-                  child: Column(
-                    children: [
-                      ClipOval(
-                        child: Image.network(
-                          a['imageUrl']!,
-                          width: 76,
-                          height: 76,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => CircleAvatar(
-                            radius: 38,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Icon(TablerIcons.user, size: 36),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        a['name']!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Artist',
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 14),
-      ],
-    );
-  }
-
   Widget _buildLikedSongsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final likedSongs = ref.watch(likedSongsProvider);
     final count = likedSongs.count;
     final subtitle = count > 0
@@ -371,26 +184,30 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
       child: Container(
         width: 236,
         decoration: BoxDecoration(
-          color: const Color(0xFF222226),
-          borderRadius: BorderRadius.circular(22),
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
+            width: 0.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
               blurRadius: 14,
-              offset: const Offset(0, 5),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 156,
+              height: 164,
               width: double.infinity,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -402,25 +219,25 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 ),
               ),
               child: const Center(
-                child: Icon(Icons.favorite, size: 60, color: Colors.white),
+                child: Icon(Icons.favorite, size: 64, color: Colors.white),
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Made By You',
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF8E8E93),
+                color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
               ),
             ),
             const SizedBox(height: 2),
-            const Text(
+            Text(
               'Liked Songs',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 17,
-                color: Colors.white,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
             const SizedBox(height: 3),
@@ -428,10 +245,10 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 height: 1.25,
-                color: Color(0xFF98989F),
+                color: isDark ? const Color(0xFF98989F) : const Color(0xFF6E6E73),
               ),
             ),
           ],
@@ -448,68 +265,64 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
       child: Container(
         width: 236,
         decoration: BoxDecoration(
-          color: const Color(0xFF222226),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF280B61),
+              Color(0xFF5A148C),
+              Color(0xFFC2185B),
+            ],
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: const Color(0xFF5A148C).withValues(alpha: 0.35),
               blurRadius: 14,
               offset: const Offset(0, 5),
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              height: 156,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF0D47A1),
-                    Color(0xFF880E4F),
-                    Color(0xFFE65100),
-                  ],
+            const Icon(TablerIcons.flame, size: 48, color: Colors.white),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Made for You',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
                 ),
-              ),
-              child: const Center(
-                child: Icon(TablerIcons.flame, size: 60, color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Made for You',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF8E8E93),
-              ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Heavy Rotation',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 3),
-            const Text(
-              'Instant mix from your music library',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.25,
-                color: Color(0xFF98989F),
-              ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Heavy Rotation',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Instant mix from your music library',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
