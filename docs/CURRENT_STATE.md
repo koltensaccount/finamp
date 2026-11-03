@@ -1,54 +1,39 @@
 # Current state
 
-Owner: Codex, branch `codex/catalog-identity`. Upstream baseline: tag 1.0.2.
-Fork: https://github.com/koltensaccount/finamp ; upstream remote retained.
-No playback/UI source was changed. Stable baseline/license remain intact.
+Owner: Antigravity, branch `antigravity/catalog-client`.
+Upstream baseline: tag 1.0.2. Fork: https://github.com/koltensaccount/finamp ; upstream remote retained.
+Stable Finamp playback, queue, lyrics, normalization, offline download, and license intact.
 
-Implemented: SQLite identity graph; cache ingestion; read-only Jellyfin sync;
-hash-based incremental updates; five-minute standalone watcher; conservative
-availability; album edition/partial ownership; ordered artist credits; local
-provisional identities; authenticated loopback catalog HTTP API; request outbox
-with acquisition disabled; actual evidence demonstrations and regression tests.
+## Live Status & Verification
 
-Initial live index: 8,976 Jellyfin Audio items; 2,332 verified public mappings;
-6,644 local-only playable identities; 945 ambiguous candidate links. Catalog
-contains 3,117 public recordings from existing expanded release evidence.
-26 live paths added after the old inventory all exist: BEAUTIFUL DAY (15) and
-99 Luftballons (11). No old inventory paths are absent from Jellyfin.
+1. **Toolchain & Build Environment:**
+   - Flutter pinned at 3.47.7 (`.tool/flutter/bin/flutter`).
+   - Xcode and simulator toolchain operational.
+   - CocoaPods manages plugin dependencies with Swift Package Manager disabled (`flutter config --no-enable-swift-package-manager`).
+   - Build artifacts routed outside synced directory to `/tmp/finamp-build-output` via `build` symlink to avoid iCloud code-signing detritus.
+   - Tested and verified on booted iPhone 17 Pro simulator (`485A60A4-3455-4C34-9671-E2F9EB2491B8`) managed through Xcode Device Hub.
 
-The 9,226 backup count was all files, not audio: 8,951 audio-looking paths
-include one macOS `._…flac` resource fork. Actual audio at that snapshot: 8,950.
-275 other files include artwork, Finder metadata and other sidecars. The mapping
-refresh excludes resource forks. No new audio audit was required.
+2. **Catalog Client Implementation:**
+   - Typed data models in `lib/models/catalog_models.dart`: `CatalogSearchResult`, `CatalogTrack`, `CatalogRelease`, `CatalogAlbumGroup`, `CatalogArtist`, `CatalogAvailability`, `CatalogLocalItem`, and `CatalogRequestStatus`.
+   - Authenticated client in `lib/services/catalog_api_client.dart` supporting search, artists, album groups, releases, and requests.
+   - Persistent, secure credential storage in `lib/services/catalog_credential_store.dart` (`SecureCatalogCredentialStore`) supporting runtime configuration and simulator development defines.
+   - Configuration UI in `lib/screens/catalog_settings_screen.dart` with connection testing, persistent saving, and clearing; exposed via Settings and the search app bar.
+   - Unified search screen in `lib/screens/catalog_search_screen.dart` with interactive artist/album/track tiles, availability status, direct playback, and ambiguity modal resolution.
+   - Interactive album view in `lib/screens/catalog_album_screen.dart` showing multi-edition dropdowns, ownership chips (`Fully Owned`, `Partially Owned`, `Unowned`), track-by-track availability, direct track playback, and truthful album request submission.
+   - Interactive artist view in `lib/screens/catalog_artist_screen.dart` showing discography and credited recordings.
+   - Ambiguity & single-song guard in `lib/services/catalog_playback_helper.dart`: candidate items prompt version selection without autoplaying; unowned single-track taps truthfully explain backend album-only acquisition scope.
 
-Live examples: Melodrama fully mapped (11/11); Revenge partially mapped (6/8);
-The Life of Pablo has zero confident mappings in the current evidence, which
-does NOT certify physical absence. Multiple editions and collaboration credits
-are represented. Missing-ID and import transitions are covered by tests; a
-real API item was also replayed through an isolated in-memory import transition.
-No acquisition was triggered to manufacture a new import demonstration.
+3. **Live Simulator & Server Verification:**
+   - Remote Jellyfin server connection active; entire user music library browsable across Home, Albums, Artists, Playlists, and Tracks tabs.
+   - Catalog backend running persistently on server (`koltensserver`) via loopback tunnel (`127.0.0.1:8765`).
+   - Tested search for "Melodrama": resolved 11/11 fully owned album and playable tracks.
+   - Verified active track playback: "Sober II (Melodrama)" played directly through Finamp's Jellyfin player (FLAC @ 777 kbps, -6.8 dB), showing artwork, playback bar, and full player controls.
+   - Tested search for "Brat": resolved partially owned release (1/35 owned) and unavailable tracks ("Vibrate").
+   - Single-track tap on unavailable track showed informative dialog explaining single-song acquisition is unsupported.
+   - Album request submitted for missing release: UI displayed truthful confirmation modal showing `state: queued` and `dispatch_enabled: false` (acquisition disabled on server). Request persisted directly to SQLite `requests` table (row ID 2).
+   - Automated tests: 7/7 Flutter client tests passed (`test/catalog_api_client_test.dart`), 14/14 Python backend tests passed (`backend/tests/`).
 
-Verified: 14 backend tests, including authenticated HTTP search/request/status/
-import availability slice. Live Jellyfin API pagination and evidence ingestion
-passed. Production media and application settings were not changed for this app.
-
-Latest drift-aware refresh saw 8,977 items (27 above the old inventory),
-demonstrating a new live item appearing during development. Public search for
-Green Light returned one confidently available recording alongside unavailable
-catalog recordings through the same result contract. Both initial GitHub
-Catalog identity CI runs passed. Main is protected against force pushes and
-deletion and requires catalog-tests. Its stable baseline is 1.0.2.
-
-Not complete: iOS UI connection, physical-device installation, full absence
-demonstration, live acquisition request dispatch, public catalog detail hydration,
-reconciliation of all provisional identities, automatic secondary-match promotion,
-whole-library metadata completeness. Don't represent these as working features.
-
-Build blocker: no Flutter on PATH and no usable full Xcode/simulator toolchain.
-Upstream pins Flutter 3.47.7 via .fvmrc/.flutter-version. Its `flutterw` fails
-because `.flutter` is not a registered submodule in this release checkout.
-Do not modify Apple credentials/certificates or rewrite playback to work around
-the missing toolchain. iOS minimum in upstream Podfile is 15.0.
-
-Server runtime data stays in `~/music-metadata-audit/catalog-index/`, excluded
-from Git. Original backup/enrichment workers are independent and untouched.
+4. **Not Complete / Deferred:**
+   - Server-side acquisition dispatcher (connecting SQLite outbox to Lidarr/slskd/Soularr).
+   - Physical iPhone data cable connectivity / physical device deployment.
+   - Full Apple Music UI visual redesign (intentionally deferred until core functionality is complete).

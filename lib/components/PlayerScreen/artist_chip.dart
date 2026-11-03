@@ -42,21 +42,8 @@ class ArtistChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final artists = ((artistType == ArtistType.albumArtist) ? baseItem?.albumArtists : baseItem?.artistItems) ?? [];
-    final collabRegex = RegExp(r'\s+(?:feat\.?|ft\.?|featuring)\s+|\s+&\s+', caseSensitive: false);
-    final List<NameIdPair> expandedArtists = [];
-    for (final a in artists) {
-      final name = a.name ?? '';
-      if (collabRegex.hasMatch(name)) {
-        final parts = name.split(collabRegex).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
-        for (int i = 0; i < parts.length; i++) {
-          expandedArtists.add(NameIdPair(id: i == 0 ? a.id : null, name: parts[i]));
-        }
-      } else {
-        expandedArtists.add(a);
-      }
-    }
     final filteredArtists = {
-      for (var artist in expandedArtists) (artist.id ?? artist.name): artist,
+      for (var artist in artists) artist.id: artist,
     }.values.sortedBy((e) => e.name ?? '').toList();
 
     return Padding(
@@ -76,7 +63,7 @@ class ArtistChips extends StatelessWidget {
                     backgroundColor: backgroundColor,
                     color: color,
                     artist: BaseItemDto(id: currentArtist.id, name: currentArtist.name, type: "MusicArtist"),
-                    key: ValueKey(currentArtist.id ?? currentArtist.name),
+                    key: ValueKey(currentArtist.id),
                   );
                 }),
         ),

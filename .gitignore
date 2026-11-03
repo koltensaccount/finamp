@@ -142,3 +142,5 @@ integration_test/testing
 
 # Local Flutter SDK used for the pinned project toolchain.
 .tool/
+.simulator-build
+build
