@@ -245,12 +245,14 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                   elevation: 0,
                   scrolledUnderElevation: 0,
                   backgroundColor: Colors.transparent,
+                  centerTitle: false,
+                  titleSpacing: 20,
                   title: Text(
                     _rootTabIndex == 0 ? 'Home' : 'Library',
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 32,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.6,
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),

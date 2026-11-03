@@ -23,16 +23,16 @@ class AppleFloatingBottomBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
             child: Container(
-              height: 52,
+              height: 48,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xCC202022)
-                    : const Color(0xE8FFFFFF),
-                borderRadius: BorderRadius.circular(26),
+                    ? const Color(0xB81C1C1E)
+                    : const Color(0xD9FFFFFF),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.12)

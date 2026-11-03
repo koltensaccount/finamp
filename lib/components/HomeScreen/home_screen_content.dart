@@ -182,10 +182,10 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
       child: Container(
-        width: 236,
+        width: 224,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
             width: 0.5,
@@ -198,16 +198,16 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
             ),
           ],
         ),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 164,
+              height: 154,
               width: double.infinity,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -219,16 +219,16 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 ),
               ),
               child: const Center(
-                child: Icon(Icons.favorite, size: 64, color: Colors.white),
+                child: Icon(Icons.favorite, size: 58, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               'Made By You',
               style: TextStyle(
-                fontSize: 11.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
+                color: isDark ? const Color(0xFFA1A1A6) : const Color(0xFF6E6E73),
               ),
             ),
             const SizedBox(height: 2),
@@ -236,19 +236,19 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
               'Liked Songs',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 17,
+                fontSize: 16,
                 color: isDark ? Colors.white : Colors.black87,
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12.5,
-                height: 1.25,
-                color: isDark ? const Color(0xFF98989F) : const Color(0xFF6E6E73),
+                fontSize: 12,
+                height: 1.2,
+                color: isDark ? const Color(0xFFA1A1A6) : const Color(0xFF6E6E73),
               ),
             ),
           ],

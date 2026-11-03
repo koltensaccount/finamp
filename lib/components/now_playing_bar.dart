@@ -205,18 +205,18 @@ class NowPlayingBar extends ConsumerWidget {
                   return false;
                 },
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14.0),
+                  borderRadius: BorderRadius.circular(12.0),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                     child: Container(
                       width: MediaQuery.widthOf(context),
-                      height: 52,
+                      height: 48,
                       padding: EdgeInsets.zero,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xCC202022)
-                            : const Color(0xE8FFFFFF),
-                        borderRadius: BorderRadius.circular(14.0),
+                            ? const Color(0xB81C1C1E)
+                            : const Color(0xD9FFFFFF),
+                        borderRadius: BorderRadius.circular(12.0),
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withValues(alpha: 0.12)
@@ -234,14 +234,14 @@ class NowPlayingBar extends ConsumerWidget {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 7.0),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6.0),
+                                  borderRadius: BorderRadius.circular(5.0),
                                   child: SizedBox(
-                                    width: 38,
-                                    height: 38,
+                                    width: 34,
+                                    height: 34,
                                     child: AlbumImage(
                                       placeholderBuilder: (_) => const SizedBox.shrink(),
                                       imageListenable: currentAlbumImageProvider,
-                                      borderRadius: BorderRadius.circular(6.0),
+                                      borderRadius: BorderRadius.circular(5.0),
                                     ),
                                   ),
                                 ),
@@ -258,7 +258,7 @@ class NowPlayingBar extends ConsumerWidget {
                                         key: ValueKey(currentTrack.item.id),
                                         text: currentTrack.item.title,
                                         style: TextStyle(
-                                          fontSize: 14.0,
+                                          fontSize: 13.5,
                                           color: primaryTextColor,
                                           fontWeight: FontWeight.w600,
                                           letterSpacing: -0.2,
@@ -270,8 +270,8 @@ class NowPlayingBar extends ConsumerWidget {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          color: isDark ? Colors.white60 : Colors.black54,
-                                          fontSize: 12,
+                                          color: isDark ? Colors.white70 : Colors.black54,
+                                          fontSize: 11.5,
                                           fontWeight: FontWeight.w400,
                                         ),
                                       ),
@@ -294,7 +294,7 @@ class NowPlayingBar extends ConsumerWidget {
                                       visualDensity: VisualDensity.compact,
                                       icon: Icon(
                                         showPauseButton ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                        size: 28,
+                                        size: 24,
                                       ),
                                     ),
                                     IconButton(
@@ -307,7 +307,7 @@ class NowPlayingBar extends ConsumerWidget {
                                       visualDensity: VisualDensity.compact,
                                       icon: const Icon(
                                         Icons.fast_forward_rounded,
-                                        size: 24,
+                                        size: 20,
                                       ),
                                     ),
                                   ],
@@ -315,13 +315,13 @@ class NowPlayingBar extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          // Subtle Apple-style 2px hairline progress at bottom
+                          // Subtle Apple-style 1.5px hairline progress at bottom
                           if (ref.watch(finampSettingsProvider.showProgressOnNowPlayingBar))
                             Positioned(
                               left: 0,
                               right: 0,
                               bottom: 0,
-                              height: 2,
+                              height: 1.5,
                               child: StreamBuilder<Duration>(
                                 stream: AudioService.position,
                                 initialData: audioHandler.playbackState.value.position,
@@ -335,7 +335,7 @@ class NowPlayingBar extends ConsumerWidget {
                                           ? 0
                                           : (position.inMilliseconds / itemLength.inMilliseconds).clamp(0.0, 1.0),
                                       child: Container(
-                                        color: const Color(0xFFFA2D48),
+                                        color: Colors.white.withValues(alpha: 0.5),
                                       ),
                                     );
                                   }
