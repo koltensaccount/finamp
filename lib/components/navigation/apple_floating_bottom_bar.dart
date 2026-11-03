@@ -24,32 +24,32 @@ class AppleFloatingBottomBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(30),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
-              height: 56,
+              height: 58,
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xB31C1C1E)
-                    : const Color(0xCCFFFFFF),
-                borderRadius: BorderRadius.circular(32),
+                    ? const Color(0xB81C1C1E)
+                    : const Color(0xD9FFFFFF),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.12)
+                      ? Colors.white.withValues(alpha: 0.14)
                       : Colors.black.withValues(alpha: 0.08),
                   width: 0.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                    blurRadius: 18,
+                    blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildTabItem(
                     index: 0,
@@ -94,31 +94,45 @@ class AppleFloatingBottomBar extends StatelessWidget {
         : (isDark ? Colors.white60 : Colors.black54);
 
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () => onDestinationSelected(index),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isSelected ? activeIcon : icon,
-                color: color,
-                size: 24,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
+      child: Center(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onDestinationSelected(index),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            constraints: const BoxConstraints(minWidth: 64),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? (isDark
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : Colors.black.withValues(alpha: 0.07))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? activeIcon : icon,
                   color: color,
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  letterSpacing: -0.2,
+                  size: 22,
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

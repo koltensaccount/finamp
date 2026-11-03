@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 
-import '../components/finamp_app_bar_back_button.dart';
 import '../components/now_playing_bar.dart';
 import '../models/catalog_models.dart';
 import '../models/finamp_models.dart';
@@ -186,11 +185,33 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const FinampAppBarBackButton(),
+        scrolledUnderElevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Center(
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.black45,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.chevron_left, color: Colors.white, size: 26),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadArtist,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.black45,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                onPressed: _loadArtist,
+              ),
+            ),
           ),
         ],
       ),
