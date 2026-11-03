@@ -47,6 +47,10 @@ class Catalog:
   with self.db:
    run=self.db.execute('INSERT INTO sync_runs(started) VALUES(?)',(time.time(),)).lastrowid
    seen=set();servers=set()
+   if not items:
+    known=[r[0] for r in self.db.execute('SELECT DISTINCT server_id FROM local_items')]
+    if len(known)>1:raise ValueError('empty multi-server snapshot requires explicit source scope')
+    servers.update(known)
    for item in items:
     server=item['ServerId'];ident=item['Id'];servers.add(server);seen.add((server,ident))
     payload=json.dumps(item,sort_keys=True);digest=hashlib.sha256(payload.encode()).hexdigest()

@@ -28,7 +28,7 @@ are represented. Missing-ID and import transitions are covered by tests; a
 real API item was also replayed through an isolated in-memory import transition.
 No acquisition was triggered to manufacture a new import demonstration.
 
-Verified: 13 backend tests, including authenticated HTTP search/request/status/
+Verified: 14 backend tests, including authenticated HTTP search/request/status/
 import availability slice. Live Jellyfin API pagination and evidence ingestion
 passed. Production media and application settings were not changed for this app.
 

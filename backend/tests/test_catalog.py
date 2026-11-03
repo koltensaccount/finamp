@@ -41,4 +41,7 @@ class Tests(unittest.TestCase):
  def test_artist_query_keeps_provider_track_results(self):
   self.c.db.execute('INSERT INTO search_hits VALUES(?,?,?,?)',('artist','track','recording',0))
   self.assertIn('recording',[x['id'] for x in self.c.search('Artist')])
+ def test_complete_empty_snapshot_removes_last_available_item(self):
+  self.c.sync([item()],evidence());self.c.sync([],{})
+  self.assertEqual(self.c.availability('recording')['state'],'not_found')
 if __name__=='__main__':unittest.main()
