@@ -226,5 +226,318 @@ void main() {
         ArtistIdentityService.mockIsOffline = null;
       }
     });
+
+    testWidgets('physically tapping artist on locally owned album routes to CatalogArtistScreen online', (tester) async {
+      final testObserver = _TestNavigatorObserver();
+      final album = BaseItemDto(
+        id: const BaseItemId('album-id-123'),
+        name: 'Heroes & Villains',
+        type: 'MusicAlbum',
+        artistItems: [
+          NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [testObserver],
+          routes: {
+            CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+            ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+          },
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                  track: album,
+                  fallbackArtistName: 'Metro Boomin',
+                );
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artistTarget,
+                      artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                      artistName: 'Metro Boomin',
+                    );
+                  },
+                  child: const Text('Metro Boomin'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Metro Boomin'));
+      await tester.pumpAndSettle();
+
+      expect(testObserver.pushedRoutes, contains(CatalogArtistScreen.routeName));
+      expect(find.text('CatalogArtistScreen'), findsOneWidget);
+    });
+
+    testWidgets('physically tapping artist on locally owned album routes to ArtistScreen offline', (tester) async {
+      ArtistIdentityService.mockIsOffline = true;
+      try {
+        final testObserver = _TestNavigatorObserver();
+        final album = BaseItemDto(
+          id: const BaseItemId('album-id-123'),
+          name: 'Heroes & Villains',
+          type: 'MusicAlbum',
+          artistItems: [
+            NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [testObserver],
+            routes: {
+              CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+              ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+            },
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                    track: album,
+                    fallbackArtistName: 'Metro Boomin',
+                  );
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      ArtistResolutionHelper.navigateToArtist(
+                        context,
+                        artistItem: artistTarget,
+                        artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                        artistName: 'Metro Boomin',
+                      );
+                    },
+                    child: const Text('Metro Boomin'),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Metro Boomin'));
+        await tester.pumpAndSettle();
+
+        expect(testObserver.pushedRoutes, contains(ArtistScreen.routeName));
+        expect(find.text('LocalArtistScreen'), findsOneWidget);
+      } finally {
+        ArtistIdentityService.mockIsOffline = null;
+      }
+    });
+
+    testWidgets('physically tapping artist in Now Playing routes to CatalogArtistScreen online', (tester) async {
+      final testObserver = _TestNavigatorObserver();
+      final track = BaseItemDto(
+        id: const BaseItemId('track-now-playing-1'),
+        name: 'Superhero',
+        type: 'Audio',
+        artistItems: [
+          NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [testObserver],
+          routes: {
+            CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+            ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+          },
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                  track: track,
+                  fallbackArtistName: 'Metro Boomin',
+                );
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artistTarget,
+                      artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                      artistName: 'Metro Boomin',
+                    );
+                  },
+                  child: const Text('NowPlaying Metro Boomin'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('NowPlaying Metro Boomin'));
+      await tester.pumpAndSettle();
+
+      expect(testObserver.pushedRoutes, contains(CatalogArtistScreen.routeName));
+      expect(find.text('CatalogArtistScreen'), findsOneWidget);
+    });
+
+    testWidgets('physically tapping artist in Now Playing routes to ArtistScreen offline', (tester) async {
+      ArtistIdentityService.mockIsOffline = true;
+      try {
+        final testObserver = _TestNavigatorObserver();
+        final track = BaseItemDto(
+          id: const BaseItemId('track-now-playing-1'),
+          name: 'Superhero',
+          type: 'Audio',
+          artistItems: [
+            NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [testObserver],
+            routes: {
+              CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+              ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+            },
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                    track: track,
+                    fallbackArtistName: 'Metro Boomin',
+                  );
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      ArtistResolutionHelper.navigateToArtist(
+                        context,
+                        artistItem: artistTarget,
+                        artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                        artistName: 'Metro Boomin',
+                      );
+                    },
+                    child: const Text('NowPlaying Metro Boomin'),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('NowPlaying Metro Boomin'));
+        await tester.pumpAndSettle();
+
+        expect(testObserver.pushedRoutes, contains(ArtistScreen.routeName));
+        expect(find.text('LocalArtistScreen'), findsOneWidget);
+      } finally {
+        ArtistIdentityService.mockIsOffline = null;
+      }
+    });
+
+    testWidgets('physically tapping Go to Artist from Liked Songs routes to CatalogArtistScreen online', (tester) async {
+      final testObserver = _TestNavigatorObserver();
+      final likedTrack = BaseItemDto(
+        id: const BaseItemId('liked-track-1'),
+        name: 'Creepin',
+        type: 'Audio',
+        artistItems: [
+          NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [testObserver],
+          routes: {
+            CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+            ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+          },
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                  track: likedTrack,
+                  fallbackArtistName: 'Metro Boomin',
+                );
+                return ListTile(
+                  title: const Text('Go to Artist'),
+                  onTap: () {
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artistTarget,
+                      artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                      artistName: 'Metro Boomin',
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go to Artist'));
+      await tester.pumpAndSettle();
+
+      expect(testObserver.pushedRoutes, contains(CatalogArtistScreen.routeName));
+      expect(find.text('CatalogArtistScreen'), findsOneWidget);
+    });
+
+    testWidgets('physically tapping Go to Artist from downloaded track routes to ArtistScreen offline', (tester) async {
+      ArtistIdentityService.mockIsOffline = true;
+      try {
+        final testObserver = _TestNavigatorObserver();
+        final downloadedTrack = BaseItemDto(
+          id: const BaseItemId('downloaded-track-1'),
+          name: 'Downloaded Track',
+          type: 'Audio',
+          artistItems: [
+            NameIdPair(id: const BaseItemId('artist-jf-id-456'), name: 'Metro Boomin'),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [testObserver],
+            routes: {
+              CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+              ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+            },
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                    track: downloadedTrack,
+                    fallbackArtistName: 'Metro Boomin',
+                  );
+                  return ListTile(
+                    title: const Text('Go to Artist'),
+                    onTap: () {
+                      ArtistResolutionHelper.navigateToArtist(
+                        context,
+                        artistItem: artistTarget,
+                        artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                        artistName: 'Metro Boomin',
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Go to Artist'));
+        await tester.pumpAndSettle();
+
+        expect(testObserver.pushedRoutes, contains(ArtistScreen.routeName));
+        expect(find.text('LocalArtistScreen'), findsOneWidget);
+      } finally {
+        ArtistIdentityService.mockIsOffline = null;
+      }
+    });
   });
 }

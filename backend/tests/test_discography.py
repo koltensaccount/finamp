@@ -67,15 +67,62 @@ class DiscographyTests(unittest.TestCase):
         self.assertEqual(resolved['name'], 'The Example')
         self.assertEqual(resolved['confidence'], 'verified')
 
-        # 2. Resolve by exact name match
+        # 2. Resolve by unique name match
         resolved_name = self.c.resolve_artist(name='the example')
         self.assertIsNotNone(resolved_name)
         self.assertEqual(resolved_name['id'], self.artist_id)
-        self.assertEqual(resolved_name['confidence'], 'verified')
+        self.assertEqual(resolved_name['confidence'], 'name_match')
 
-        # 3. Unknown name returns None
-        self.assertIsNull = self.assertIsNone
+        # 3. Ambiguous name match (multiple artists share same name) never returns single id
+        self.c.db.execute("INSERT INTO artists (id, name) VALUES('art-duplicate', 'The Example')")
+        ambiguous = self.c.resolve_artist(name='the example')
+        self.assertIsNotNone(ambiguous)
+        self.assertEqual(ambiguous['confidence'], 'ambiguous')
+        self.assertIsNone(ambiguous['id'])
+        self.assertEqual(len(ambiguous['candidates']), 2)
+
+        # 4. Unknown name returns None
         self.assertIsNone(self.c.resolve_artist(name='Nonexistent Artist'))
+
+    def test_featured_artist_never_steals_primary_track_provider_id(self):
+        # A track with primary artist 'The Example' (MBID: art-1) and featured artist 'Collaborator' (JF ID: jf-collab)
+        import json
+        payload = json.dumps({
+            'Name': 'Collab Track',
+            'ProviderIds': {'MusicBrainzArtist': self.artist_id},
+            'ArtistItems': [
+                {'Id': 'jf-primary', 'Name': 'The Example'},
+                {'Id': 'jf-collab', 'Name': 'Collaborator'}
+            ]
+        })
+        self.c.db.execute("INSERT INTO artists (id, name) VALUES('art-collab', 'Collaborator')")
+        self.c.db.execute("INSERT INTO local_items VALUES('srv', 'item-collab-track', '/music/collab.flac', ?, 'hash-collab', 1)", (payload,))
+
+        # Resolving for Collaborator's Jellyfin ID must resolve to Collaborator (art-collab), NOT The Example (art-1)
+        res = self.c.resolve_artist(jellyfin_id='jf-collab')
+        self.assertIsNotNone(res)
+        self.assertEqual(res['id'], 'art-collab')
+        self.assertEqual(res['name'], 'Collaborator')
+
+    def test_resolving_track_id_with_featured_artist_name_does_not_trust_unmatched_provider_id(self):
+        # Track has an unknown primary provider ID, but a cataloged featured artist name is requested
+        import json
+        payload = json.dumps({
+            'Name': 'Track With Unknown Primary Provider',
+            'ProviderIds': {'MusicBrainzArtist': 'unknown-mbid-999'},
+            'ArtistItems': [
+                {'Id': 'jf-primary-unknown', 'Name': 'Unknown Primary'},
+                {'Id': 'jf-collab-2', 'Name': 'Known Collab'}
+            ]
+        })
+        self.c.db.execute("INSERT INTO artists (id, name) VALUES('art-known-collab', 'Known Collab')")
+        self.c.db.execute("INSERT INTO local_items VALUES('srv', 'item-unknown-primary', '/music/track2.flac', ?, 'hash2', 1)", (payload,))
+
+        # Querying by track ID with name='Known Collab' must resolve to art-known-collab, NEVER unknown-mbid-999
+        res = self.c.resolve_artist(item_id='item-unknown-primary', name='Known Collab')
+        self.assertIsNotNone(res)
+        self.assertEqual(res['id'], 'art-known-collab')
+        self.assertEqual(res['name'], 'Known Collab')
 
 if __name__ == '__main__':
     unittest.main()

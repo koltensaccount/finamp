@@ -2,7 +2,6 @@
 import argparse, json, os, time, urllib.request, urllib.parse, urllib.error, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from catalog import Catalog, norm
-from acquisition import AcquisitionDispatcher
 
 LAST = 0
 
@@ -285,18 +284,16 @@ class Handler(BaseHTTPRequestHandler):
                 if size > 8192:
                     raise ValueError('request too large')
                 body = json.loads(self.rfile.read(size))
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                result = disp.submit_request(body['release_id'], body.get('scope', 'album'), origin=body.get('origin', 'explicit_user'))
+                ident = c.request(body['release_id'], body.get('scope', 'album'), origin=body.get('origin', 'explicit_user'))
+                row = c.db.execute('SELECT state FROM requests WHERE id=?', (ident,)).fetchone()
+                state = row['state'] if row else 'queued'
+                result = {'id': ident, 'state': state, 'dispatch_enabled': False}
             elif route.path == '/v1/requests' and self.command == 'GET':
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                result = {'requests': disp.get_all_requests()}
+                rows = c.db.execute('SELECT * FROM requests ORDER BY created_at DESC LIMIT 50').fetchall()
+                result = {'requests': [dict(r) for r in rows]}
             elif parts[:2] == ['v1', 'requests'] and len(parts) == 3:
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                try:
-                    req_id = int(parts[2])
-                    result = disp.get_request(req_id)
-                except ValueError:
-                    result = None
+                row = c.db.execute('SELECT * FROM requests WHERE id=?', (parts[2],)).fetchone()
+                result = dict(row) if row else None
             else:
                 self.send_error(404)
                 return

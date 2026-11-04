@@ -124,35 +124,43 @@ class ArtistIdentityService {
       final catalogClient = GetIt.instance<CatalogApiClient>();
       final res = await catalogClient.resolveArtist(itemId: targetJfId, name: targetName);
       if (res != null) {
+        final confidence = res['confidence'] as String?;
+        if (confidence == 'ambiguous') {
+          return null;
+        }
+
         final resolvedMbid = res['artist_id'] ?? res['id'];
         if (resolvedMbid is String && isMbid(resolvedMbid)) {
-          recordMapping(
-            jellyfinId: targetJfId,
-            name: targetName ?? (res['name'] as String?),
-            mbid: resolvedMbid,
-          );
+          // Only record and persist mapping if verified or direct provider identity
+          if (confidence == 'verified' || confidence == 'exact' || confidence == 'direct_mbid') {
+            recordMapping(
+              jellyfinId: targetJfId,
+              name: targetName ?? (res['name'] as String?),
+              mbid: resolvedMbid,
+            );
+          }
           return resolvedMbid;
         }
       }
     } catch (_) {}
 
-    // 4. Query catalog search endpoint for exact normalized name match
+    // 4. Query catalog search endpoint for exact normalized name match.
+    // Strictly guard against ambiguity: if multiple artists share the exact name, NEVER route blindly.
+    // Also NEVER persist an unverified search-derived mapping into storage.
     if (targetName != null && targetName.trim().isNotEmpty) {
       try {
         final catalogClient = GetIt.instance<CatalogApiClient>();
         final searchRes = await catalogClient.search(targetName.trim());
-        for (final item in searchRes.results) {
-          if (item.kind == 'artist' && item.title.trim().toLowerCase() == targetName.trim().toLowerCase()) {
-            if (isMbid(item.id)) {
-              recordMapping(
-                jellyfinId: targetJfId,
-                name: targetName,
-                mbid: item.id,
-              );
-              return item.id;
-            }
-          }
+        final normTarget = targetName.trim().toLowerCase();
+        final matchingArtists = searchRes.results.where(
+          (item) => item.kind == 'artist' && item.title.trim().toLowerCase() == normTarget && isMbid(item.id),
+        ).toList();
+
+        // Exactly one matching artist across catalog search results -> route for UI, but DO NOT persist
+        if (matchingArtists.length == 1) {
+          return matchingArtists.first.id;
         }
+        // If 0 or >1 (ambiguous), return null so the app falls back safely to local ArtistScreen
       } catch (_) {}
     }
 

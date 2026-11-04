@@ -452,72 +452,95 @@ class Catalog:
         """
         Deterministically resolve a Jellyfin item ID, track ID, album ID, MusicBrainz ID,
         or artist name to a canonical MusicBrainz artist identity for navigation.
+        Ambiguous names (multiple catalog artists with the same name) never resolve to a single artist.
         """
-        if name:
-            art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (name.strip(),)).fetchone()
-            if art:
-                return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'confidence': 'verified'}
-
         target_id = item_id or jellyfin_id
-        if not target_id:
-            return None
 
         # 1. Direct MusicBrainz artist ID
-        art = self.db.execute('SELECT * FROM artists WHERE id=?', (target_id,)).fetchone()
-        if art:
-            return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'direct_mbid'}
+        if target_id:
+            art = self.db.execute('SELECT * FROM artists WHERE id=?', (target_id,)).fetchone()
+            if art:
+                return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'direct_mbid'}
 
-        # 2. Local item (track) by Jellyfin ItemId
-        loc = self.db.execute('SELECT server_id, item_id, payload FROM local_items WHERE item_id=?', (target_id,)).fetchone()
-        if loc:
-            try:
-                payload = json.loads(loc['payload'])
-            except Exception:
-                payload = {}
+            # 2. Local item (track) by Jellyfin ItemId
+            loc = self.db.execute('SELECT server_id, item_id, payload FROM local_items WHERE item_id=?', (target_id,)).fetchone()
+            if loc:
+                try:
+                    payload = json.loads(loc['payload'])
+                except Exception:
+                    payload = {}
 
-            # A. Check ProviderIds for MusicBrainzArtist or MusicBrainzAlbumArtist
-            pids = payload.get('ProviderIds') or {}
-            mb_artist = pids.get('MusicBrainzArtist') or pids.get('MusicBrainzAlbumArtist')
-            if mb_artist:
-                art = self.db.execute('SELECT name FROM artists WHERE id=?', (mb_artist,)).fetchone()
-                name = art['name'] if art else (payload.get('AlbumArtists') or payload.get('ArtistItems') or [{'Name': ''}])[0].get('Name', '')
-                return {'id': mb_artist, 'artist_id': mb_artist, 'name': name, 'item_id': target_id, 'confidence': 'exact'}
-
-            # B. Check verified mappings
-            m = self.db.execute("SELECT recording_id, confidence FROM mappings WHERE server_id=? AND item_id=?", (loc['server_id'], target_id)).fetchone()
-            if m and m['recording_id']:
-                c = self.db.execute("SELECT c.artist_id, a.name FROM credits c JOIN artists a ON a.id=c.artist_id WHERE c.entity_type='recording' AND c.entity_id=? ORDER BY c.position LIMIT 1", (m['recording_id'],)).fetchone()
-                if c:
-                    return {'id': c['artist_id'], 'artist_id': c['artist_id'], 'name': c['name'], 'item_id': target_id, 'confidence': m['confidence']}
-
-            # C. Check ArtistItems / AlbumArtists by exact name match against catalog artists
-            for k in ('ArtistItems', 'AlbumArtists'):
-                for a in (payload.get(k) or []):
-                    aname = a.get('Name')
-                    if aname:
-                        art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (aname,)).fetchone()
-                        if art:
-                            return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'name_match'}
-
-        # 3. ItemId matches a Jellyfin Artist or Album ID nested inside local_items payloads
-        loc2 = self.db.execute('SELECT payload FROM local_items WHERE payload LIKE ? LIMIT 1', (f'%"{target_id}"%',)).fetchone()
-        if loc2:
-            try:
-                payload = json.loads(loc2['payload'])
+                # A. Check ProviderIds for MusicBrainzArtist or MusicBrainzAlbumArtist
                 pids = payload.get('ProviderIds') or {}
                 mb_artist = pids.get('MusicBrainzArtist') or pids.get('MusicBrainzAlbumArtist')
                 if mb_artist:
                     art = self.db.execute('SELECT name FROM artists WHERE id=?', (mb_artist,)).fetchone()
-                    name = art['name'] if art else (payload.get('AlbumArtists') or [{'Name': ''}])[0].get('Name', '')
-                    return {'id': mb_artist, 'artist_id': mb_artist, 'name': name, 'item_id': target_id, 'confidence': 'exact'}
+                    if art:
+                        art_name = art['name']
+                        if not name or art_name.strip().lower() == name.strip().lower():
+                            return {'id': mb_artist, 'artist_id': mb_artist, 'name': art_name, 'item_id': target_id, 'confidence': 'verified'}
+
+                # B. Check verified mappings
+                m = self.db.execute("SELECT recording_id, confidence FROM mappings WHERE server_id=? AND item_id=?", (loc['server_id'], target_id)).fetchone()
+                if m and m['recording_id'] and m['confidence'] in ('verified', 'local_identity'):
+                    c = self.db.execute("SELECT c.artist_id, a.name FROM credits c JOIN artists a ON a.id=c.artist_id WHERE c.entity_type='recording' AND c.entity_id=? ORDER BY c.position LIMIT 1", (m['recording_id'],)).fetchone()
+                    if c:
+                        if not name or c['name'].strip().lower() == name.strip().lower():
+                            return {'id': c['artist_id'], 'artist_id': c['artist_id'], 'name': c['name'], 'item_id': target_id, 'confidence': m['confidence']}
+
+                # C. Check ArtistItems / AlbumArtists by exact name match against catalog artists (guarded against ambiguity)
                 for k in ('ArtistItems', 'AlbumArtists'):
                     for a in (payload.get(k) or []):
-                        if a.get('Id') == target_id and a.get('Name'):
-                            art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (a['Name'],)).fetchone()
-                            if art:
-                                return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'name_match'}
-            except Exception:
-                pass
+                        aname = a.get('Name')
+                        if aname and aname.strip():
+                            if name and aname.strip().lower() != name.strip().lower():
+                                continue
+                            matching = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (aname.strip(),)).fetchall()
+                            if len(matching) == 1:
+                                return {'id': matching[0]['id'], 'artist_id': matching[0]['id'], 'name': matching[0]['name'], 'item_id': target_id, 'confidence': 'name_match'}
+                            elif len(matching) > 1:
+                                return {'id': None, 'artist_id': None, 'name': aname, 'item_id': target_id, 'confidence': 'ambiguous', 'candidates': [dict(m) for m in matching]}
+
+            # 3. ItemId matches a Jellyfin Artist or Album ID nested inside local_items payloads
+            loc2 = self.db.execute('SELECT payload FROM local_items WHERE payload LIKE ? LIMIT 1', (f'%"{target_id}"%',)).fetchone()
+            if loc2:
+                try:
+                    payload = json.loads(loc2['payload'])
+                    # Find which artist entry actually matches target_id
+                    matched_name = None
+                    for k in ('ArtistItems', 'AlbumArtists'):
+                        for a in (payload.get(k) or []):
+                            if a.get('Id') == target_id:
+                                matched_name = a.get('Name')
+                                break
+                        if matched_name:
+                            break
+
+                    target_name = name or matched_name
+
+                    pids = payload.get('ProviderIds') or {}
+                    mb_artist = pids.get('MusicBrainzArtist') or pids.get('MusicBrainzAlbumArtist')
+                    if mb_artist and target_name:
+                        art = self.db.execute('SELECT name FROM artists WHERE id=?', (mb_artist,)).fetchone()
+                        if art and art['name'].strip().lower() == target_name.strip().lower():
+                            return {'id': mb_artist, 'artist_id': mb_artist, 'name': art['name'], 'item_id': target_id, 'confidence': 'verified'}
+
+                    if target_name and target_name.strip():
+                        matching = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (target_name.strip(),)).fetchall()
+                        if len(matching) == 1:
+                            return {'id': matching[0]['id'], 'artist_id': matching[0]['id'], 'name': matching[0]['name'], 'item_id': target_id, 'confidence': 'name_match'}
+                        elif len(matching) > 1:
+                            return {'id': None, 'artist_id': None, 'name': target_name, 'item_id': target_id, 'confidence': 'ambiguous', 'candidates': [dict(m) for m in matching]}
+                except Exception:
+                    pass
+
+        # 4. Name-only resolution (must strictly check for uniqueness; never return first of multiple)
+        if name and name.strip():
+            matching = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (name.strip(),)).fetchall()
+            if len(matching) == 1:
+                return {'id': matching[0]['id'], 'artist_id': matching[0]['id'], 'name': matching[0]['name'], 'confidence': 'name_match'}
+            elif len(matching) > 1:
+                return {'id': None, 'artist_id': None, 'name': name.strip(), 'confidence': 'ambiguous', 'candidates': [dict(m) for m in matching]}
 
         return None
 

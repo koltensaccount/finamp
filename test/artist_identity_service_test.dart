@@ -75,5 +75,19 @@ void main() {
         ArtistIdentityService.mockIsOffline = null;
       }
     });
+
+    test('does not record mapping for ambiguous artist names', () async {
+      // Ensure SharedPreferences is empty
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getKeys(), isEmpty);
+
+      // Verify that recordMapping ignores invalid MBIDs
+      ArtistIdentityService.recordMapping(
+        jellyfinId: 'test-jf-id',
+        name: 'Ambiguous Artist',
+        mbid: 'not-a-valid-mbid',
+      );
+      expect(prefs.getKeys(), isEmpty);
+    });
   });
 }
