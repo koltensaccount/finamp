@@ -33,6 +33,24 @@ Stable Finamp playback, queue, lyrics, normalization, offline download, and lice
    - Executed non-interactive review via `codex review --commit 4d976f8e`.
    - Codex independently verified commit `4d976f8e`: confirmed zero actionable regressions.
 
+6. **Autonomous Review Audit & iOS Simulator Parity Overhaul:**
+   - Evaluated review findings across `git diff d8658b45..HEAD` and addressed all items:
+     * Fixed nullable artist property access in `GoToArtistMenuEntry.build` callback (`go_to_artist_menu_entry.dart`).
+     * Architected `ArtistResolutionHelper.resolveGenuineArtist({artistItems, albumArtists})` in `lib/services/artist_resolution_helper.dart` ensuring truthful fallback to album artists for empty lists or blank/whitespace IDs, avoiding ID fabrication.
+     * Restored "Go to Artist" and "Go to Album" action sheet items in `lib/menus/track_menu.dart`.
+     * Re-enabled playback feature chips in `lib/components/PlayerScreen/control_area.dart` while cleanly defaulting `featureChipsConfiguration.enabled = false` for minimalist Apple Music aesthetics.
+     * Replaced mock resolver with direct production tests in `test/artist_navigation_test.dart` (all 6 edge cases passing).
+   - Resolved iOS simulator toolchain issues:
+     * Unlinked Homebrew rust toolchain shadowing rustup (`aarch64-apple-ios-sim` target for `flutter_discord_rpc`).
+     * Reconstituted `Info.plist` inside `objective_c.framework` for Flutter native asset compliance.
+     * Eliminated ScrollController assertion on iOS by returning unadorned child in `FinampScrollBehavior.buildScrollbar`.
+     * Added `HitTestBehavior.opaque` on `AlbumScreen` and `TrackNameContent` artist link gesture detectors for responsive touch handling.
+   - Interactive verification on iPhone 17 Pro simulator (`485A60A4-3455-4C34-9671-E2F9EB2491B8`):
+     * Active bit-perfect FLAC audio playback confirmed ("Wasted Times" by The Weeknd @ 879 kbps).
+     * Smooth transition between full-screen Now Playing, collapsed mini-player, and Home/Library navigation.
+     * Track action sheet verified with working "Go to Album" and "Go to Artist" navigation routes.
+     * 100% test pass rate: 14/14 Flutter tests (`flutter test`) and 16/16 backend tests (`python3 -m unittest`).
+
 ## Live Status & Verification
 
 1. **Toolchain & Build Environment:**

@@ -9,6 +9,8 @@ import 'package:finamp/menus/components/menuEntries/add_to_playlist_menu_entry.d
 import 'package:finamp/menus/components/menuEntries/clear_queue_menu_entry.dart';
 import 'package:finamp/menus/components/menuEntries/create_playlist_from_current_queue.dart';
 import 'package:finamp/menus/components/menuEntries/delete_from_server_menu_entry.dart';
+import 'package:finamp/menus/components/menuEntries/go_to_album_menu_entry.dart';
+import 'package:finamp/menus/components/menuEntries/go_to_artist_menu_entry.dart';
 import 'package:finamp/menus/components/menuEntries/instant_mix_menu_entry.dart';
 import 'package:finamp/menus/components/menuEntries/menu_entry.dart';
 import 'package:finamp/menus/components/menuEntries/remove_from_current_playlist_menu_entry.dart';
@@ -239,6 +241,8 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
 
     return [
       if (widget.queueInfo != null) RestoreQueueMenuEntry(queueInfo: widget.queueInfo!),
+      GoToArtistMenuEntry(baseItem: widget.item),
+      GoToAlbumMenuEntry(baseItem: widget.item),
       AddToPlaylistMenuEntry(item: playableItem, queueItem: queueItem),
       RemoveFromCurrentPlaylistMenuEntry(
         baseItem: widget.item,

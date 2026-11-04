@@ -6,6 +6,7 @@ import '../../models/jellyfin_models.dart' as jellyfin_models;
 import '../../screens/artist_screen.dart';
 import '../../screens/catalog_search_screen.dart';
 import '../../screens/player_screen.dart';
+import '../../services/artist_resolution_helper.dart';
 import '../../services/favorite_provider.dart';
 import '../../services/queue_service.dart';
 import '../favorite_button.dart';
@@ -34,13 +35,14 @@ class TrackNameContent extends ConsumerWidget {
         currentTrack.item.artist ??
         '';
 
-    final artistItem = (trackBaseItemDto.artistItems ?? trackBaseItemDto.albumArtists)?.firstOrNull;
-    final genuineArtistId = artistItem?.id;
-    final hasGenuineArtist = genuineArtistId != null && genuineArtistId.raw.isNotEmpty;
-    final artistTarget = hasGenuineArtist
+    final genuineArtist = ArtistResolutionHelper.resolveGenuineArtist(
+      artistItems: trackBaseItemDto.artistItems,
+      albumArtists: trackBaseItemDto.albumArtists,
+    );
+    final artistTarget = genuineArtist != null
         ? jellyfin_models.BaseItemDto(
-            id: genuineArtistId,
-            name: artistItem?.name ?? artistName,
+            id: genuineArtist.id,
+            name: genuineArtist.name ?? artistName,
             type: "MusicArtist",
           )
         : null;
@@ -76,6 +78,7 @@ class TrackNameContent extends ConsumerWidget {
                 const SizedBox(height: 3),
                 // Artist Name
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
                     if (artistTarget != null) {
                       Navigator.of(context).pushNamed(

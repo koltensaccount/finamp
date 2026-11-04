@@ -9,6 +9,7 @@ import '../components/print_duration.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
 import '../services/album_screen_provider.dart';
+import '../services/artist_resolution_helper.dart';
 import '../services/favorite_provider.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
@@ -154,12 +155,16 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           const SizedBox(height: 4),
           // Artist Name (Tappable with Apple Red accent)
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () {
-              final artistItem = (resolvedParent.artistItems ?? resolvedParent.albumArtists)?.firstOrNull;
-              if (artistItem?.id != null && artistItem!.id.raw.isNotEmpty) {
+              final genuineArtist = ArtistResolutionHelper.resolveGenuineArtist(
+                artistItems: resolvedParent.artistItems,
+                albumArtists: resolvedParent.albumArtists,
+              );
+              if (genuineArtist != null) {
                 final artistStub = BaseItemDto(
-                  id: artistItem.id,
-                  name: artistItem.name ?? artistName,
+                  id: genuineArtist.id,
+                  name: genuineArtist.name ?? artistName,
                   type: 'MusicArtist',
                 );
                 Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artistStub);

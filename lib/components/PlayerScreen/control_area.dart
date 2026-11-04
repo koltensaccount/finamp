@@ -19,7 +19,7 @@ class ControlArea extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isDesktop && controller.shouldShow(PlayerHideable.features)) const FeatureChips(),
+        if (controller.shouldShow(PlayerHideable.features)) const FeatureChips(),
         if (controller.shouldShow(PlayerHideable.progressSlider))
           if (isDesktop)
             Tooltip(

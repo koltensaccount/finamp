@@ -3,6 +3,7 @@ import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/menus/components/menuEntries/menu_entry.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/screens/artist_screen.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/downloads_service.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/jellyfin_api_helper.dart';
@@ -20,7 +21,10 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
   Widget build(BuildContext context, WidgetRef ref) {
     final jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
 
-    final artistItem = (baseItem.artistItems ?? baseItem.albumArtists)?.firstOrNull;
+    final artistItem = ArtistResolutionHelper.resolveGenuineArtist(
+      artistItems: baseItem.artistItems,
+      albumArtists: baseItem.albumArtists,
+    );
     final canGoToArtist = artistItem != null && artistItem.id.raw.isNotEmpty;
 
     return Visibility(
@@ -29,13 +33,17 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
         icon: TablerIcons.user,
         title: AppLocalizations.of(context)!.goToArtist,
         onTap: () async {
+          if (artistItem == null || artistItem.id.raw.isEmpty) {
+            return;
+          }
+          final artistId = artistItem.id;
           late BaseItemDto artist;
           try {
             if (FinampSettingsHelper.finampSettings.isOffline) {
               final downloadsService = GetIt.instance<DownloadsService>();
-              artist = (await downloadsService.getCollectionInfo(id: artistItem.id))!.baseItem!;
+              artist = (await downloadsService.getCollectionInfo(id: artistId))!.baseItem!;
             } else {
-              artist = await jellyfinApiHelper.getItemById(artistItem.id);
+              artist = await jellyfinApiHelper.getItemById(artistId);
             }
           } catch (e) {
             GlobalSnackbar.error(e);
@@ -52,7 +60,9 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
 
   @override
   bool get isVisible {
-    final artistItem = (baseItem.artistItems ?? baseItem.albumArtists)?.firstOrNull;
-    return artistItem != null && artistItem.id.raw.isNotEmpty;
+    return ArtistResolutionHelper.resolveGenuineArtist(
+      artistItems: baseItem.artistItems,
+      albumArtists: baseItem.albumArtists,
+    ) != null;
   }
 }

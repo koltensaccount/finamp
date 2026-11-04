@@ -1244,8 +1244,11 @@ class FinampScrollBehavior extends MaterialScrollBehavior {
       case Axis.horizontal:
         return child;
       case Axis.vertical:
+        if (getPlatform(context) == TargetPlatform.iOS && interactive != true) {
+          return child;
+        }
         final controller = details.controller;
-        if (controller == null || controller.positions.length > 1) {
+        if (controller == null || (controller.hasClients && controller.positions.length > 1)) {
           return child;
         }
         return Scrollbar(controller: controller, interactive: interactive, child: child);
