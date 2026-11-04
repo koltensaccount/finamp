@@ -3,6 +3,8 @@ Books Core: Canonical literary Work, Edition, Asset, Progress, and Alignment Eng
 Lightweight SQLite backend with WAL mode, Audiobookshelf synchronization, and progress tracking.
 """
 
+import hashlib
+import hmac
 import json
 import os
 import sqlite3
@@ -10,6 +12,11 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+
+
+def generate_media_ticket(secret: str, path: str, expires_at: int) -> str:
+    message = f"{path}:{expires_at}".encode("utf-8")
+    return hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
 
 
 def _norm(s):
@@ -134,8 +141,23 @@ class BooksCore:
                     engine TEXT NOT NULL,
                     version TEXT NOT NULL,
                     confidence REAL NOT NULL,
-                    mapping_data TEXT NOT NULL, -- JSON
+                    mapping_data TEXT NOT NULL, -- JSON array of {sentence_idx, epub_cfi, text, audio_track, audio_start_sec, audio_end_sec, confidence}
+                    epub_asset_hash TEXT,
+                    audio_asset_hash TEXT,
+                    unmatched_regions TEXT, -- JSON array of {type, start, end, reason}
                     created_at REAL NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS background_tasks (
+                    id TEXT PRIMARY KEY,
+                    task_type TEXT NOT NULL,
+                    priority TEXT NOT NULL, -- 'immediate', 'opportunistic', 'deferred'
+                    payload TEXT NOT NULL, -- JSON
+                    state TEXT NOT NULL DEFAULT 'queued', -- 'queued', 'processing', 'completed', 'failed', 'yielded'
+                    retries INTEGER DEFAULT 0,
+                    error_message TEXT,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS book_requests (
@@ -205,8 +227,15 @@ class BooksCore:
                 }
 
                 # Resolve relative cover proxy if cover_url starts with http://127.0.0.1:13378
-                if book.get("cover_url") and "13378" in book["cover_url"]:
-                    book["cover_url"] = f"http://127.0.0.1:8765/v1/books/{book['id']}/cover"
+                if book.get("cover_url") and ("13378" in book["cover_url"] or "/v1/books/" in book["cover_url"]):
+                    secret = os.environ.get("CATALOG_API_TOKEN", "")
+                    cover_path = f"/v1/books/{book['id']}/cover"
+                    if secret:
+                        expires = int(time.time()) + 86400
+                        sig = generate_media_ticket(secret, cover_path, expires)
+                        book["cover_url"] = f"http://127.0.0.1:8765{cover_path}?ticket={sig}&expires={expires}"
+                    else:
+                        book["cover_url"] = f"http://127.0.0.1:8765{cover_path}"
 
                 if format_filter:
                     if format_filter == "epub" and "epub" not in formats:
@@ -272,14 +301,45 @@ class BooksCore:
                 "is_finished": bool(book.pop("is_finished")),
             }
 
-            if book.get("cover_url") and "13378" in book["cover_url"]:
-                book["cover_url"] = f"http://127.0.0.1:8765/v1/books/{book['id']}/cover"
+            secret = os.environ.get("CATALOG_API_TOKEN", "")
+            expires = int(time.time()) + 86400
+
+            if book.get("cover_url") and ("13378" in book["cover_url"] or "/v1/books/" in book["cover_url"]):
+                cover_path = f"/v1/books/{book['id']}/cover"
+                if secret:
+                    sig = generate_media_ticket(secret, cover_path, expires)
+                    book["cover_url"] = f"http://127.0.0.1:8765{cover_path}?ticket={sig}&expires={expires}"
+                else:
+                    book["cover_url"] = f"http://127.0.0.1:8765{cover_path}"
+
+            # Attach media URLs to edition assets
+            for ed in editions:
+                for a in ed.get("assets", []):
+                    if ed.get("format") == "audiobook" and a.get("track_number"):
+                        audio_path = f"/v1/books/{work_id}/audio/{a['track_number']}"
+                        if secret:
+                            sig = generate_media_ticket(secret, audio_path, expires)
+                            a["stream_url"] = f"http://127.0.0.1:8765{audio_path}?ticket={sig}&expires={expires}"
+                        else:
+                            a["stream_url"] = f"http://127.0.0.1:8765{audio_path}"
+                    elif ed.get("format") == "epub":
+                        epub_path = f"/v1/books/{work_id}/epub"
+                        if secret:
+                            sig = generate_media_ticket(secret, epub_path, expires)
+                            a["download_url"] = f"http://127.0.0.1:8765{epub_path}?ticket={sig}&expires={expires}"
+                        else:
+                            a["download_url"] = f"http://127.0.0.1:8765{epub_path}"
 
             # Alignment
             align_row = db.execute("SELECT * FROM alignments WHERE work_id=? ORDER BY created_at DESC LIMIT 1", (work_id,)).fetchone()
             if align_row:
                 align = dict(align_row)
                 align["mapping_data"] = json.loads(align["mapping_data"]) if align["mapping_data"] else []
+                if align.get("unmatched_regions"):
+                    try:
+                        align["unmatched_regions"] = json.loads(align["unmatched_regions"])
+                    except Exception:
+                        pass
                 book["alignment"] = align
             else:
                 book["alignment"] = None
@@ -513,21 +573,22 @@ class BooksCore:
 
                     synced_works.append(work_id)
 
-            # Generate alignment when a work has both epub and audiobook editions
+            # Check if any synced work has both epub and audiobook, and if so enqueue an alignment task
             for wid in set(synced_works):
                 epub_ed = db.execute("SELECT id FROM editions WHERE work_id=? AND format='epub'", (wid,)).fetchone()
                 audio_ed = db.execute("SELECT id FROM editions WHERE work_id=? AND format='audiobook'", (wid,)).fetchone()
                 if epub_ed and audio_ed:
-                    align_id = f"align-{wid}"
-                    mapping = [
-                        {"chapter_idx": 1, "epub_cfi": "/6/2[ch01]!/4/2/1", "audio_start_sec": 0.0, "confidence": 0.95},
-                        {"chapter_idx": 2, "epub_cfi": "/6/4[ch02]!/4/2/1", "audio_start_sec": 74.15, "confidence": 0.92},
-                    ]
-                    db.execute("""
-                        INSERT INTO alignments (id, work_id, epub_edition_id, audio_edition_id, alignment_level, engine, version, confidence, mapping_data, created_at)
-                        VALUES (?, ?, ?, ?, 'chapter', 'storyteller-stalign', '1.0.0', 0.94, ?, ?)
-                        ON CONFLICT(id) DO UPDATE SET mapping_data=excluded.mapping_data, confidence=excluded.confidence
-                    """, (align_id, wid, epub_ed["id"], audio_ed["id"], json.dumps(mapping), now))
+                    existing_task = db.execute(
+                        "SELECT id FROM background_tasks WHERE task_type='align_work' AND payload LIKE ? AND state IN ('queued', 'processing')",
+                        (f"%{wid}%",)
+                    ).fetchone()
+                    if not existing_task:
+                        task_id = f"task-{uuid.uuid4().hex[:12]}"
+                        payload = json.dumps({"work_id": wid, "epub_edition_id": epub_ed["id"], "audio_edition_id": audio_ed["id"]})
+                        db.execute("""
+                            INSERT INTO background_tasks (id, task_type, priority, payload, state, created_at, updated_at)
+                            VALUES (?, 'align_work', 'opportunistic', ?, 'queued', ?, ?)
+                        """, (task_id, payload, now, now))
 
             db.commit()
 
@@ -671,3 +732,316 @@ class BooksCore:
                 db.commit()
             return self.get_request(request_id)
         return req
+
+    # --- Alignment Engine Architecture ---
+
+    def store_alignment(
+        self,
+        work_id: str,
+        epub_edition_id: str,
+        audio_edition_id: str,
+        alignment_level: str,
+        engine: str,
+        version: str,
+        confidence: float,
+        mapping_data: list,
+        epub_asset_hash: str = None,
+        audio_asset_hash: str = None,
+        unmatched_regions: list = None,
+    ):
+        if alignment_level not in ("chapter", "sentence"):
+            raise ValueError(f"Invalid alignment_level: {alignment_level}")
+        if not (0.0 <= confidence <= 1.0):
+            raise ValueError("confidence must be between 0.0 and 1.0")
+        if not isinstance(mapping_data, list):
+            raise ValueError("mapping_data must be a list of mapping objects")
+
+        now = time.time()
+        align_id = f"align-{work_id}"
+        mapping_json = json.dumps(mapping_data)
+        unmatched_json = json.dumps(unmatched_regions or [])
+
+        with self.get_db() as db:
+            db.execute("""
+                INSERT INTO alignments (
+                    id, work_id, epub_edition_id, audio_edition_id,
+                    alignment_level, engine, version, confidence,
+                    mapping_data, epub_asset_hash, audio_asset_hash,
+                    unmatched_regions, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    epub_edition_id=excluded.epub_edition_id,
+                    audio_edition_id=excluded.audio_edition_id,
+                    alignment_level=excluded.alignment_level,
+                    engine=excluded.engine,
+                    version=excluded.version,
+                    confidence=excluded.confidence,
+                    mapping_data=excluded.mapping_data,
+                    epub_asset_hash=excluded.epub_asset_hash,
+                    audio_asset_hash=excluded.audio_asset_hash,
+                    unmatched_regions=excluded.unmatched_regions,
+                    created_at=excluded.created_at
+            """, (
+                align_id, work_id, epub_edition_id, audio_edition_id,
+                alignment_level, engine, version, confidence,
+                mapping_json, epub_asset_hash, audio_asset_hash,
+                unmatched_json, now
+            ))
+            db.commit()
+
+        return self.get_alignment(work_id)
+
+    def get_alignment(self, work_id: str):
+        with self.get_db() as db:
+            row = db.execute("SELECT * FROM alignments WHERE work_id=? ORDER BY created_at DESC LIMIT 1", (work_id,)).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            if d.get("mapping_data"):
+                try:
+                    d["mapping_data"] = json.loads(d["mapping_data"])
+                except Exception:
+                    pass
+            if d.get("unmatched_regions"):
+                try:
+                    d["unmatched_regions"] = json.loads(d["unmatched_regions"])
+                except Exception:
+                    pass
+            return d
+
+    def map_audio_to_reading_location(self, work_id: str, track_number: int, timestamp_seconds: float):
+        """
+        Maps an audio playback position (track + timestamp) to the corresponding EPUB CFI.
+        Returns a dict with {epub_cfi, sentence_idx, confidence, text} or None.
+        """
+        alignment = self.get_alignment(work_id)
+        if not alignment or not alignment.get("mapping_data"):
+            return None
+
+        mappings = alignment["mapping_data"]
+        track_candidates = [
+            m for m in mappings
+            if m.get("audio_track", 1) == track_number
+        ]
+        if not track_candidates:
+            return None
+
+        best_match = None
+        for m in track_candidates:
+            start = m.get("audio_start_sec", 0.0)
+            end = m.get("audio_end_sec", float("inf"))
+            if start <= timestamp_seconds <= end:
+                best_match = m
+                break
+
+        if not best_match:
+            prior = [m for m in track_candidates if m.get("audio_start_sec", 0.0) <= timestamp_seconds]
+            if prior:
+                best_match = max(prior, key=lambda m: m.get("audio_start_sec", 0.0))
+
+        if best_match:
+            return {
+                "epub_cfi": best_match.get("epub_cfi"),
+                "sentence_idx": best_match.get("sentence_idx") or best_match.get("chapter_idx"),
+                "confidence": best_match.get("confidence", alignment.get("confidence", 1.0)),
+                "text": best_match.get("text"),
+                "alignment_level": alignment.get("alignment_level", "sentence"),
+            }
+        return None
+
+    def map_reading_location_to_audio(self, work_id: str, epub_cfi: str):
+        """
+        Maps an EPUB CFI reading position to audio playback position (track + seconds).
+        Returns a dict with {audio_track, audio_timestamp_seconds, confidence} or None.
+        """
+        alignment = self.get_alignment(work_id)
+        if not alignment or not alignment.get("mapping_data"):
+            return None
+
+        mappings = alignment["mapping_data"]
+        for m in mappings:
+            if m.get("epub_cfi") == epub_cfi:
+                return {
+                    "audio_track": m.get("audio_track", 1),
+                    "audio_timestamp_seconds": m.get("audio_start_sec", 0.0),
+                    "confidence": m.get("confidence", alignment.get("confidence", 1.0)),
+                }
+
+        cfi_prefix = epub_cfi.split("!")[0] if "!" in epub_cfi else epub_cfi
+        prefix_matches = [
+            m for m in mappings
+            if m.get("epub_cfi", "").startswith(cfi_prefix)
+        ]
+        if prefix_matches:
+            best = prefix_matches[0]
+            return {
+                "audio_track": best.get("audio_track", 1),
+                "audio_timestamp_seconds": best.get("audio_start_sec", 0.0),
+                "confidence": max(0.5, best.get("confidence", 0.8) * 0.9),
+            }
+
+        return None
+
+    # --- Persistent Resource-Aware Background Task Queue ---
+
+    def enqueue_task(self, task_type: str, payload: dict, priority: str = "opportunistic"):
+        if priority not in ("immediate", "opportunistic", "deferred"):
+            raise ValueError(f"Invalid priority: {priority}")
+        task_id = f"task-{uuid.uuid4().hex[:12]}"
+        now = time.time()
+        with self.get_db() as db:
+            db.execute("""
+                INSERT INTO background_tasks (id, task_type, priority, payload, state, retries, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'queued', 0, ?, ?)
+            """, (task_id, task_type, priority, json.dumps(payload), now, now))
+            db.commit()
+        return self.get_task(task_id)
+
+    def get_task(self, task_id: str):
+        with self.get_db() as db:
+            row = db.execute("SELECT * FROM background_tasks WHERE id=?", (task_id,)).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            if d.get("payload"):
+                try:
+                    d["payload"] = json.loads(d["payload"])
+                except Exception:
+                    pass
+            return d
+
+    def list_tasks(self, state: str = None, priority: str = None):
+        with self.get_db() as db:
+            query = "SELECT * FROM background_tasks"
+            params = []
+            clauses = []
+            if state:
+                clauses.append("state=?")
+                params.append(state)
+            if priority:
+                clauses.append("priority=?")
+                params.append(priority)
+            if clauses:
+                query += " WHERE " + " AND ".join(clauses)
+            query += " ORDER BY created_at DESC"
+            rows = db.execute(query, params).fetchall()
+            res = []
+            for r in rows:
+                d = dict(r)
+                if d.get("payload"):
+                    try:
+                        d["payload"] = json.loads(d["payload"])
+                    except Exception:
+                        pass
+                res.append(d)
+            return res
+
+    def can_run_background_tasks(self, priority: str = "opportunistic") -> bool:
+        """
+        Resource-aware gatekeeper:
+        - Checks free disk space on database filesystem.
+        - Checks system 1-minute load average to prevent CPU saturation.
+        """
+        import shutil
+
+        try:
+            total, used, free = shutil.disk_usage(os.path.dirname(os.path.abspath(self.db_path)))
+            free_mb = free / (1024 * 1024)
+            if priority == "immediate" and free_mb < 100:
+                return False
+            if priority in ("opportunistic", "deferred") and free_mb < 500:
+                return False
+        except Exception:
+            pass
+
+        if priority in ("opportunistic", "deferred"):
+            try:
+                if hasattr(os, "getloadavg"):
+                    load1, _, _ = os.getloadavg()
+                    cpu_count = os.cpu_count() or 4
+                    if load1 > cpu_count * 2.5:
+                        return False
+            except Exception:
+                pass
+
+        return True
+
+    def process_next_task(self):
+        """
+        Picks and processes the next queued task based on priority order:
+        immediate -> opportunistic -> deferred.
+        """
+        with self.get_db() as db:
+            row = db.execute("""
+                SELECT * FROM background_tasks
+                WHERE state='queued'
+                ORDER BY
+                    CASE priority
+                        WHEN 'immediate' THEN 1
+                        WHEN 'opportunistic' THEN 2
+                        WHEN 'deferred' THEN 3
+                        ELSE 4
+                    END ASC,
+                    created_at ASC
+                LIMIT 1
+            """).fetchone()
+
+            if not row:
+                return {"status": "idle", "message": "No queued tasks"}
+
+            task = dict(row)
+            task_id = task["id"]
+            priority = task["priority"]
+            task_type = task["task_type"]
+            payload = json.loads(task["payload"]) if task.get("payload") else {}
+
+            if not self.can_run_background_tasks(priority):
+                return {"status": "deferred", "task_id": task_id, "reason": "system_load_or_disk"}
+
+            now = time.time()
+            db.execute("UPDATE background_tasks SET state='processing', updated_at=? WHERE id=?", (now, task_id))
+            db.commit()
+
+        try:
+            result = self._dispatch_task(task_type, payload)
+            now = time.time()
+            with self.get_db() as db:
+                db.execute("UPDATE background_tasks SET state='completed', updated_at=? WHERE id=?", (now, task_id))
+                db.commit()
+            return {"status": "completed", "task_id": task_id, "result": result}
+        except Exception as e:
+            now = time.time()
+            with self.get_db() as db:
+                retries = task.get("retries", 0) + 1
+                new_state = "failed" if retries >= 3 else "queued"
+                db.execute("""
+                    UPDATE background_tasks
+                    SET state=?, retries=?, error_message=?, updated_at=?
+                    WHERE id=?
+                """, (new_state, retries, str(e), now, task_id))
+                db.commit()
+            return {"status": "error", "task_id": task_id, "error": str(e), "retries": retries}
+
+    def _dispatch_task(self, task_type: str, payload: dict):
+        if task_type == "verify_metadata":
+            req_id = payload.get("request_id")
+            return self.verify_request_metadata(req_id)
+        elif task_type == "align_work":
+            work_id = payload.get("work_id")
+            if "mapping_data" in payload:
+                return self.store_alignment(
+                    work_id=work_id,
+                    epub_edition_id=payload.get("epub_edition_id"),
+                    audio_edition_id=payload.get("audio_edition_id"),
+                    alignment_level=payload.get("alignment_level", "sentence"),
+                    engine=payload.get("engine", "storyteller-stalign"),
+                    version=payload.get("version", "1.0.0"),
+                    confidence=payload.get("confidence", 0.95),
+                    mapping_data=payload["mapping_data"],
+                    epub_asset_hash=payload.get("epub_asset_hash"),
+                    audio_asset_hash=payload.get("audio_asset_hash"),
+                    unmatched_regions=payload.get("unmatched_regions"),
+                )
+            return {"status": "alignment_queued_or_ready", "work_id": work_id}
+        else:
+            return {"status": "no_op", "task_type": task_type}
