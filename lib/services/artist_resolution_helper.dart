@@ -23,4 +23,26 @@ class ArtistResolutionHelper {
     }
     return null;
   }
+
+  /// Resolves an artist [BaseItemDto] target for navigation from a track/album [BaseItemDto].
+  /// Truthfully falls back from [artistItems] to [albumArtists] when [artistItems] is empty
+  /// or contains invalid/whitespace IDs. Returns null if no genuine artist ID exists,
+  /// avoiding fabricating an artist target using the track's ID.
+  static BaseItemDto? resolveArtistNavigationTarget({
+    required BaseItemDto track,
+    String? fallbackArtistName,
+  }) {
+    final genuine = resolveGenuineArtist(
+      artistItems: track.artistItems,
+      albumArtists: track.albumArtists,
+    );
+    if (genuine != null) {
+      return BaseItemDto(
+        id: genuine.id,
+        name: genuine.name ?? fallbackArtistName ?? track.name,
+        type: "MusicArtist",
+      );
+    }
+    return null;
+  }
 }

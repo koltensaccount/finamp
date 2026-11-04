@@ -78,5 +78,73 @@ void main() {
         isNull,
       );
     });
+
+    test('resolveArtistNavigationTarget resolves valid target from track artistItems', () {
+      final track = BaseItemDto(
+        id: BaseItemId('track-uuid-1234'),
+        name: 'Track Title',
+        type: 'Audio',
+        artistItems: [
+          NameIdPair(id: BaseItemId('artist-uuid-5678'), name: 'Real Artist'),
+        ],
+      );
+
+      final target = ArtistResolutionHelper.resolveArtistNavigationTarget(
+        track: track,
+        fallbackArtistName: 'Real Artist',
+      );
+
+      expect(target, isNotNull);
+      expect(target!.id.raw, equals('artist-uuid-5678'));
+      expect(target.id.raw, isNot(equals('track-uuid-1234')));
+      expect(target.name, equals('Real Artist'));
+      expect(target.type, equals('MusicArtist'));
+    });
+
+    test('resolveArtistNavigationTarget falls back to albumArtists when artistItems is an empty list', () {
+      // Direct regression test for empty-list vs albumArtists fallback:
+      // A naive `(track.artistItems ?? track.albumArtists)` evaluates to `[]` when artistItems is `[]`,
+      // completely missing albumArtists. ArtistResolutionHelper correctly checks and falls back.
+      final track = BaseItemDto(
+        id: BaseItemId('track-uuid-1234'),
+        name: 'Track Title',
+        type: 'Audio',
+        artistItems: [],
+        albumArtists: [
+          NameIdPair(id: BaseItemId('album-artist-uuid-3333'), name: 'Album Artist 3333'),
+        ],
+      );
+
+      final target = ArtistResolutionHelper.resolveArtistNavigationTarget(
+        track: track,
+        fallbackArtistName: 'Album Artist 3333',
+      );
+
+      expect(target, isNotNull);
+      expect(target!.id.raw, equals('album-artist-uuid-3333'));
+      expect(target.id.raw, isNot(equals('track-uuid-1234')));
+      expect(target.name, equals('Album Artist 3333'));
+      expect(target.type, equals('MusicArtist'));
+    });
+
+    test('resolveArtistNavigationTarget refuses to fabricate artist target with track ID', () {
+      final track = BaseItemDto(
+        id: BaseItemId('track-uuid-1234'),
+        name: 'Track Title',
+        type: 'Audio',
+        artists: ['String-Only Artist'],
+        artistItems: [],
+        albumArtists: [
+          NameIdPair(id: BaseItemId('   '), name: 'Whitespace ID'),
+        ],
+      );
+
+      final target = ArtistResolutionHelper.resolveArtistNavigationTarget(
+        track: track,
+        fallbackArtistName: 'String-Only Artist',
+      );
+
+      expect(target, isNull);
+    });
   });
 }

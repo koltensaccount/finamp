@@ -35,17 +35,10 @@ class TrackNameContent extends ConsumerWidget {
         currentTrack.item.artist ??
         '';
 
-    final genuineArtist = ArtistResolutionHelper.resolveGenuineArtist(
-      artistItems: trackBaseItemDto.artistItems,
-      albumArtists: trackBaseItemDto.albumArtists,
+    final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+      track: trackBaseItemDto,
+      fallbackArtistName: artistName,
     );
-    final artistTarget = genuineArtist != null
-        ? jellyfin_models.BaseItemDto(
-            id: genuineArtist.id,
-            name: genuineArtist.name ?? artistName,
-            type: "MusicArtist",
-          )
-        : null;
 
     final title = currentTrack.item.title;
 
