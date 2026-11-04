@@ -42,7 +42,13 @@ class HTTPTests(unittest.TestCase):
     # Test direct MBID resolve
     res_direct = call('/v1/artists/resolve?item_id=artist-a')
     self.assertEqual(res_direct['artist_id'], 'artist-a')
+    self.assertEqual(res_direct['id'], 'artist-a')
     self.assertEqual(res_direct['name'], 'A')
+
+    # Test resolve by name
+    res_name = call('/v1/artists/resolve?name=A')
+    self.assertEqual(res_name['artist_id'], 'artist-a')
+    self.assertEqual(res_name['name'], 'A')
 
     # Test 404 for unknown item
     with self.assertRaises(urllib.error.HTTPError) as exc:

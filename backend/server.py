@@ -266,10 +266,11 @@ class Handler(BaseHTTPRequestHandler):
                         fetch_mb_release(c, best_ed['id'])
                         result = c.group(group_id)
             elif parts[:2] == ['v1', 'artists'] and len(parts) == 3 and parts[2] == 'resolve':
-                item_id = q.get('item_id', [None])[0]
-                if not item_id:
-                    raise ValueError('item_id query parameter required')
-                result = c.resolve_artist(item_id)
+                item_id = q.get('item_id', [None])[0] or q.get('jellyfin_id', [None])[0]
+                name = q.get('name', [None])[0]
+                if not item_id and not name:
+                    raise ValueError('item_id or name query parameter required')
+                result = c.resolve_artist(item_id=item_id, name=name)
                 if result is None:
                     self.send_error(404)
                     return

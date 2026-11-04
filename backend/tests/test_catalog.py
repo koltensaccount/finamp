@@ -57,4 +57,58 @@ class Tests(unittest.TestCase):
   it = {'ServerId':'server','Id':'local-2','Path':'/media/Music/song2.flac','Name':'Song','Artists':['A','B'],'Album':'Album','IndexNumber':1,'ParentIndexNumber':1,'RunTimeTicks':1000000000}
   self.c.sync([it], {})
   self.assertEqual(self.c.album('edition')['ownership'], 'full')
+ def test_resolve_artist_primary_and_featured(self):
+  it = {
+      'ServerId': 'server', 'Id': 'track-feat', 'Path': '/media/Music/feat.flac',
+      'Name': 'Song Feat', 'Album': 'Album', 'IndexNumber': 1, 'ParentIndexNumber': 1,
+      'ArtistItems': [{'Id': 'jf-a', 'Name': 'A'}, {'Id': 'jf-b', 'Name': 'B'}],
+      'ProviderIds': {'MusicBrainzArtist': 'artist-a'}
+  }
+  self.c.sync([it], {})
+  res_track = self.c.resolve_artist('track-feat')
+  self.assertEqual(res_track['artist_id'], 'artist-a')
+  self.assertEqual(res_track['confidence'], 'exact')
+  res_b = self.c.resolve_artist('jf-b')
+  self.assertEqual(res_b['artist_id'], 'artist-b')
+  self.assertEqual(res_b['confidence'], 'name_match')
+ def test_resolve_artist_compilation_album(self):
+  self.c.db.execute("INSERT INTO artists(id, name) VALUES('va-id', 'Various Artists') ON CONFLICT(id) DO UPDATE SET name=excluded.name")
+  self.c.db.execute("INSERT INTO artists(id, name) VALUES('artist-c', 'Performer C') ON CONFLICT(id) DO UPDATE SET name=excluded.name")
+  comp_track = {
+      'ServerId': 'server', 'Id': 'comp-track-1', 'AlbumId': 'comp-album-1',
+      'Path': '/media/Music/VA/track1.flac', 'Name': 'VA Song',
+      'AlbumArtist': 'Various Artists', 'Artists': ['Performer C'],
+      'AlbumArtists': [{'Id': 'va-jf', 'Name': 'Various Artists'}],
+      'ArtistItems': [{'Id': 'c-jf', 'Name': 'Performer C'}],
+      'ProviderIds': {
+          'MusicBrainzArtist': 'artist-c',
+          'MusicBrainzAlbumArtist': 'va-id',
+          'MusicBrainzAlbum': 'comp-rel-1'
+      }
+  }
+  self.c.sync([comp_track], {})
+  res = self.c.resolve_artist('comp-track-1')
+  self.assertEqual(res['artist_id'], 'artist-c')
+  self.assertEqual(res['name'], 'Performer C')
+  self.assertEqual(res['confidence'], 'exact')
+ def test_resolve_artist_same_name_disambiguation(self):
+  self.c.db.execute("INSERT INTO artists(id, name) VALUES('art-jw1', 'John Williams') ON CONFLICT(id) DO UPDATE SET name=excluded.name")
+  self.c.db.execute("INSERT INTO artists(id, name) VALUES('art-jw2', 'John Williams') ON CONFLICT(id) DO UPDATE SET name=excluded.name")
+  self.c.db.execute("INSERT INTO release_groups(id, title) VALUES('rg-jw', 'Star Wars OST')")
+  self.c.db.execute("INSERT INTO credits VALUES('group', 'rg-jw', 'art-jw1', 0, 'John Williams', '')")
+  res = self.c.resolve_artist(name='John Williams')
+  self.assertEqual(res['artist_id'], 'art-jw1')
+  self.assertEqual(res['confidence'], 'disambiguated_local_presence')
+ def test_resolve_artist_unverified_never_claims_exact(self):
+  self.c.db.execute("INSERT INTO artists(id, name) VALUES('art-raw', 'Raw Band') ON CONFLICT(id) DO UPDATE SET name=excluded.name")
+  raw_track = {
+      'ServerId': 'server', 'Id': 'raw-track', 'Path': '/media/Music/raw.flac',
+      'Name': 'Raw Song', 'Album': 'Raw Album',
+      'ArtistItems': [{'Id': 'raw-jf', 'Name': 'Raw Band'}]
+  }
+  self.c.sync([raw_track], {})
+  res = self.c.resolve_artist('raw-track')
+  self.assertEqual(res['artist_id'], 'art-raw')
+  self.assertNotEqual(res['confidence'], 'exact')
+  self.assertEqual(res['confidence'], 'name_match')
 if __name__=='__main__':unittest.main()
