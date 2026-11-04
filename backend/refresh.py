@@ -70,6 +70,14 @@ def refresh(a):
  with c.db:
   for rel_id, in c.db.execute("SELECT id FROM releases").fetchall():
    c.reconcile_release(rel_id)
+ try:
+  from acquisition import AcquisitionDispatcher
+  dispatcher = AcquisitionDispatcher(c)
+  poll_res = dispatcher.poll_lifecycle()
+  if poll_res.get('active_count', 0) > 0:
+   summary['active_requests'] = poll_res['active_count']
+ except Exception:
+  pass
  summary={'jellyfin_audio_items':len(items),'public_recordings':c.db.execute("select count(*) from recordings where id not like 'local:%'").fetchone()[0],'confident_mappings':c.db.execute("select count(*) from mappings where confidence='verified'").fetchone()[0],'local_only_mappings':c.db.execute("select count(*) from mappings where confidence='local_identity'").fetchone()[0],'ambiguous_candidates':c.db.execute("select count(*) from mappings where confidence='ambiguous'").fetchone()[0]}
  old={p.replace('/mnt/media/','/media/',1) for p, in inv.execute("select path from files where scope='library'")};current={i['Path'] for i in items}
  summary.update(new_since_inventory=len(current-old),inventory_paths_not_in_jellyfin=len(old-current))

@@ -1,25 +1,18 @@
-# Next concrete task — Antigravity
+# Next Concrete Tasks
 
-Branch/worktree: create `antigravity/catalog-client` from Codex's reviewed branch.
-Ownership: Flutter client integration only; coordinate before changing backend/.
+## 1. Flutter Client Integration (Finamp App Agent on `antigravity/catalog-client`)
 
-1. Install/use pinned Flutter 3.47.7 and full Xcode. Run unmodified baseline with
-   existing Finamp configuration; record simulator/device results honestly.
-2. Add a typed catalog API client and one functional search route, retaining
-   existing Jellyfin media, download and queue machinery. Catalog tracks with
-   exactly one confident mapping resolve the returned Jellyfin item ID through
-   existing API/model code; ambiguous results must not play automatically.
-3. Album pages use release-group concepts and edition tracks. Missing items offer
-   explicit album requests; single-song option explains unsupported behavior.
-4. Display outbox queued state honestly; `dispatch_enabled:false` must never look
-   like an active download. Preserve cached/offline navigation.
+- Connect downloaded track and album detail views to `/v1/artists/resolve?item_id={itemId}`:
+  - Add `resolveArtist(String itemId)` in `CatalogApiClient`.
+  - When user taps on artist name in a downloaded/offline view, resolve the item ID and push `CatalogArtistScreen` with resolved `artistMbid`.
+- Wire up the request status badge in `CatalogArtistScreen` and `CatalogAlbumScreen`:
+  - When a user taps "Request Album", display the live request progression (`queued` -> `dispatched` -> `downloading` -> `available`).
+- Render enriched artist details from `/v1/artists/{id}`:
+  - Utilize `artist.image_url` for header background and Deezer artist photo fallback.
+  - Display genres pills and bio summary in artist overview dialog.
 
-Expected files: new catalog client/models, existing search navigation touchpoint,
-targeted widget/client tests, CURRENT_STATE update. No player rewrite or redesign.
+## 2. Server Operations & Monitoring
 
-Acceptance: build/test results recorded; one search result plays a mapped local
-Jellyfin item; unavailable result submits a controlled request; ambiguity cannot
-autoplay; offline Finamp downloads remain reachable without the public catalog.
-
-Separate backend follow-up: scoped acquisition dispatcher with one controlled
-request; do not enable broad Soularr monitoring as a substitute.
+- Keep `server.py` and `refresh.py --watch` running continuously under systemd or supervisor.
+- Monitor Soularr / SLSKD completion for Request 4 (Neutral Milk Hotel — *In the Aeroplane Over the Sea*).
+- Observe automatic state progression from `dispatched` -> `downloading` -> `imported` -> `available`.

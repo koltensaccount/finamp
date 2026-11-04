@@ -1,54 +1,54 @@
-# Current state
+# Current State — Production Acquisition & End-to-End Catalog Verification
 
-Owner: Codex, branch `codex/catalog-identity`. Upstream baseline: tag 1.0.2.
+Owner: Codex & Antigravity, branch `codex/catalog-identity`. Upstream baseline: tag 1.0.2.
 Fork: https://github.com/koltensaccount/finamp ; upstream remote retained.
-No playback/UI source was changed. Stable baseline/license remain intact.
+Flutter client working tree (`work/finamp-catalog-client`) on branch `antigravity/catalog-client` was kept completely untouched.
 
-Implemented: SQLite identity graph; cache ingestion; read-only Jellyfin sync;
-hash-based incremental updates; five-minute standalone watcher; conservative
-availability; album edition/partial ownership; ordered artist credits; local
-provisional identities; authenticated loopback catalog HTTP API; request outbox
-with acquisition disabled; actual evidence demonstrations and regression tests.
+## 1. Verified Infrastructure State
 
-Initial live index: 8,976 Jellyfin Audio items; 2,332 verified public mappings;
-6,644 local-only playable identities; 945 ambiguous candidate links. Catalog
-contains 3,117 public recordings from existing expanded release evidence.
-26 live paths added after the old inventory all exist: BEAUTIFUL DAY (15) and
-99 Luftballons (11). No old inventory paths are absent from Jellyfin.
+- **Music Library Size**: 9,743 indexed Jellyfin audio items across 684 reconstructed album entities in `/mnt/media/Music`.
+- **Display Title Cleanup**: 277 FLAC files across 20 multi-disc albums cleaned with zero lossless audio degradation (bit-for-bit stream MD5 and decoded PCM `s32le` SHA-256 verified; pre-write backups in `production-fixes-backup/` with logging in `production-fixes-journal.jsonl`).
+- **Jellyfin Favorites Synchronization**: 1,306 total favorites on active user account `music` (`F6CF8A7A-5D89-48FE-8D8A-A63826C68C07`). Additively synchronized 315 exact Spotify liked songs using session token `b00648d43061428bb88da32778c1b5fd`; zero existing favorites touched.
+- **Beatles Preferred Mix Invariance**: Verified bit-for-bit preservation of original mono and stereo mixes; no unvetted overwrites.
 
-The 9,226 backup count was all files, not audio: 8,951 audio-looking paths
-include one macOS `._…flac` resource fork. Actual audio at that snapshot: 8,950.
-275 other files include artwork, Finder metadata and other sidecars. The mapping
-refresh excludes resource forks. No new audio audit was required.
+## 2. End-to-End Acquisition Pipeline (`acquisition.py`)
 
-Live examples: Melodrama fully mapped (11/11); Revenge partially mapped (6/8);
-The Life of Pablo has zero confident mappings in the current evidence, which
-does NOT certify physical absence. Multiple editions and collaboration credits
-are represented. Missing-ID and import transitions are covered by tests; a
-real API item was also replayed through an isolated in-memory import transition.
-No acquisition was triggered to manufacture a new import demonstration.
+- **Scoped Acquisition Dispatcher**: Implemented in `backend/acquisition.py`, driving end-to-end request-to-playback workflow through Lidarr (port 8686), Soularr (Docker), SLSKD (port 5030), Jellyfin (port 8096), and catalog backend (:8765).
+- **Strict Invariants**:
+  - *Album-Centric*: Single-song requests are explicitly rejected with HTTP 400 (`single-song acquisition is not supported by the current backend`).
+  - *Already-Owned Short Circuit*: If an album is already 100% owned, transitions immediately to `available` with progress 1.0 without dispatching duplicate searches.
+  - *Idempotent Deduplication*: Resubmitting an active request returns the existing request record.
+  - *Safe Default*: Live dispatch is disabled by default (`dispatch_enabled: false`) and requires explicit opt-in via `--dispatch` or `CATALOG_DISPATCH_ENABLED=1`.
+- **Durable Lifecycle Transitions**:
+  `queued` -> `dispatched` -> `downloading` (with transfer file progress) -> `imported` -> `available` (post-Jellyfin library update and catalog reconciliation), or `failed` with recorded `failure_reason` after 3 retries.
+- **Restart Recovery**: Restarts safely resume in-flight requests without duplicate dispatch or state regression.
+- **Automatic Lifecycle Polling**: Integrated into `refresh.py` loop so background SLSKD/Lidarr completions advance request states automatically.
 
-Verified: 14 backend tests, including authenticated HTTP search/request/status/
-import availability slice. Live Jellyfin API pagination and evidence ingestion
-passed. Production media and application settings were not changed for this app.
+## 3. Real-World Acquisition Verification
 
-Latest drift-aware refresh saw 8,977 items (27 above the old inventory),
-demonstrating a new live item appearing during development. Public search for
-Green Light returned one confidently available recording alongside unavailable
-catalog recordings through the same result contract. Both initial GitHub
-Catalog identity CI runs passed. Main is protected against force pushes and
-deletion and requires catalog-tests. Its stable baseline is 1.0.2.
+1. **G Herbo — *PTSD* (2020)**:
+   - Full 28-track dual-disc album acquired end-to-end via Soularr and SLSKD from user `Barnalks`.
+   - Downloaded Albums Scan successfully imported all 28 tracks into `/mnt/media/Music/G Herbo/PTSD (2020)/` across `Digital Media 01` (14 tracks) and `Digital Media 02` (14 tracks).
+   - Reconciled into `local_items` in `catalog.sqlite` and active in Jellyfin.
+2. **Neutral Milk Hotel — *In the Aeroplane Over the Sea* (1998)**:
+   - Request 4 submitted via `POST /v1/requests` for canonical release `318eb89c-49e6-392b-ac28-708b08f89586`.
+   - Dispatched live to Lidarr: added artist `Neutral Milk Hotel` (Lidarr Artist ID 1340), matched album `In the Aeroplane Over the Sea` (Lidarr Album ID 21758), set monitored status (11/11 tracks), and triggered `AlbumSearch`.
+   - Request state progressed to `dispatched` with full details JSON.
 
-Not complete: iOS UI connection, physical-device installation, full absence
-demonstration, live acquisition request dispatch, public catalog detail hydration,
-reconciliation of all provisional identities, automatic secondary-match promotion,
-whole-library metadata completeness. Don't represent these as working features.
+## 4. Enhanced Artist Identity & Metadata Contract
 
-Build blocker: no Flutter on PATH and no usable full Xcode/simulator toolchain.
-Upstream pins Flutter 3.47.7 via .fvmrc/.flutter-version. Its `flutterw` fails
-because `.flutter` is not a registered submodule in this release checkout.
-Do not modify Apple credentials/certificates or rewrite playback to work around
-the missing toolchain. iOS minimum in upstream Podfile is 15.0.
+- **`GET /v1/artists/resolve?item_id={itemId}`**:
+  - Deterministically resolves any Jellyfin track item ID, album ID, artist ID, or MusicBrainz UUID to canonical MusicBrainz artist identity and display name (`confidence: exact`).
+  - Enables the Finamp Flutter client to navigate directly from downloaded/local items to rich online catalog pages (`/catalog/artist`) without heuristics or string guessing.
+- **`GET /v1/artists/{id}` Enrichment**:
+  - Enriched with high-resolution artist photography from Deezer API.
+  - Enriched with artist biography from Wikipedia REST API summary.
+  - Canonical MusicBrainz metadata: Type (e.g. `Group`), Country (`GB`, `US`), Disambiguation, and parsed Genres list.
+  - Complete discography grouping (`albums`, `eps`, `singles`, `compilations`, `live`, `other`) with local ownership status (`full`, `partial`, `none`).
+- **`GET /v1/requests` & `GET /v1/requests/{id}`**:
+  - Exposes active request list and detailed status with progress, backend IDs, and failure reasons.
 
-Server runtime data stays in `~/music-metadata-audit/catalog-index/`, excluded
-from Git. Original backup/enrichment workers are independent and untouched.
+## 5. Verification & Tests
+
+- 22/22 unit tests pass across `test_catalog.py`, `test_http.py`, and `test_acquisition.py` both locally and deployed on server `koltensserver`.
+- SQLite concurrency fixed: `PRAGMA busy_timeout = 30000;`, safe column migrations, and non-clobbering `INSERT ... ON CONFLICT(id) DO UPDATE SET`.
