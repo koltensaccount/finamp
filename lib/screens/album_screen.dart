@@ -157,17 +157,12 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
-              final genuineArtist = ArtistResolutionHelper.resolveGenuineArtist(
-                artistItems: resolvedParent.artistItems,
-                albumArtists: resolvedParent.albumArtists,
+              final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
+                track: resolvedParent,
+                fallbackArtistName: artistName,
               );
-              if (genuineArtist != null) {
-                final artistStub = BaseItemDto(
-                  id: genuineArtist.id,
-                  name: genuineArtist.name ?? artistName,
-                  type: 'MusicArtist',
-                );
-                Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artistStub);
+              if (artistTarget != null) {
+                Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artistTarget);
               } else if (artistName.isNotEmpty) {
                 Navigator.of(context).pushNamed(CatalogSearchScreen.routeName, arguments: artistName);
               }
