@@ -38,10 +38,8 @@ CatalogAvailabilityState catalogAvailabilityStateFromJson(Object? value) {
 class CatalogLocalItem {
   const CatalogLocalItem({required this.serverId, required this.itemId});
 
-  factory CatalogLocalItem.fromJson(Map<String, dynamic> json) => CatalogLocalItem(
-    serverId: (json['server_id'] ?? '') as String,
-    itemId: (json['item_id'] ?? '') as String,
-  );
+  factory CatalogLocalItem.fromJson(Map<String, dynamic> json) =>
+      CatalogLocalItem(serverId: (json['server_id'] ?? '') as String, itemId: (json['item_id'] ?? '') as String);
 
   final String serverId;
   final String itemId;
@@ -83,11 +81,7 @@ class CatalogAvailability {
 }
 
 class CatalogCredit {
-  const CatalogCredit({
-    required this.artistId,
-    required this.name,
-    this.joinphrase = '',
-  });
+  const CatalogCredit({required this.artistId, required this.name, this.joinphrase = ''});
 
   factory CatalogCredit.fromJson(Map<String, dynamic> json) => CatalogCredit(
     artistId: (json['artist_id'] ?? json['id'] ?? '') as String,
@@ -115,6 +109,7 @@ class CatalogSearchResult {
     this.secondaryTypes = const [],
     this.category,
     this.imageUrl,
+    this.artworkItemId,
     this.ownership,
   });
 
@@ -141,6 +136,7 @@ class CatalogSearchResult {
       secondaryTypes: secondaryTypes,
       category: json['category'] as String?,
       imageUrl: json['image_url'] as String?,
+      artworkItemId: json['artwork_item_id'] as String?,
       ownership: json['ownership'] as String?,
     );
   }
@@ -158,6 +154,7 @@ class CatalogSearchResult {
   final List<String> secondaryTypes;
   final String? category;
   final String? imageUrl;
+  final String? artworkItemId;
   final String? ownership;
 
   bool get isFullyOwned => ownership == 'full';
@@ -264,10 +261,7 @@ class CatalogRelease {
       id: json['id'] as String,
       groupId: json['group_id'] as String?,
       title: (json['title'] ?? '') as String,
-      tracks: rawTracks
-          .whereType<Map<String, dynamic>>()
-          .map((t) => CatalogTrack.fromJson(t))
-          .toList(growable: false),
+      tracks: rawTracks.whereType<Map<String, dynamic>>().map((t) => CatalogTrack.fromJson(t)).toList(growable: false),
       ownedTracks: (json['owned_tracks'] as num?)?.toInt() ?? 0,
       totalTracks: (json['total_tracks'] as num?)?.toInt() ?? 0,
       ownership: (json['ownership'] ?? 'none') as String,

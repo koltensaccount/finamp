@@ -354,6 +354,87 @@ class Catalog:
                 results.append(row)
         return results
 
+    def representative_release_for_recording(self, recording_id):
+        """Return one deterministic, artwork-capable release for a recording.
+
+        A recording may occur on an original album, later editions, singles, and
+        compilations.  This deliberately chooses presentation artwork only; it
+        never changes the availability result used for playback.
+        """
+        rows = self.db.execute('''
+            SELECT rt.release_id, rel.group_id, rel.title AS release_title,
+                   g.primary_type, g.first_date, g.secondary_types,
+                   m.item_id, li.payload
+            FROM release_tracks rt
+            JOIN releases rel ON rel.id = rt.release_id
+            LEFT JOIN release_groups g ON g.id = rel.group_id
+            LEFT JOIN mappings m ON m.release_track_id = rt.id
+                AND m.recording_id = rt.recording_id
+                AND m.confidence IN ('verified', 'local_identity')
+            LEFT JOIN local_items li ON li.server_id = m.server_id
+                AND li.item_id = m.item_id AND li.active = 1
+            WHERE rt.recording_id = ?
+        ''', (recording_id,)).fetchall()
+
+        def has_artwork(payload):
+            if not payload:
+                return False
+            try:
+                item = json.loads(payload)
+            except (TypeError, json.JSONDecodeError):
+                return False
+            tags = item.get('ImageTags') or {}
+            return bool(tags.get('Primary') or item.get('AlbumPrimaryImageTag') or item.get('ParentPrimaryImageTag'))
+
+        def release_rank(row):
+            try:
+                secondary = json.loads(row['secondary_types'] or '[]')
+            except (TypeError, json.JSONDecodeError):
+                secondary = []
+            secondary = {str(value).casefold() for value in secondary}
+            primary = (row['primary_type'] or '').casefold()
+            title = (row['release_title'] or '').casefold()
+            is_studio_album = primary == 'album' and not secondary.intersection({
+                'compilation', 'live', 'remix', 'dj-mix', 'soundtrack',
+            })
+            is_reissue = any(word in title for word in (
+                'remaster', 'remastered', 'reissue', 'deluxe', 'expanded', 'anniversary',
+            ))
+            if is_studio_album and not is_reissue:
+                category = 0
+            elif is_studio_album:
+                category = 1
+            elif primary in ('single', 'ep'):
+                category = 2
+            elif 'compilation' in secondary:
+                category = 3
+            else:
+                category = 4
+            # A known Jellyfin image is the only artwork validity signal already
+            # in the catalog. Within that set, follow the release hierarchy.
+            # The stable date/title/id keys make all ties repeatable.
+            return (
+                0 if has_artwork(row['payload']) else 1,
+                category,
+                row['first_date'] or '9999-12-31',
+                row['release_title'] or '',
+                row['release_id'],
+                row['item_id'] or '',
+            )
+
+        if not rows:
+            return None
+        selected = min(rows, key=release_rank)
+        group_id = selected['group_id']
+        return {
+            'release_id': selected['release_id'],
+            'image_url': (
+                f'https://coverartarchive.org/release-group/{group_id}/front-250'
+                if group_id else f"https://coverartarchive.org/release/{selected['release_id']}/front-250"
+            ),
+            'artwork_item_id': selected['item_id'] if has_artwork(selected['payload']) else None,
+        }
+
     def artist(self, artist_id):
         artist = self.db.execute('SELECT * FROM artists WHERE id=?', (artist_id,)).fetchone()
         if not artist:
@@ -424,10 +505,14 @@ class Catalog:
             JOIN mappings m ON m.recording_id=r.id AND m.confidence IN ('verified', 'local_identity')
             JOIN local_items l ON l.server_id=m.server_id AND l.item_id=m.item_id AND l.active=1
             WHERE c.entity_type='recording' AND c.artist_id=?
+            ORDER BY r.title COLLATE NOCASE, r.id
         """, (artist_id,)).fetchall()
         for r in rec_rows:
             rec = dict(r)
             rec['availability'] = self.availability(r['id'])
+            representative = self.representative_release_for_recording(r['id'])
+            if representative:
+                rec.update(representative)
             rec['kind'] = 'track'
             c_list, disp = self.get_credits('recording', r['id'])
             rec['artist_credit'] = c_list

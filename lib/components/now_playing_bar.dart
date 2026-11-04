@@ -25,9 +25,13 @@ import '../services/music_player_background_task.dart';
 import '../services/process_artist.dart';
 import 'PlayerScreen/player_split_screen_scaffold.dart';
 import 'album_image.dart';
+import 'navigation/player_motion.dart';
 
 class NowPlayingBar extends ConsumerWidget {
-  const NowPlayingBar({super.key});
+  const NowPlayingBar({super.key, this.includeBottomSafeArea = true});
+
+  // Root navigation already owns the home-indicator inset.
+  final bool includeBottomSafeArea;
 
   static const horizontalPadding = 8.0;
   static const albumImageSize = 58.0;
@@ -131,23 +135,10 @@ class NowPlayingBar extends ConsumerWidget {
     await GlobalSnackbar.navigatorState?.push(
       PageRouteBuilder<void>(
         pageBuilder: (context, animation, secondaryAnimation) => const PlayerScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          if (MediaQuery.disableAnimationsOf(context)) {
-            return child;
-          }
-          const begin = Offset(0.0, 1.0);
-          const end = Offset.zero;
-
-          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOutQuad));
-          var offsetAnimation = animation.drive(tween);
-
-          if (animation.status == AnimationStatus.reverse) {
-            // dismiss animation
-            return FadeTransition(opacity: animation, child: child);
-          } else {
-            return SlideTransition(position: offsetAnimation, child: child);
-          }
-        },
+        transitionDuration: const Duration(milliseconds: 380),
+        reverseTransitionDuration: const Duration(milliseconds: 320),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            PlayerSheetTransition(animation: animation, child: child),
         settings: const RouteSettings(name: PlayerScreen.routeName),
       ),
     );
@@ -360,9 +351,8 @@ class NowPlayingBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final queueService = GetIt.instance<QueueService>();
 
-    return Hero(
-      tag: "nowplaying",
-      createRectTween: (from, to) => RectTween(begin: from, end: from),
+    return MiniPlayerAnchor(
+      includeBottomSafeArea: includeBottomSafeArea,
       child: PlayerScreenTheme(
         // The now playing bar must be enclosed in a SafeArea at all times so that the enclosing scaffold properly adds
         // bottom padding, even if the now playing bar itself is empty.

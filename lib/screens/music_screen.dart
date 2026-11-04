@@ -18,6 +18,7 @@ import 'package:finamp/services/item_by_id_provider.dart';
 import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:finamp/services/music_providers.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
+import 'package:finamp/screens/books_screen.dart';
 import 'package:finamp/components/navigation/apple_floating_bottom_bar.dart';
 import 'package:finamp/screens/library_screen_content.dart';
 import 'package:finamp/screens/settings_screen.dart';
@@ -51,7 +52,7 @@ class MusicScreen extends ConsumerStatefulWidget {
 }
 
 class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderStateMixin {
-  int _rootTabIndex = 0;
+  int _rootTabIndex = const int.fromEnvironment('DEFAULT_TAB', defaultValue: 0);
   bool isSearching = false;
   TextEditingController textEditingController = TextEditingController();
   String? searchQuery;
@@ -238,7 +239,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
         canPop: false,
         child: Scaffold(
           extendBody: true,
-          appBar: _rootTabIndex == 2
+          appBar: _rootTabIndex >= 2
               ? null
               : AppBar(
                   automaticallyImplyLeading: false,
@@ -304,6 +305,9 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                 child: LibraryScreenContent(),
               ),
               const PrimaryScrollController.none(
+                child: BooksScreen(),
+              ),
+              const PrimaryScrollController.none(
                 child: CatalogSearchScreen(isTab: true),
               ),
             ],
@@ -311,7 +315,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
           bottomNavigationBar: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const NowPlayingBar(),
+              const NowPlayingBar(includeBottomSafeArea: false),
               AppleFloatingBottomBar(
                 selectedIndex: _rootTabIndex,
                 onDestinationSelected: (index) => setState(() => _rootTabIndex = index),

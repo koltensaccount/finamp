@@ -28,6 +28,11 @@ import 'package:finamp/screens/login_screen.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:finamp/screens/catalog_album_screen.dart';
 import 'package:finamp/screens/catalog_artist_screen.dart';
+import 'package:finamp/screens/books_screen.dart';
+import 'package:finamp/screens/book_detail_screen.dart';
+import 'package:finamp/screens/epub_reader_screen.dart';
+import 'package:finamp/services/books_api_client.dart';
+import 'package:finamp/services/books_download_service.dart';
 import 'package:finamp/screens/catalog_discography_screen.dart';
 import 'package:finamp/screens/liked_songs_screen.dart';
 import 'package:finamp/screens/catalog_settings_screen.dart';
@@ -246,6 +251,11 @@ Future<void> _setupEdgeToEdgeOverlayStyle() async {
 Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
   GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
+  final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore());
+  GetIt.instance.registerSingleton(booksApiClient);
+  final booksDownloadService = BooksDownloadService(apiClient: booksApiClient);
+  GetIt.instance.registerSingleton(booksDownloadService);
+  unawaited(booksDownloadService.init());
   GetIt.instance.registerSingleton(LikedSongsService());
   unawaited(ArtistIdentityService.init());
   unawaited(ArtistImageService.init());
@@ -1012,6 +1022,15 @@ class FinampApp extends ConsumerWidget {
         AdvancedLoginOptionsScreen.routeName: (context) => const AdvancedLoginOptionsScreen(),
         ViewSelector.routeName: (context) => const ViewSelector(),
         MusicScreen.routeName: (context) => const MusicScreen(),
+        BooksScreen.routeName: (context) => const BooksScreen(),
+        BookDetailScreen.routeName: (context) => BookDetailScreen(
+          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ?? 'work-the-great-gatsby-f-scott-fitzgerald',
+        ),
+        EpubReaderScreen.routeName: (context) => EpubReaderScreen(
+          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ?? 'work-the-great-gatsby-f-scott-fitzgerald',
+          title: 'The Great Gatsby',
+          author: 'F. Scott Fitzgerald',
+        ),
         CatalogSearchScreen.routeName: (context) => const CatalogSearchScreen(),
         CatalogAlbumScreen.routeName: (context) => const CatalogAlbumScreen(),
         CatalogArtistScreen.routeName: (context) => const CatalogArtistScreen(),

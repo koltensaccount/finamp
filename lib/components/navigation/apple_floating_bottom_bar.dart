@@ -66,6 +66,13 @@ class AppleFloatingBottomBar extends StatelessWidget {
                   ),
                   _buildTabItem(
                     index: 2,
+                    icon: Icons.auto_stories_outlined,
+                    activeIcon: Icons.auto_stories_rounded,
+                    label: 'Books',
+                    isDark: isDark,
+                  ),
+                  _buildTabItem(
+                    index: 3,
                     icon: Icons.search_rounded,
                     activeIcon: Icons.search_rounded,
                     label: 'Search',

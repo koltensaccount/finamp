@@ -18,17 +18,10 @@ import 'catalog_album_screen.dart';
 import 'catalog_discography_screen.dart';
 
 class CatalogArtistScreenArguments {
-  const CatalogArtistScreenArguments({
-    required this.artistMbid,
-    this.initialName,
-    this.fallbackArtist,
-  });
+  const CatalogArtistScreenArguments({required this.artistMbid, this.initialName, this.fallbackArtist});
 
   factory CatalogArtistScreenArguments.fromSearchResult(CatalogSearchResult result) =>
-      CatalogArtistScreenArguments(
-        artistMbid: result.id,
-        initialName: result.title,
-      );
+      CatalogArtistScreenArguments(artistMbid: result.id, initialName: result.title);
 
   final String artistMbid;
   final String? initialName;
@@ -53,6 +46,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
   String? _heroImageUrl;
   List<Map<String, String>> _similarArtists = const [];
   bool _bioExpanded = false;
+  final Map<String, Future<String?>> _topSongArtworkUrls = {};
 
   @override
   void didChangeDependencies() {
@@ -70,7 +64,10 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     } else if (rawArgs is String) {
       args = CatalogArtistScreenArguments(artistMbid: rawArgs);
     } else {
-      const defaultMbid = String.fromEnvironment('DEBUG_ARTIST_MBID', defaultValue: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3');
+      const defaultMbid = String.fromEnvironment(
+        'DEBUG_ARTIST_MBID',
+        defaultValue: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
+      );
       args = const CatalogArtistScreenArguments(artistMbid: defaultMbid);
     }
 
@@ -93,6 +90,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
       final client = GetIt.instance<CatalogApiClient>();
       final artist = await client.getArtist(args.artistMbid);
       _artist = artist;
+      _topSongArtworkUrls.clear();
 
       // Extract image & bio
       _heroImageUrl = artist.imageUrl ?? ArtistImageService.getKnownArtistImageUrl(artist.name);
@@ -126,6 +124,19 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     if (similar.isNotEmpty && mounted) {
       setState(() => _similarArtists = similar);
     }
+  }
+
+  Future<String?> _topSongArtworkUrl(CatalogSearchResult track) {
+    final itemId = track.artworkItemId;
+    if (itemId == null || itemId.isEmpty) return Future.value(null);
+    return _topSongArtworkUrls.putIfAbsent(track.id, () async {
+      try {
+        final item = await GetIt.instance<JellyfinApiHelper>().getItemById(BaseItemId(itemId));
+        return GetIt.instance<JellyfinApiHelper>().getImageUrl(item: item, maxWidth: 100, maxHeight: 100)?.toString();
+      } catch (_) {
+        return null;
+      }
+    });
   }
 
   Future<void> _playArtistRecordings(CatalogArtist artist) async {
@@ -177,9 +188,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Playback failed: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
       }
     }
   }
@@ -202,12 +211,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             _buildInfoRow('Library Tracks', '${artist.recordings.length}'),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
       ),
     );
   }
@@ -224,10 +228,9 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
 
   void _openOfflineLibrary() {
     if (_fallbackArtist != null) {
-      Navigator.of(context).pushNamed(
-        ArtistScreen.routeName,
-        arguments: {'artist': _fallbackArtist, 'disableRedirect': true},
-      );
+      Navigator.of(
+        context,
+      ).pushNamed(ArtistScreen.routeName, arguments: {'artist': _fallbackArtist, 'disableRedirect': true});
     }
   }
 
@@ -303,7 +306,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
               const SizedBox(height: 16),
               Text('Could not load artist.', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -334,10 +341,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     final studioAlbums = artist.albums.where((a) => a.category == 'album').toList();
     final epsAndSingles = artist.albums.where((a) => a.category == 'ep' || a.category == 'single').toList();
     final compilations = artist.albums.where((a) => a.category == 'compilation').toList();
-    final liveAndOther = artist.albums.where((a) =>
-        a.category == 'live' ||
-        a.category == 'other' ||
-        (a.category == null && !['album', 'ep', 'single', 'compilation'].contains(a.category))).toList();
+    final liveAndOther = artist.albums
+        .where(
+          (a) =>
+              a.category == 'live' ||
+              a.category == 'other' ||
+              (a.category == null && !['album', 'ep', 'single', 'compilation'].contains(a.category)),
+        )
+        .toList();
 
     // Determine latest release for the featured card
     CatalogSearchResult? latestRelease;
@@ -349,9 +360,9 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
 
     // Hero backdrop image: prioritize real artist photo, fallback to top album art
     final heroImageAlbum = artist.albums.cast<CatalogSearchResult?>().firstWhere(
-          (a) => a?.imageUrl != null && a!.imageUrl!.isNotEmpty,
-          orElse: () => null,
-        );
+      (a) => a?.imageUrl != null && a!.imageUrl!.isNotEmpty,
+      orElse: () => null,
+    );
     final effectiveHeroImageUrl = _heroImageUrl ?? heroImageAlbum?.imageUrl;
 
     return ListView(
@@ -365,54 +376,29 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
         ),
 
         // 2. Featured Latest Release Card (like Apple Music 'Getting Killed' card)
-        if (latestRelease != null) ...[
-          const SizedBox(height: 8),
-          _buildFeaturedLatestReleaseCard(latestRelease),
-        ],
+        if (latestRelease != null) ...[const SizedBox(height: 8), _buildFeaturedLatestReleaseCard(latestRelease)],
 
         // 3. Top Songs Section
-        if (artist.recordings.isNotEmpty) ...[
-          _buildTopSongsSection(artist),
-        ],
+        if (artist.recordings.isNotEmpty) ...[_buildTopSongsSection(artist)],
 
         // 4. Horizontal Carousels for Albums and Singles & EPs
         if (studioAlbums.isNotEmpty)
-          _buildAlbumCarouselSection(
-            title: 'Albums',
-            artistName: artist.name,
-            items: studioAlbums,
-          ),
+          _buildAlbumCarouselSection(title: 'Albums', artistName: artist.name, items: studioAlbums),
 
         if (epsAndSingles.isNotEmpty)
-          _buildAlbumCarouselSection(
-            title: 'Singles & EPs',
-            artistName: artist.name,
-            items: epsAndSingles,
-          ),
+          _buildAlbumCarouselSection(title: 'Singles & EPs', artistName: artist.name, items: epsAndSingles),
 
         if (compilations.isNotEmpty)
-          _buildAlbumCarouselSection(
-            title: 'Compilations',
-            artistName: artist.name,
-            items: compilations,
-          ),
+          _buildAlbumCarouselSection(title: 'Compilations', artistName: artist.name, items: compilations),
 
         if (liveAndOther.isNotEmpty)
-          _buildAlbumCarouselSection(
-            title: 'Live & Other Releases',
-            artistName: artist.name,
-            items: liveAndOther,
-          ),
+          _buildAlbumCarouselSection(title: 'Live & Other Releases', artistName: artist.name, items: liveAndOther),
 
         // 5. Artist Biography Section (Wikipedia)
-        if (_bio != null && _bio!.isNotEmpty) ...[
-          _buildBioSection(artist),
-        ],
+        if (_bio != null && _bio!.isNotEmpty) ...[_buildBioSection(artist)],
 
         // 6. Similar Artists Section (Deezer)
-        if (_similarArtists.isNotEmpty) ...[
-          _buildSimilarArtistsSection(artist),
-        ],
+        if (_similarArtists.isNotEmpty) ...[_buildSimilarArtistsSection(artist)],
 
         const SizedBox(height: 36),
       ],
@@ -428,10 +414,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
         children: [
           Text(
             'About ${artist.name}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
           ),
           const SizedBox(height: 10),
           Container(
@@ -447,11 +430,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                   bioText,
                   maxLines: _bioExpanded ? 30 : 4,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    height: 1.45,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 14.5, height: 1.45, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 if (bioText.length > 200) ...[
                   const SizedBox(height: 8),
@@ -485,10 +464,9 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             children: [
               Text(
                 'Similar Artists',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
               ),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
@@ -509,10 +487,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
               return InkWell(
                 borderRadius: BorderRadius.circular(44),
                 onTap: () {
-                  ArtistResolutionHelper.navigateToArtist(
-                    context,
-                    artistName: name,
-                  );
+                  ArtistResolutionHelper.navigateToArtist(context, artistName: name);
                 },
                 child: SizedBox(
                   width: 90,
@@ -646,10 +621,8 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     _buildHeroCircleButton(
                       icon: Icons.info_outline_rounded,
                       tooltip: 'Artist Info',
-                      onTap: () => _showArtistInfoDialog(
-                        artist,
-                        artist.albums.where((a) => a.category == 'album').toList(),
-                      ),
+                      onTap: () =>
+                          _showArtistInfoDialog(artist, artist.albums.where((a) => a.category == 'album').toList()),
                     ),
                     const SizedBox(width: 24),
 
@@ -670,9 +643,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: Icon(Icons.play_arrow_rounded, color: Colors.black, size: 38),
-                        ),
+                        child: const Center(child: Icon(Icons.play_arrow_rounded, color: Colors.black, size: 38)),
                       ),
                     ),
                     const SizedBox(width: 24),
@@ -686,9 +657,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                         setState(() => _isFavorite = !_isFavorite);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(_isFavorite
-                                ? 'Added ${artist.name} to favorites'
-                                : 'Removed ${artist.name} from favorites'),
+                            content: Text(
+                              _isFavorite
+                                  ? 'Added ${artist.name} to favorites'
+                                  : 'Removed ${artist.name} from favorites',
+                            ),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -723,18 +696,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             color: Colors.white.withValues(alpha: 0.18),
             border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
           ),
-          child: Center(
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
+          child: Center(child: Icon(icon, color: iconColor, size: 22)),
         ),
       ),
     );
   }
 
   Widget _buildFeaturedLatestReleaseCard(CatalogSearchResult latest) {
-    final year = latest.firstDate != null && latest.firstDate!.length >= 4
-        ? latest.firstDate!.substring(0, 4)
-        : null;
+    final year = latest.firstDate != null && latest.firstDate!.length >= 4 ? latest.firstDate!.substring(0, 4) : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -743,10 +712,9 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.of(context).pushNamed(
-            CatalogAlbumScreen.routeName,
-            arguments: CatalogAlbumScreenArguments.fromSearchResult(latest),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).pushNamed(CatalogAlbumScreen.routeName, arguments: CatalogAlbumScreenArguments.fromSearchResult(latest)),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -795,11 +763,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        [
-                          latest.primaryType ?? 'Album',
-                          ?year,
-                          if (latest.isFullyOwned) 'In Library',
-                        ].join(' • '),
+                        [latest.primaryType ?? 'Album', ?year, if (latest.isFullyOwned) 'In Library'].join(' • '),
                         style: TextStyle(
                           fontSize: 12,
                           color: latest.isFullyOwned ? Colors.green : Colors.grey,
@@ -841,10 +805,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           child: Row(
             children: [
-              Text(
-                'Top Songs',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text('Top Songs', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(width: 4),
               const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
             ],
@@ -874,28 +835,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: track.imageUrl != null && track.imageUrl!.isNotEmpty
-                        ? Image.network(
-                            track.imageUrl!,
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              width: 44,
-                              height: 44,
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              child: const Icon(TablerIcons.music, size: 22),
-                            ),
-                          )
-                        : Container(
-                            width: 44,
-                            height: 44,
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Icon(TablerIcons.music, size: 22),
-                          ),
-                  ),
+                  _TopSongArtwork(imageUrl: track.imageUrl, jellyfinImageUrl: _topSongArtworkUrl(track)),
                 ],
               ),
               title: Text(
@@ -916,11 +856,8 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
               trailing: canPlay
                   ? const Icon(Icons.play_circle_fill, color: Colors.green, size: 26)
                   : const Icon(Icons.play_circle_outline, color: Colors.grey, size: 24),
-              onTap: () => CatalogPlaybackHelper.handleTrackTap(
-                context,
-                title: track.title,
-                availability: track.availability,
-              ),
+              onTap: () =>
+                  CatalogPlaybackHelper.handleTrackTap(context, title: track.title, availability: track.availability),
             );
           },
         ),
@@ -944,10 +881,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
           child: Row(
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -969,11 +903,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                 InkWell(
                   onTap: () => Navigator.of(context).pushNamed(
                     CatalogDiscographyScreen.routeName,
-                    arguments: CatalogDiscographyScreenArguments(
-                      title: title,
-                      artistName: artistName,
-                      items: items,
-                    ),
+                    arguments: CatalogDiscographyScreenArguments(title: title, artistName: artistName, items: items),
                   ),
                   borderRadius: BorderRadius.circular(8),
                   child: const Padding(
@@ -1009,17 +939,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
   }
 
   Widget _buildAlbumSquareCard(CatalogSearchResult album) {
-    final year = album.firstDate != null && album.firstDate!.length >= 4
-        ? album.firstDate!.substring(0, 4)
-        : null;
+    final year = album.firstDate != null && album.firstDate!.length >= 4 ? album.firstDate!.substring(0, 4) : null;
 
     return SizedBox(
       width: 142,
       child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(
-          CatalogAlbumScreen.routeName,
-          arguments: CatalogAlbumScreenArguments.fromSearchResult(album),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).pushNamed(CatalogAlbumScreen.routeName, arguments: CatalogAlbumScreenArguments.fromSearchResult(album)),
         borderRadius: BorderRadius.circular(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1054,10 +981,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     right: 6,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
                       child: const Icon(Icons.check, size: 12, color: Colors.white),
                     ),
                   )
@@ -1067,10 +991,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     right: 6,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade800,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: BoxDecoration(color: Colors.amber.shade800, shape: BoxShape.circle),
                       child: const Icon(Icons.pie_chart, size: 12, color: Colors.white),
                     ),
                   ),
@@ -1084,12 +1005,55 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
               style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 2),
-            Text(
-              year ?? (album.primaryType ?? 'Album'),
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
+            Text(year ?? (album.primaryType ?? 'Album'), style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TopSongArtwork extends StatelessWidget {
+  const _TopSongArtwork({required this.imageUrl, required this.jellyfinImageUrl});
+
+  final String? imageUrl;
+  final Future<String?> jellyfinImageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget placeholder() => Container(
+      width: 44,
+      height: 44,
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: const Icon(TablerIcons.music, size: 22),
+    );
+
+    Widget catalogArtwork() {
+      if (imageUrl == null || imageUrl!.isEmpty) return placeholder();
+      return Image.network(
+        imageUrl!,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => placeholder(),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: FutureBuilder<String?>(
+        future: jellyfinImageUrl,
+        builder: (context, snapshot) {
+          final localUrl = snapshot.data;
+          if (localUrl == null || localUrl.isEmpty) return catalogArtwork();
+          return Image.network(
+            localUrl,
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => catalogArtwork(),
+          );
+        },
       ),
     );
   }

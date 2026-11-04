@@ -196,6 +196,8 @@ void main() {
                 'id': 'rec-1',
                 'title': 'Hit Song',
                 'duration_ms': 210000,
+                'image_url': 'https://coverartarchive.org/release-group/rg-1/front-250',
+                'artwork_item_id': 'jellyfin-track-1',
               },
             ],
           }),
@@ -210,6 +212,8 @@ void main() {
     expect(artist.albums.first.title, 'Debut');
     expect(artist.recordings.length, 1);
     expect(artist.recordings.first.title, 'Hit Song');
+    expect(artist.recordings.first.imageUrl, contains('rg-1'));
+    expect(artist.recordings.first.artworkItemId, 'jellyfin-track-1');
   });
 
   test('fetches request status by id', () async {

@@ -37,7 +37,10 @@ class DiscographyTests(unittest.TestCase):
         self.c.db.execute("INSERT INTO credits VALUES('recording', 'rec-1', ?, 0, 'The Example', '')", (self.artist_id,))
 
         # Owned item mapping for rec-1
-        self.c.db.execute("INSERT INTO local_items VALUES('srv', 'item-1', '/music/1.flac', '{}', 'hash1', 1)")
+        self.c.db.execute(
+            "INSERT INTO local_items VALUES('srv', 'item-1', '/music/1.flac', ?, 'hash1', 1)",
+            (json.dumps({'ImageTags': {'Primary': 'cover-tag'}}),),
+        )
         self.c.db.execute("INSERT INTO mappings VALUES('srv', 'item-1', 'rec-1', 'rt-1', 'verified', '{}')")
 
     def test_artist_categories_and_ordering(self):
@@ -58,6 +61,68 @@ class DiscographyTests(unittest.TestCase):
         self.assertEqual(len(recs), 1)
         self.assertEqual(recs[0]['id'], 'rec-1')
         self.assertEqual(recs[0]['availability']['state'], 'available')
+        self.assertEqual(recs[0]['release_id'], 'rel-1')
+        self.assertTrue(recs[0]['image_url'].endswith('/g-studio/front-250'))
+        self.assertEqual(recs[0]['artwork_item_id'], 'item-1')
+
+    def test_representative_release_prefers_original_studio_album_over_duplicates(self):
+        # The same canonical recording appears on a reissue, a single, and a
+        # compilation. The earliest non-reissue studio album supplies artwork.
+        releases = [
+            ('rel-remaster', 'g-remaster', 'Studio Album (2010 Remaster)', 'Album', '1965-01-01', '[]'),
+            ('rel-single', 'g-single-duplicate', 'Track 1', 'Single', '1964-01-01', '[]'),
+            ('rel-comp', 'g-comp-duplicate', 'Hits', 'Album', '1975-01-01', '["Compilation"]'),
+        ]
+        for release_id, group_id, title, primary_type, date, secondary in releases:
+            self.c.db.execute(
+                'INSERT INTO release_groups VALUES(?,?,?,?,?)',
+                (group_id, title, primary_type, date, secondary),
+            )
+            self.c.db.execute('INSERT INTO releases VALUES(?,?,?)', (release_id, group_id, title))
+            self.c.db.execute(
+                'INSERT INTO release_tracks VALUES(?,?,?,?,?,?,?)',
+                ('rt-' + release_id, release_id, 'rec-1', 1, 1, 'Track 1', 200000),
+            )
+
+        representative = self.c.representative_release_for_recording('rec-1')
+        self.assertEqual(representative['release_id'], 'rel-1')
+        self.assertEqual(representative['artwork_item_id'], 'item-1')
+
+    def test_representative_release_uses_stable_reissue_then_single_order(self):
+        self.c.db.execute("DELETE FROM release_tracks WHERE release_id='rel-1'")
+        rows = [
+            ('rel-z', 'g-z', 'Album (2012 Remaster)', 'Album', '1970-01-01'),
+            ('rel-a', 'g-a', 'Album (2012 Remaster)', 'Album', '1970-01-01'),
+            ('rel-single', 'g-single-duplicate', 'Track 1', 'Single', '1964-01-01'),
+        ]
+        for release_id, group_id, title, primary_type, date in rows:
+            self.c.db.execute('INSERT INTO release_groups VALUES(?,?,?,?,?)', (group_id, title, primary_type, date, '[]'))
+            self.c.db.execute('INSERT INTO releases VALUES(?,?,?)', (release_id, group_id, title))
+            self.c.db.execute(
+                'INSERT INTO release_tracks VALUES(?,?,?,?,?,?,?)',
+                ('rt-' + release_id, release_id, 'rec-1', 1, 1, 'Track 1', 200000),
+            )
+        representative = self.c.representative_release_for_recording('rec-1')
+        self.assertEqual(representative['release_id'], 'rel-a')
+
+    def test_representative_release_prefers_a_known_image_over_an_unillustrated_album(self):
+        self.c.db.execute("UPDATE local_items SET payload='{}' WHERE item_id='item-1'")
+        self.c.db.execute("INSERT INTO release_groups VALUES('g-single-art', 'Track 1', 'Single', '1964-01-01', '[]')")
+        self.c.db.execute("INSERT INTO releases VALUES('rel-single-art', 'g-single-art', 'Track 1')")
+        self.c.db.execute(
+            "INSERT INTO release_tracks VALUES('rt-single-art', 'rel-single-art', 'rec-1', 1, 1, 'Track 1', 200000)",
+        )
+        payload = json.dumps({'AlbumPrimaryImageTag': 'single-cover'})
+        self.c.db.execute(
+            "INSERT INTO local_items VALUES('srv', 'item-single', '/music/single.flac', ?, 'hash-single', 1)",
+            (payload,),
+        )
+        self.c.db.execute(
+            "INSERT INTO mappings VALUES('srv', 'item-single', 'rec-1', 'rt-single-art', 'verified', '{}')",
+        )
+        representative = self.c.representative_release_for_recording('rec-1')
+        self.assertEqual(representative['release_id'], 'rel-single-art')
+        self.assertEqual(representative['artwork_item_id'], 'item-single')
 
     def test_resolve_artist_by_mapping_and_name(self):
         # 1. Resolve by local mapping item_id
