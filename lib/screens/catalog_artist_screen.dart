@@ -12,6 +12,7 @@ import '../services/catalog_playback_helper.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
 import '../services/artist_image_service.dart';
+import '../services/top_song_artwork.dart';
 import '../services/artist_resolution_helper.dart';
 import 'artist_screen.dart';
 import 'catalog_album_screen.dart';
@@ -46,7 +47,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
   String? _heroImageUrl;
   List<Map<String, String>> _similarArtists = const [];
   bool _bioExpanded = false;
-  final Map<String, Future<String?>> _topSongArtworkUrls = {};
+  final Map<String, Future<List<String>>> _topSongArtworkUrls = {};
 
   @override
   void didChangeDependencies() {
@@ -126,16 +127,16 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     }
   }
 
-  Future<String?> _topSongArtworkUrl(CatalogSearchResult track) {
-    final itemId = track.artworkItemId;
-    if (itemId == null || itemId.isEmpty) return Future.value(null);
-    return _topSongArtworkUrls.putIfAbsent(track.id, () async {
-      try {
-        final item = await GetIt.instance<JellyfinApiHelper>().getItemById(BaseItemId(itemId));
-        return GetIt.instance<JellyfinApiHelper>().getImageUrl(item: item, maxWidth: 100, maxHeight: 100)?.toString();
-      } catch (_) {
-        return null;
-      }
+  Future<List<String>> _topSongArtworkUrl(CatalogSearchResult track) {
+    return _topSongArtworkUrls.putIfAbsent(track.id, () {
+      final api = GetIt.instance<JellyfinApiHelper>();
+      // Defer API calls until after build (Jellyfin enforces this in debug).
+      return Future(() => resolveTopSongArtwork(
+        track,
+        albums: _artist?.albums ?? const [],
+        loadItem: (id) => api.getItemById(BaseItemId(id)),
+        imageUrl: (item) => api.getImageUrl(item: item, maxWidth: 100, maxHeight: 100)?.toString(),
+      ));
     });
   }
 
@@ -1017,7 +1018,7 @@ class _TopSongArtwork extends StatelessWidget {
   const _TopSongArtwork({required this.imageUrl, required this.jellyfinImageUrl});
 
   final String? imageUrl;
-  final Future<String?> jellyfinImageUrl;
+  final Future<List<String>> jellyfinImageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -1028,32 +1029,25 @@ class _TopSongArtwork extends StatelessWidget {
       child: const Icon(TablerIcons.music, size: 22),
     );
 
-    Widget catalogArtwork() {
-      if (imageUrl == null || imageUrl!.isEmpty) return placeholder();
+    Widget artwork(List<String> urls, int index) {
+      if (index >= urls.length) return placeholder();
       return Image.network(
-        imageUrl!,
+        urls[index],
         width: 44,
         height: 44,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder(),
+        errorBuilder: (_, _, _) => artwork(urls, index + 1),
       );
     }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
-      child: FutureBuilder<String?>(
+      child: FutureBuilder<List<String>>(
         future: jellyfinImageUrl,
-        builder: (context, snapshot) {
-          final localUrl = snapshot.data;
-          if (localUrl == null || localUrl.isEmpty) return catalogArtwork();
-          return Image.network(
-            localUrl,
-            width: 44,
-            height: 44,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => catalogArtwork(),
-          );
-        },
+        builder: (context, snapshot) => artwork({
+          ...?snapshot.data,
+          if (imageUrl != null && imageUrl!.isNotEmpty) imageUrl!,
+        }.toList(), 0),
       ),
     );
   }
