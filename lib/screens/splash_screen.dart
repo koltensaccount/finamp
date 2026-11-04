@@ -8,6 +8,7 @@ import 'package:finamp/screens/catalog_artist_screen.dart';
 import 'package:finamp/screens/catalog_album_screen.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:finamp/screens/liked_songs_screen.dart';
+import 'package:finamp/screens/player_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

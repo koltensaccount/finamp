@@ -1,22 +1,20 @@
-import 'package:finamp/components/AddToPlaylistScreen/add_to_playlist_button.dart';
-import 'package:finamp/components/favorite_button.dart';
-import 'package:finamp/components/PlayerScreen/album_chip.dart';
-import 'package:finamp/components/PlayerScreen/artist_chip.dart';
-import 'package:finamp/components/PlayerScreen/player_buttons_more.dart';
-import 'package:finamp/l10n/app_localizations.dart';
-import 'package:finamp/models/jellyfin_models.dart' as jellyfin_models;
-import 'package:finamp/screens/player_screen.dart';
-import 'package:finamp/services/finamp_settings_helper.dart';
-import 'package:finamp/services/queue_service.dart';
-import 'package:finamp/services/scrolling_text_helper.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../l10n/app_localizations.dart';
+import '../../models/jellyfin_models.dart' as jellyfin_models;
+import '../../screens/artist_screen.dart';
+import '../../screens/player_screen.dart';
+import '../../services/favorite_provider.dart';
+import '../../services/queue_service.dart';
+import '../favorite_button.dart';
+import 'player_buttons_more.dart';
 
 class TrackNameContent extends ConsumerWidget {
   const TrackNameContent(this.controller, {super.key});
 
   final PlayerHideableController controller;
+  static const Color appleAccentColor = Color(0xFFFA2D48);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,121 +24,92 @@ class TrackNameContent extends ConsumerWidget {
       return const CircularProgressIndicator();
     }
     final currentTrack = queue!.currentTrack!;
-
     final jellyfin_models.BaseItemDto trackBaseItemDto = currentTrack.baseItem;
 
-    Widget getContent(BoxConstraints constraints, double padding) => Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: constraints.maxWidth - padding),
-          child: Semantics.fromProperties(
-            properties: SemanticsProperties(
-              label: "${currentTrack.item.title} (${AppLocalizations.of(context)!.title})",
-            ),
-            excludeSemantics: true,
-            container: true,
-            child: Consumer(
-              builder: (context, ref, _) {
-                final text = currentTrack.item.title;
-                // TODO properly scale in player screen controller?
-                final isTwoLineMode =
-                    controller.shouldShow(PlayerHideable.twoLineTitle) &&
-                    !(MediaQuery.textScalerOf(context).scale(18) > 18 * 1.11);
+    final isFav = ref.watch(isFavoriteProvider(trackBaseItemDto));
 
-                final textStyle = TextStyle(
-                  fontSize: 18,
-                  height: 1.2,
-                  fontWeight: Theme.brightnessOf(context) == Brightness.light ? FontWeight.w500 : FontWeight.w500,
-                );
+    final artistName = trackBaseItemDto.artists?.firstOrNull ??
+        trackBaseItemDto.albumArtist ??
+        currentTrack.item.artist ??
+        '';
 
-                final textSpan = TextSpan(text: text, style: textStyle);
-                final textPainter = TextPainter(text: textSpan, textDirection: TextDirection.ltr, maxLines: 2)
-                  ..layout(maxWidth: 280);
+    final artistItem = (trackBaseItemDto.artistItems ?? trackBaseItemDto.albumArtists)?.firstOrNull;
+    final artistTarget = artistItem != null
+        ? jellyfin_models.BaseItemDto(id: artistItem.id, name: artistItem.name, type: "MusicArtist")
+        : (artistName.isNotEmpty
+            ? jellyfin_models.BaseItemDto(id: trackBaseItemDto.id, name: artistName, type: "MusicArtist")
+            : null);
 
-                final wouldOverflow = textPainter.didExceedMaxLines;
-                textPainter.dispose();
+    final title = currentTrack.item.title;
 
-                if (!isTwoLineMode) {
-                  return Text(
-                    text,
-                    style: textStyle,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left: Apple Music Left-Aligned Title and Artist Subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Track Title
+                Semantics(
+                  label: "$title (${AppLocalizations.of(context)!.title})",
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: Colors.white,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  );
-                } else {
-                  if (wouldOverflow && ref.watch(finampSettingsProvider.oneLineMarqueeTextButton)) {
-                    return SizedBox(
-                      width: 280,
-                      height: 30,
-                      child: ScrollingTextHelper(
-                        id: ValueKey(currentTrack.item.id),
-                        text: text,
-                        style: textStyle,
-                        alignment: TextAlign.center,
-                      ),
-                    );
-                  } else {
-                    return SizedBox(
-                      height: 46.0,
-                      child: Center(
-                        child: Text(
-                          text,
-                          style: textStyle,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    );
-                  }
-                }
-              },
+                  ),
+                ),
+                const SizedBox(height: 3),
+                // Artist Name
+                GestureDetector(
+                  onTap: () {
+                    if (artistTarget != null) {
+                      Navigator.of(context).pushNamed(
+                        ArtistScreen.routeName,
+                        arguments: artistTarget,
+                      );
+                    }
+                  },
+                  child: Text(
+                    artistName.isNotEmpty ? artistName : AppLocalizations.of(context)!.unknownArtist,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.2,
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            PlayerButtonsMore(item: trackBaseItemDto, queueItem: currentTrack),
-            Flexible(
-              child: ArtistChips(
-                baseItem: trackBaseItemDto,
-                backgroundColor: IconTheme.of(context).color!.withOpacity(0.1),
+          const SizedBox(width: 12),
+          // Right: Favorite Heart & Three Dots Menu
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FavoriteButton(
+                item: trackBaseItemDto,
+                color: isFav ? appleAccentColor : Colors.white.withValues(alpha: 0.65),
+                size: 26,
               ),
-            ),
-            FavoriteButton(
-              item: trackBaseItemDto,
-              color: const Color(0xFF1DB954),
-              size: 24,
-            ),
-            AddToPlaylistButton(item: trackBaseItemDto, queueItem: currentTrack),
-          ],
-        ),
-        Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: AlbumChips(
-              baseItem: trackBaseItemDto,
-              backgroundColor: IconTheme.of(context).color!.withOpacity(0.1),
-              key: trackBaseItemDto.album == null ? null : ValueKey("${trackBaseItemDto.album}-album"),
-            ),
+              const SizedBox(width: 4),
+              PlayerButtonsMore(item: trackBaseItemDto, queueItem: currentTrack),
+            ],
           ),
-        ),
-      ],
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double padding = ((constraints.maxWidth - 260) / 4).clamp(0, 20);
-        return Padding(
-          padding: EdgeInsets.only(left: padding, right: padding, bottom: 4.0),
-          child: getContent(constraints, padding),
-        );
-      },
+        ],
+      ),
     );
   }
 }

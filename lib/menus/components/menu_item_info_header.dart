@@ -1,6 +1,5 @@
 import 'package:collection/collection.dart';
 import 'package:finamp/components/AddToPlaylistScreen/add_to_playlist_button.dart';
-import 'package:finamp/components/PlayerScreen/album_chip.dart';
 import 'package:finamp/components/PlayerScreen/artist_chip.dart';
 import 'package:finamp/components/PlayerScreen/genre_chip.dart';
 import 'package:finamp/components/PlayerScreen/item_amount.dart';
@@ -177,28 +176,31 @@ class TrackInfo extends ConsumerWidget {
           softWrap: true,
           maxLines: 2,
         ),
-        Padding(
-          padding: condensed ? const EdgeInsets.only(top: 6.0) : const EdgeInsets.only(top: 2.0),
-          child: ArtistChips(
-            baseItem: item,
-            backgroundColor:
-                IconTheme.of(context).color?.withOpacity(0.1) ??
-                Theme.of(context).textTheme.bodyMedium?.color ??
-                Colors.white,
-            color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.white,
-          ),
+        Builder(
+          builder: (context) {
+            final artist = item.artists?.join(', ') ?? item.albumArtist ?? '';
+            final album = item.album ?? '';
+            final subtitle = [
+              if (artist.isNotEmpty) artist,
+              if (album.isNotEmpty) album,
+            ].join(' • ');
+            if (subtitle.isEmpty) return const SizedBox.shrink();
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          },
         ),
-        if (!condensed) ...[
-          AlbumChips(
-            baseItem: item,
-            backgroundColor:
-                IconTheme.of(context).color?.withOpacity(0.1) ??
-                Theme.of(context).textTheme.bodyMedium?.color ??
-                Colors.white,
-            key: item.album == null ? null : ValueKey("${item.album}-album"),
-          ),
-          GenreIconAndText(parent: item),
-        ],
       ],
     );
   }

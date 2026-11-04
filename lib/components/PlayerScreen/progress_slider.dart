@@ -201,25 +201,23 @@ class __PlaybackProgressSliderState extends ConsumerState<_PlaybackProgressSlide
   Widget build(BuildContext context) {
     return SliderTheme(
       data: widget.allowSeeking
-          // ? _sliderThemeData.copyWith(
           ? SliderTheme.of(context).copyWith(
-              inactiveTrackColor: IconTheme.of(context).color!.withOpacity(0.35),
-              secondaryActiveTrackColor: IconTheme.of(context).color!.withOpacity(0.6),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              activeTrackColor: Colors.white,
+              thumbColor: Colors.white,
+              inactiveTrackColor: Colors.white.withValues(alpha: 0.22),
+              secondaryActiveTrackColor: Colors.white.withValues(alpha: 0.38),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             )
-          // )
-          // : _sliderThemeData.copyWith(
           : SliderTheme.of(context).copyWith(
-              inactiveTrackColor: IconTheme.of(context).color!.withOpacity(0.35),
-              secondaryActiveTrackColor: IconTheme.of(context).color!.withOpacity(0.6),
+              activeTrackColor: Colors.white,
+              thumbColor: Colors.white,
+              inactiveTrackColor: Colors.white.withValues(alpha: 0.22),
+              secondaryActiveTrackColor: Colors.white.withValues(alpha: 0.38),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0.1),
-              // gets rid of both horizontal and vertical padding
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 0.1),
               trackShape: const RectangularSliderTrackShape(),
-              // rectangular shape is thinner than round
-              trackHeight: 4.0,
+              trackHeight: 3.5,
             ),
-      // ),
       child: Slider(
         min: 0.0,
         max: widget.mediaItem?.duration == null

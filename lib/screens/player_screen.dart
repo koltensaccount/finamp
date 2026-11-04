@@ -420,6 +420,8 @@ class _PlayerScreenContent extends ConsumerWidget {
               Flexible(
                 fit: FlexFit.tight,
                 child: SimpleButton(
+                  textColor: Colors.white70,
+                  iconColor: Colors.white70,
                   text: AppLocalizations.of(context)!.outputMenuButtonTitle,
                   icon: TablerIcons.device_speaker,
                   onPressed: () async {
@@ -435,6 +437,8 @@ class _PlayerScreenContent extends ConsumerWidget {
               Flexible(
                 fit: FlexFit.tight,
                 child: SimpleButton(
+                  textColor: Colors.white70,
+                  iconColor: Colors.white70,
                   inactive: !isLyricsAvailable,
                   text: AppLocalizations.of(context)!.lyricsScreenButtonTitle,
                   icon: getLyricsIcon(),

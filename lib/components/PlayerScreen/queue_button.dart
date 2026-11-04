@@ -12,6 +12,8 @@ class QueueButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SimpleButton(
+      textColor: Colors.white70,
+      iconColor: Colors.white70,
       text: AppLocalizations.of(context)!.queue,
       icon: TablerIcons.playlist,
       onPressed: () {

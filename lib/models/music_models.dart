@@ -85,11 +85,11 @@ class MusicScreenPlayable<ChildType extends FinampPlayableDto> extends _Sortable
         assert(ChildType == Genre);
       case ContentType.performingArtists:
       case ContentType.albumArtists:
+      case ContentType.genericArtists:
         assert(ChildType == Artist);
       case ContentType.tracks:
         assert(ChildType == Track);
       case ContentType.home:
-      case ContentType.genericArtists:
       case ContentType.inPlaylistOrAlbum:
       case ContentType.mixed:
       case ContentType.inPerformingArtistAlbums:
@@ -120,6 +120,9 @@ class MusicScreenPlayable<ChildType extends FinampPlayableDto> extends _Sortable
       case ContentType.albumArtists:
         return MusicScreenPlayable<Artist>._(tab: tab, library: library, source: source, sortConfig: sortConfig)
             as MusicScreenPlayable<ChildType>;
+      case ContentType.genericArtists:
+        return MusicScreenPlayable<Artist>._(tab: ContentType.albumArtists, library: library, source: source, sortConfig: sortConfig)
+            as MusicScreenPlayable<ChildType>;
       case ContentType.genres:
         return MusicScreenPlayable<Genre>._(tab: tab, library: library, source: source, sortConfig: sortConfig)
             as MusicScreenPlayable<ChildType>;
@@ -127,7 +130,6 @@ class MusicScreenPlayable<ChildType extends FinampPlayableDto> extends _Sortable
         return MusicScreenPlayable<Track>._(tab: tab, library: library, source: source, sortConfig: sortConfig)
             as MusicScreenPlayable<ChildType>;
       case ContentType.inPlaylistOrAlbum:
-      case ContentType.genericArtists:
       case ContentType.home:
       case ContentType.mixed:
       case ContentType.inPerformingArtistAlbums:

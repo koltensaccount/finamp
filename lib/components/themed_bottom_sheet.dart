@@ -32,7 +32,6 @@ Future<T?> showThemedBottomSheet<T>({
   bool useRootNavigator = false,
 }) async {
   FeedbackHelper.feedback(FeedbackType.selection);
-  bool useDefaultTheme = false;
   final menu = ThemedBottomSheet(
     key: ValueKey((item?.id.raw ?? "") + routeName),
     buildSlivers: buildSlivers,
@@ -60,9 +59,7 @@ Future<T?> showThemedBottomSheet<T>({
     builder: (BuildContext context) {
       return ProviderScope(
         overrides: [
-          if (useDefaultTheme || item == null) localThemeProvider.overrideWith((_) => ColorScheme.of(context)),
-          if (!useDefaultTheme && item != null)
-            localThemeInfoProvider.overrideWithValue(ThemeInfo(item, useIsolate: false)),
+          localThemeProvider.overrideWith((_) => ColorScheme.of(context)),
         ],
         child: menu,
       );

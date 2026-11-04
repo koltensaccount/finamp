@@ -65,6 +65,9 @@ Future<List<BaseItemDto>> globalSearch(Ref ref, String searchTerm, {required boo
 Future<FinampDisplayable<FinampPlayable>> resolveSection(Ref ref, HomeScreenSectionConfiguration section) async {
   switch (section.base) {
     case TabsHomeSection tabSection:
+      final resolvedContentType = tabSection.contentType == ContentType.genericArtists
+          ? ref.read(finampSettingsProvider.defaultArtistType).tabType
+          : tabSection.contentType;
       final source = QueueItemSource.rawId(
         type: QueueItemSourceType.homeScreenSection,
         name: QueueItemSourceName(
@@ -76,14 +79,14 @@ Future<FinampDisplayable<FinampPlayable>> resolveSection(Ref ref, HomeScreenSect
       );
       final resolvedSort = SortAndFilterController.resolveOfflineWithoutFallback(
         ref,
-        tabSection.contentType,
+        resolvedContentType,
         section.sortConfig,
       );
       if (resolvedSort == null) {
         return UnavailableHomeSectionPlayable(source: source, section: section);
       }
       return MusicScreenPlayable(
-        tab: tabSection.contentType,
+        tab: resolvedContentType,
         library: tabSection.libraryId,
         source: source,
         sortConfig: resolvedSort,

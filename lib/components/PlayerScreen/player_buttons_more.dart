@@ -29,7 +29,7 @@ class PlayerButtonsMore extends ConsumerWidget {
         data: IconThemeData(color: IconTheme.of(context).color, size: 24),
         child: IconButton(
           tooltip: AppLocalizations.of(context)!.trackMenuButtonTooltip,
-          icon: const Icon(TablerIcons.menu_2),
+          icon: const Icon(TablerIcons.dots),
           visualDensity: VisualDensity.compact,
           onPressed: () async {
             if (item == null) return;
