@@ -1,4 +1,6 @@
 # Miscellaneous
+.serena/
+__pycache__/
 *.class
 *.log
 *.pyc
