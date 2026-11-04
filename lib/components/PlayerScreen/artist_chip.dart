@@ -8,7 +8,7 @@ import 'package:get_it/get_it.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../models/jellyfin_models.dart';
-import '../../screens/artist_screen.dart';
+import '../../services/artist_resolution_helper.dart';
 import '../../services/downloads_service.dart';
 import '../../services/finamp_settings_helper.dart';
 import '../../services/jellyfin_api_helper.dart';
@@ -117,7 +117,7 @@ class _ArtistChipContent extends StatelessWidget {
           borderRadius: _borderRadius,
           child: InkWell(
             // We shouldn't click through to artists if not passed one
-            onTap: !isArtist ? null : () => Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: item),
+            onTap: !isArtist ? null : () => ArtistResolutionHelper.navigateToArtist(context, artistItem: item),
             borderRadius: _borderRadius,
             child: Row(
               mainAxisSize: MainAxisSize.min,

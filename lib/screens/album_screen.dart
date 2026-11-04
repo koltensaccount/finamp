@@ -13,8 +13,6 @@ import '../services/artist_resolution_helper.dart';
 import '../services/favorite_provider.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
-import 'artist_screen.dart';
-import 'catalog_search_screen.dart';
 
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key, this.parent, this.genreFilter});
@@ -161,11 +159,11 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                 track: resolvedParent,
                 fallbackArtistName: artistName,
               );
-              if (artistTarget != null) {
-                Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artistTarget);
-              } else if (artistName.isNotEmpty) {
-                Navigator.of(context).pushNamed(CatalogSearchScreen.routeName, arguments: artistName);
-              }
+              ArtistResolutionHelper.navigateToArtist(
+                context,
+                artistItem: artistTarget,
+                artistName: artistName.isNotEmpty ? artistName : null,
+              );
             },
             child: Text(
               artistName,

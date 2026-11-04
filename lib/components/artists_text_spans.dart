@@ -1,3 +1,4 @@
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +6,6 @@ import 'package:get_it/get_it.dart';
 
 import '../../models/jellyfin_models.dart';
 import '../../services/jellyfin_api_helper.dart';
-import '../screens/artist_screen.dart';
 import '../services/downloads_service.dart';
 
 List<TextSpan> buildArtistsTextSpans(BaseItemDto item, Color? textColour, BuildContext context, bool popRoutes) {
@@ -35,9 +35,17 @@ List<TextSpan> buildArtistsTextSpans(BaseItemDto item, Color? textColour, BuildC
                     : jellyfinApiHelper.getItemById(e.id);
 
                 artistFuture.then(
-                  (artist) => popRoutes
-                      ? Navigator.of(context).popAndPushNamed(ArtistScreen.routeName, arguments: artist)
-                      : Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artist),
+                  (artist) {
+                    if (context.mounted) {
+                      ArtistResolutionHelper.navigateToArtist(
+                        context,
+                        artistItem: artist,
+                        jellyfinId: e.id.raw,
+                        artistName: e.name,
+                        popFirst: popRoutes,
+                      );
+                    }
+                  },
                 );
               },
           ),

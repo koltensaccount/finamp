@@ -6,6 +6,7 @@ import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/services/album_screen_provider.dart';
 import 'package:finamp/services/artist_content_provider.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/downloads_service.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/finamp_user_helper.dart';
@@ -16,7 +17,6 @@ import 'package:get_it/get_it.dart';
 
 import '../menus/track_menu.dart';
 import '../screens/album_screen.dart';
-import '../screens/artist_screen.dart';
 import '../screens/genre_screen.dart';
 import '../screens/music_screen.dart';
 import 'music_screen_provider.dart';
@@ -189,11 +189,14 @@ void openItemPage(BaseItemDto item, NavigatorState navigator, {bool showTracks =
     );
     return;
   }
+  if (BaseItemDtoType.fromItem(item) == BaseItemDtoType.artist) {
+    ArtistResolutionHelper.navigateToArtist(navigator.context, artistItem: item);
+    return;
+  }
   final targetRoute = switch (BaseItemDtoType.fromItem(item)) {
     BaseItemDtoType.album => AlbumScreen.routeName,
     BaseItemDtoType.playlist => AlbumScreen.routeName,
     BaseItemDtoType.genre => GenreScreen.routeName,
-    BaseItemDtoType.artist => ArtistScreen.routeName,
     _ => AlbumScreen.routeName,
   };
   navigator.pushNamed(targetRoute, arguments: item);

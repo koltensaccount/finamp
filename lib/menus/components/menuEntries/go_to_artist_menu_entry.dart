@@ -2,7 +2,6 @@ import 'package:finamp/components/global_snackbar.dart';
 import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/menus/components/menuEntries/menu_entry.dart';
 import 'package:finamp/models/jellyfin_models.dart';
-import 'package:finamp/screens/artist_screen.dart';
 import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/downloads_service.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
@@ -51,7 +50,12 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
           }
           if (context.mounted) {
             Navigator.pop(context);
-            await Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artist);
+            await ArtistResolutionHelper.navigateToArtist(
+              context,
+              artistItem: artist,
+              jellyfinId: artistId.raw,
+              artistName: artistItem.name,
+            );
           }
         },
       ),

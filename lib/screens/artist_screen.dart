@@ -9,31 +9,78 @@ import '../components/print_duration.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
 import '../services/artist_content_provider.dart';
+import '../services/artist_identity_service.dart';
 import '../services/artist_image_service.dart';
 import '../services/favorite_provider.dart';
+import '../services/finamp_settings_helper.dart';
 import '../services/finamp_user_helper.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
 import 'album_screen.dart';
+import 'catalog_artist_screen.dart';
 
 class ArtistScreen extends ConsumerStatefulWidget {
-  const ArtistScreen({super.key, this.widgetArtist, this.genreFilter});
+  const ArtistScreen({super.key, this.widgetArtist, this.genreFilter, this.disableRedirect = false});
 
   static const routeName = "/music/artist";
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
   final BaseItemDto? widgetArtist;
   final BaseItemDto? genreFilter;
+  final bool disableRedirect;
 
   @override
   ConsumerState<ArtistScreen> createState() => _ArtistScreenState();
 }
 
 class _ArtistScreenState extends ConsumerState<ArtistScreen> {
+  bool _checkedOnlineRedirect = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkRedirect();
+  }
+
+  Future<void> _checkRedirect() async {
+    if (_checkedOnlineRedirect || widget.disableRedirect) return;
+    final rawArgs = ModalRoute.of(context)?.settings.arguments;
+    if (rawArgs is Map && rawArgs['disableRedirect'] == true) return;
+
+    _checkedOnlineRedirect = true;
+    if (FinampSettingsHelper.finampSettings.isOffline) return;
+
+    BaseItemDto? artist = widget.widgetArtist;
+    if (artist == null && rawArgs is BaseItemDto) {
+      artist = rawArgs;
+    } else if (artist == null && rawArgs is Map && rawArgs['artist'] is BaseItemDto) {
+      artist = rawArgs['artist'] as BaseItemDto;
+    }
+    if (artist == null) return;
+
+    final mbid = await ArtistIdentityService.resolveArtistMbid(artistItem: artist);
+    if (mbid != null && mounted) {
+      Navigator.of(context).pushReplacementNamed(
+        CatalogArtistScreen.routeName,
+        arguments: CatalogArtistScreenArguments(
+          artistMbid: mbid,
+          initialName: artist.name,
+          fallbackArtist: artist,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final BaseItemDto artist = widget.widgetArtist ?? ModalRoute.settingsOf(context)!.arguments as BaseItemDto;
+    final rawArgs = ModalRoute.of(context)?.settings.arguments;
+    final BaseItemDto artist = widget.widgetArtist ??
+        (rawArgs is BaseItemDto
+            ? rawArgs
+            : (rawArgs is Map && rawArgs['artist'] is BaseItemDto
+                ? rawArgs['artist'] as BaseItemDto
+                : BaseItemDto(id: const BaseItemId(''), name: 'Artist')));
 
     final finampUserHelper = GetIt.instance<FinampUserHelper>();
     final library = finampUserHelper.currentUser?.currentView;

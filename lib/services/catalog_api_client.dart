@@ -30,6 +30,19 @@ class CatalogApiClient {
     return CatalogAvailability.fromJson(_jsonObject(response));
   }
 
+  Future<Map<String, dynamic>?> resolveArtist({String? itemId, String? name}) async {
+    final query = <String, String>{};
+    if (itemId != null && itemId.isNotEmpty) query['item_id'] = itemId;
+    if (name != null && name.isNotEmpty) query['name'] = name;
+    if (query.isEmpty) return null;
+    try {
+      final response = await _get('/v1/artists/resolve', query);
+      return _jsonObject(response);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<CatalogArtist> getArtist(String artistMbid) async {
     final response = await _get('/v1/artists/$artistMbid');
     return CatalogArtist.fromJson(_jsonObject(response));

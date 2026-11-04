@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
@@ -11,11 +12,17 @@ import '../services/catalog_playback_helper.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
 import '../services/artist_image_service.dart';
+import '../services/artist_resolution_helper.dart';
+import 'artist_screen.dart';
 import 'catalog_album_screen.dart';
 import 'catalog_discography_screen.dart';
 
 class CatalogArtistScreenArguments {
-  const CatalogArtistScreenArguments({required this.artistMbid, this.initialName});
+  const CatalogArtistScreenArguments({
+    required this.artistMbid,
+    this.initialName,
+    this.fallbackArtist,
+  });
 
   factory CatalogArtistScreenArguments.fromSearchResult(CatalogSearchResult result) =>
       CatalogArtistScreenArguments(
@@ -25,6 +32,7 @@ class CatalogArtistScreenArguments {
 
   final String artistMbid;
   final String? initialName;
+  final BaseItemDto? fallbackArtist;
 }
 
 class CatalogArtistScreen extends StatefulWidget {
@@ -40,6 +48,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
   String? _error;
   bool _loading = true;
   bool _isFavorite = false;
+  BaseItemDto? _fallbackArtist;
+  String? _bio;
+  String? _heroImageUrl;
+  List<Map<String, String>> _similarArtists = const [];
+  bool _bioExpanded = false;
 
   @override
   void didChangeDependencies() {
@@ -61,6 +74,8 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
       args = const CatalogArtistScreenArguments(artistMbid: defaultMbid);
     }
 
+    _fallbackArtist = args.fallbackArtist;
+
     if (args.artistMbid.isEmpty) {
       setState(() {
         _loading = false;
@@ -76,11 +91,40 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
 
     try {
       final client = GetIt.instance<CatalogApiClient>();
-      _artist = await client.getArtist(args.artistMbid);
+      final artist = await client.getArtist(args.artistMbid);
+      _artist = artist;
+
+      // Extract image & bio
+      _heroImageUrl = artist.imageUrl ?? ArtistImageService.getKnownArtistImageUrl(artist.name);
+      _bio = artist.bio;
+
+      // Asynchronously load bio, image, and similar artists from legitimate APIs
+      unawaited(_fetchEnrichedMetadata(artist));
     } catch (e) {
       _error = e.toString();
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _fetchEnrichedMetadata(CatalogArtist artist) async {
+    if (_heroImageUrl == null || _heroImageUrl!.isEmpty) {
+      final img = await ArtistImageService.fetchArtistImageUrl(artist.name);
+      if (img != null && mounted) {
+        setState(() => _heroImageUrl = img);
+      }
+    }
+
+    if (_bio == null || _bio!.isEmpty) {
+      final bio = await ArtistImageService.fetchArtistBio(artist.name);
+      if (bio != null && mounted) {
+        setState(() => _bio = bio);
+      }
+    }
+
+    final similar = await ArtistImageService.fetchSimilarArtists(artist.name);
+    if (similar.isNotEmpty && mounted) {
+      setState(() => _similarArtists = similar);
     }
   }
 
@@ -178,6 +222,15 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     );
   }
 
+  void _openOfflineLibrary() {
+    if (_fallbackArtist != null) {
+      Navigator.of(context).pushNamed(
+        ArtistScreen.routeName,
+        arguments: {'artist': _fallbackArtist, 'disableRedirect': true},
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,6 +254,20 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
           ),
         ),
         actions: [
+          if (_fallbackArtist != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.black45,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.download_done, color: Colors.white, size: 20),
+                  tooltip: 'View Downloaded Music',
+                  onPressed: _openOfflineLibrary,
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: CircleAvatar(
@@ -238,10 +305,23 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
               const SizedBox(height: 8),
               Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-                onPressed: _loadArtist,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    onPressed: _loadArtist,
+                  ),
+                  if (_fallbackArtist != null) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.library_music),
+                      label: const Text('Browse Downloaded'),
+                      onPressed: _openOfflineLibrary,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -268,13 +348,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     }
 
     // Hero backdrop image: prioritize real artist photo, fallback to top album art
-    final artistPhoto = ArtistImageService.getKnownArtistImageUrl(artist.name) ??
-        ArtistImageService.getKnownArtistImageUrl(artist.id);
     final heroImageAlbum = artist.albums.cast<CatalogSearchResult?>().firstWhere(
           (a) => a?.imageUrl != null && a!.imageUrl!.isNotEmpty,
           orElse: () => null,
         );
-    final heroImageUrl = artistPhoto ?? heroImageAlbum?.imageUrl;
+    final effectiveHeroImageUrl = _heroImageUrl ?? heroImageAlbum?.imageUrl;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -282,7 +360,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
         // 1. Apple Music Full-Bleed Artist Hero Section
         _buildArtistHeroHeader(
           artist: artist,
-          heroImageUrl: heroImageUrl,
+          heroImageUrl: effectiveHeroImageUrl,
           studioAlbumsCount: studioAlbums.length,
         ),
 
@@ -326,70 +404,78 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
             items: liveAndOther,
           ),
 
-        _buildSimilarArtistsSection(artist),
+        // 5. Artist Biography Section (Wikipedia)
+        if (_bio != null && _bio!.isNotEmpty) ...[
+          _buildBioSection(artist),
+        ],
+
+        // 6. Similar Artists Section (Deezer)
+        if (_similarArtists.isNotEmpty) ...[
+          _buildSimilarArtistsSection(artist),
+        ],
 
         const SizedBox(height: 36),
       ],
     );
   }
 
+  Widget _buildBioSection(CatalogArtist artist) {
+    final bioText = _bio!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'About ${artist.name}',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bioText,
+                  maxLines: _bioExpanded ? 30 : 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    height: 1.45,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (bioText.length > 200) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _bioExpanded = !_bioExpanded),
+                    child: Text(
+                      _bioExpanded ? 'Show less' : 'Read more',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSimilarArtistsSection(CatalogArtist artist) {
-    final Map<String, List<Map<String, String>>> similarMapping = {
-      'geese': [
-        {
-          'name': 'Cameron Winter',
-          'mbid': '5b116773-5182-4df4-a14a-10114ea0cb13',
-          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/80284da7bfe0aee61d2299c37a9a76f4/250x250-000000-80-0-0.jpg',
-        },
-        {
-          'name': 'Black Country, New Road',
-          'mbid': 'f72671c6-11f2-452f-87a3-4889c6569106',
-          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/250x250-000000-80-0-0.jpg',
-        },
-        {
-          'name': 'MJ Lenderman',
-          'mbid': '96ee86f7-9c9c-4903-8d62-5fcfe0c0d164',
-          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/99d12aa8eef867cc63f2e7ba80414b88/250x250-000000-80-0-0.jpg',
-        },
-      ],
-      'the beatles': [
-        {
-          'name': 'The Rolling Stones',
-          'mbid': 'b071f9f8-14b0-4217-8e97-eb41da73f59e',
-          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f773418ba6a12781463cf17d23d9b4db/500x500-000000-80-0-0.jpg',
-        },
-        {
-          'name': 'Pink Floyd',
-          'mbid': '83d91898-7763-47d7-b03b-b92132375c47',
-          'imageUrl': 'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/250x250-000000-80-0-0.jpg',
-        },
-        {
-          'name': 'Queen',
-          'mbid': '0383dadf-2a4e-4d10-a46a-e9e041da8eb3',
-          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/61b7f9408b049d5a7d65fc9fae6da62a/500x500-000000-80-0-0.jpg',
-        },
-        {
-          'name': 'David Bowie',
-          'mbid': '5441c29d-3602-4898-b1a1-b77fa23b8e50',
-          'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/720074e6451eeb22ae7cb210ec947dfb/500x500-000000-80-0-0.jpg',
-        },
-      ],
-    };
-
-    final list = similarMapping[artist.name.toLowerCase()] ??
-        [
-          {
-            'name': 'The Beatles',
-            'mbid': 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
-            'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
-          },
-          {
-            'name': 'Geese',
-            'mbid': 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
-            'imageUrl': 'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
-          },
-        ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -414,36 +500,46 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: list.length,
+            itemCount: _similarArtists.length,
             separatorBuilder: (_, _) => const SizedBox(width: 20),
             itemBuilder: (context, i) {
-              final a = list[i];
+              final a = _similarArtists[i];
+              final name = a['name'] ?? '';
+              final imageUrl = a['imageUrl'] ?? '';
               return InkWell(
                 borderRadius: BorderRadius.circular(44),
-                onTap: () => Navigator.of(context).pushNamed(
-                  CatalogArtistScreen.routeName,
-                  arguments: CatalogArtistScreenArguments(artistMbid: a['mbid']!, initialName: a['name']!),
-                ),
+                onTap: () {
+                  ArtistResolutionHelper.navigateToArtist(
+                    context,
+                    artistName: name,
+                  );
+                },
                 child: SizedBox(
                   width: 90,
                   child: Column(
                     children: [
                       ClipOval(
-                        child: Image.network(
-                          a['imageUrl']!,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Icon(TablerIcons.user, size: 36),
-                          ),
-                        ),
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: const Icon(TablerIcons.user, size: 36),
+                                ),
+                              )
+                            : CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                child: const Icon(TablerIcons.user, size: 36),
+                              ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        a['name']!,
+                        name,
                         maxLines: 2,
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
@@ -501,8 +597,8 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.55),
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.55),
                   Theme.of(context).scaffoldBackgroundColor,
                 ],
                 stops: const [0.0, 0.65, 1.0],
@@ -533,10 +629,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                   [
                     if (studioAlbumsCount > 0) '$studioAlbumsCount Albums',
                     '${artist.albums.length} Releases',
-                    if (artist.recordings.isNotEmpty) '${artist.recordings.length} In Library',
+                    if (artist.recordings.isNotEmpty)
+                      '${artist.recordings.length} ${artist.recordings.length == 1 ? 'Song' : 'Songs'} in Library',
                   ].join(' • '),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -567,7 +664,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.35),
+                              color: Colors.black.withValues(alpha: 0.35),
                               blurRadius: 14,
                               offset: const Offset(0, 4),
                             ),
@@ -623,8 +720,8 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.18),
-            border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+            color: Colors.white.withValues(alpha: 0.18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
           ),
           child: Center(
             child: Icon(icon, color: iconColor, size: 22),
@@ -717,7 +814,7 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: latest.isFullyOwned
-                        ? Colors.green.withOpacity(0.15)
+                        ? Colors.green.withValues(alpha: 0.15)
                         : Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   child: Icon(

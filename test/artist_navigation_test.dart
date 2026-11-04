@@ -1,6 +1,19 @@
 import 'package:finamp/models/jellyfin_models.dart';
+import 'package:finamp/screens/artist_screen.dart';
+import 'package:finamp/screens/catalog_artist_screen.dart';
+import 'package:finamp/services/artist_identity_service.dart';
 import 'package:finamp/services/artist_resolution_helper.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _TestNavigatorObserver extends NavigatorObserver {
+  final List<String?> pushedRoutes = [];
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushedRoutes.add(route.settings.name);
+    super.didPush(route, previousRoute);
+  }
+}
 
 void main() {
   group('Artist Navigation ID Resolution Regression Tests', () {
@@ -145,6 +158,73 @@ void main() {
       );
 
       expect(target, isNull);
+    });
+
+    testWidgets('navigateToArtist routes to CatalogArtistScreen when MBID is confident', (tester) async {
+      final testObserver = _TestNavigatorObserver();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [testObserver],
+          routes: {
+            CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogScreen')),
+            ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+          },
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                ArtistResolutionHelper.navigateToArtist(
+                  context,
+                  artistMbid: '59db3d82-86ea-451f-881f-dffc8ec387c9',
+                  artistName: 'Metro Boomin',
+                );
+              },
+              child: const Text('Go'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Go'));
+      await tester.pumpAndSettle();
+
+      expect(testObserver.pushedRoutes, contains(CatalogArtistScreen.routeName));
+      expect(find.text('CatalogScreen'), findsOneWidget);
+    });
+
+    testWidgets('navigateToArtist falls back to ArtistScreen when offline', (tester) async {
+      ArtistIdentityService.mockIsOffline = true;
+      try {
+        final testObserver = _TestNavigatorObserver();
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [testObserver],
+            routes: {
+              CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogScreen')),
+              ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+            },
+            home: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  ArtistResolutionHelper.navigateToArtist(
+                    context,
+                    jellyfinId: '3abb1a64b01694b0df1411d4f6ee051e',
+                    artistName: 'Metro Boomin',
+                  );
+                },
+                child: const Text('Go'),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Go'));
+        await tester.pumpAndSettle();
+
+        expect(testObserver.pushedRoutes, contains(ArtistScreen.routeName));
+        expect(find.text('LocalArtistScreen'), findsOneWidget);
+      } finally {
+        ArtistIdentityService.mockIsOffline = null;
+      }
     });
   });
 }

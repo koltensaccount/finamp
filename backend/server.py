@@ -2,6 +2,7 @@
 import argparse, json, os, time, urllib.request, urllib.parse, urllib.error, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from catalog import Catalog, norm
+from acquisition import AcquisitionDispatcher
 
 LAST = 0
 
@@ -27,7 +28,7 @@ def provider(c, q):
                 c.db.execute('INSERT OR REPLACE INTO http_cache VALUES(?,?,?,?,?)', (url, 200, raw, time.time(), 0))
                 if kind == 'artist':
                     for i, x in enumerate(data.get('artists', [])):
-                        c.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)', (x['id'], x['name']))
+                        c.db.execute('INSERT INTO artists(id, name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name', (x['id'], x['name']))
                         c.db.execute('INSERT OR REPLACE INTO search_hits VALUES(?,?,?,?)', (norm(q), 'artist', x['id'], i))
                 elif kind == 'release-group':
                     for i, x in enumerate(data.get('release-groups', [])):
@@ -136,14 +137,60 @@ def _hydrate_artist_release_groups(c, artist_id, data):
             c.db.execute("INSERT OR IGNORE INTO credits VALUES('group',?,?,?,(SELECT name FROM artists WHERE id=?),'')", (gid, artist_id, 999, artist_id))
 
 def fetch_mb_artist(c, artist_id, force=False):
-    # Ensure artist name is present
+    # Ensure artist details are present
     artist_row = c.db.execute('SELECT * FROM artists WHERE id=?', (artist_id,)).fetchone()
-    if not artist_row or force:
-        a_url = f'https://musicbrainz.org/ws/2/artist/{artist_id}?fmt=json'
+    has_image = bool(artist_row and 'image_url' in artist_row.keys() and artist_row['image_url'])
+    if not artist_row or force or not has_image:
+        a_url = f'https://musicbrainz.org/ws/2/artist/{artist_id}?inc=url-rels+tags+genres&fmt=json'
         try:
             _, a_data = _mb_get(a_url)
+            name = a_data.get('name') or ''
+            art_type = a_data.get('type')
+            country = a_data.get('country')
+            disambiguation = a_data.get('disambiguation')
+            genres = [g['name'] for g in a_data.get('genres', [])]
+
+            # Deezer artist photo
+            image_url = None
+            try:
+                dz_url = 'https://api.deezer.com/search/artist?' + urllib.parse.urlencode({'q': name})
+                dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
+                    dz_data = json.loads(dz_resp.read().decode())
+                    dz_items = dz_data.get('data', [])
+                    if dz_items:
+                        image_url = dz_items[0].get('picture_xl') or dz_items[0].get('picture_big')
+            except Exception:
+                pass
+
+            # Wikipedia bio
+            bio = None
+            try:
+                w_title = urllib.parse.quote(name.replace(' ', '_'))
+                w_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{w_title}'
+                w_req = urllib.request.Request(w_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                with urllib.request.urlopen(w_req, timeout=5) as w_resp:
+                    w_data = json.loads(w_resp.read().decode())
+                    bio = w_data.get('extract')
+                    if not image_url:
+                        image_url = w_data.get('thumbnail', {}).get('source')
+            except Exception:
+                pass
+
             with c.db:
-                c.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)', (a_data['id'], a_data['name']))
+                c.db.execute('''
+                    INSERT INTO artists(id, name, disambiguation, type, country, genres, image_url, bio)
+                    VALUES(?,?,?,?,?,?,?,?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name=excluded.name,
+                        disambiguation=COALESCE(excluded.disambiguation, artists.disambiguation),
+                        type=COALESCE(excluded.type, artists.type),
+                        country=COALESCE(excluded.country, artists.country),
+                        genres=COALESCE(excluded.genres, artists.genres),
+                        image_url=COALESCE(excluded.image_url, artists.image_url),
+                        bio=COALESCE(excluded.bio, artists.bio)
+                ''', (a_data['id'], name, disambiguation, art_type, country, json.dumps(genres), image_url, bio))
+            c.db.commit()
         except Exception:
             pass
 
@@ -218,6 +265,15 @@ class Handler(BaseHTTPRequestHandler):
                                 break
                         fetch_mb_release(c, best_ed['id'])
                         result = c.group(group_id)
+            elif parts[:2] == ['v1', 'artists'] and len(parts) == 3 and parts[2] == 'resolve':
+                item_id = q.get('item_id', [None])[0] or q.get('jellyfin_id', [None])[0]
+                name = q.get('name', [None])[0]
+                if not item_id and not name:
+                    raise ValueError('item_id or name query parameter required')
+                result = c.resolve_artist(item_id=item_id, name=name)
+                if result is None:
+                    self.send_error(404)
+                    return
             elif parts[:2] == ['v1', 'artists'] and len(parts) == 3:
                 artist_id = parts[2]
                 fetch_mb_artist(c, artist_id, force=bool(q.get('refresh') == ['true']))
@@ -229,11 +285,18 @@ class Handler(BaseHTTPRequestHandler):
                 if size > 8192:
                     raise ValueError('request too large')
                 body = json.loads(self.rfile.read(size))
-                ident = c.request(body['release_id'], body.get('scope', 'album'))
-                result = {'id': ident, 'state': 'queued', 'dispatch_enabled': False}
+                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
+                result = disp.submit_request(body['release_id'], body.get('scope', 'album'), origin=body.get('origin', 'explicit_user'))
+            elif route.path == '/v1/requests' and self.command == 'GET':
+                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
+                result = {'requests': disp.get_all_requests()}
             elif parts[:2] == ['v1', 'requests'] and len(parts) == 3:
-                row = c.db.execute('SELECT * FROM requests WHERE id=?', (parts[2],)).fetchone()
-                result = dict(row) if row else None
+                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
+                try:
+                    req_id = int(parts[2])
+                    result = disp.get_request(req_id)
+                except ValueError:
+                    result = None
             else:
                 self.send_error(404)
                 return
@@ -255,16 +318,20 @@ class Handler(BaseHTTPRequestHandler):
     do_GET = dispatch
     do_POST = dispatch
 
-def serve(database, port):
+def serve(database, port, dispatch=False, dry_run=False):
     if not os.environ.get('CATALOG_API_TOKEN'):
         raise RuntimeError('CATALOG_API_TOKEN required')
     server = HTTPServer(('127.0.0.1', port), Handler)
     server.database = database
+    server.dispatch_enabled = dispatch
+    server.dry_run = dry_run
     server.serve_forever()
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--database', required=True)
     p.add_argument('--port', type=int, default=8765)
+    p.add_argument('--dispatch', action='store_true', default=False)
+    p.add_argument('--dry-run', action='store_true', default=False)
     a = p.parse_args()
-    serve(a.database, a.port)
+    serve(a.database, a.port, dispatch=a.dispatch, dry_run=a.dry_run)

@@ -7,11 +7,11 @@ import 'package:finamp/menus/track_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/screens/album_screen.dart';
-import 'package:finamp/screens/artist_screen.dart';
 import 'package:finamp/screens/downloads_screen.dart';
 import 'package:finamp/screens/genre_screen.dart';
 import 'package:finamp/screens/music_screen.dart';
 import 'package:finamp/services/album_screen_provider.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/downloads_service.dart';
 import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
@@ -31,7 +31,7 @@ void navigateToSource(BuildContext context, QueueItemSource source) {
     case QueueItemSourceType.artist:
     case QueueItemSourceType.nextUpArtist:
     case QueueItemSourceType.artistMix:
-      Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: source.item);
+      ArtistResolutionHelper.navigateToArtist(context, artistItem: source.item);
       break;
     case QueueItemSourceType.genre:
     case QueueItemSourceType.nextUpGenre:
@@ -95,7 +95,7 @@ void navigateToSource(BuildContext context, QueueItemSource source) {
           Navigator.of(context).pushNamed(AlbumScreen.routeName, arguments: source.item);
           break;
         case BaseItemDtoType.artist:
-          Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: source.item);
+          ArtistResolutionHelper.navigateToArtist(context, artistItem: source.item);
           break;
         case BaseItemDtoType.genre:
           Navigator.of(context).pushNamed(GenreScreen.routeName, arguments: source.item);

@@ -22,5 +22,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         controller.loadDefaultSplashScreenView()
         window?.rootViewController = controller
         window?.makeKeyAndVisible()
+
+        if let url = connectionOptions.urlContexts.first?.url {
+            _ = (UIApplication.shared.delegate as? FlutterAppDelegate)?.application(
+                UIApplication.shared,
+                open: url,
+                options: [:]
+            )
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        for context in URLContexts {
+            _ = (UIApplication.shared.delegate as? FlutterAppDelegate)?.application(
+                UIApplication.shared,
+                open: context.url,
+                options: [:]
+            )
+        }
     }
 }

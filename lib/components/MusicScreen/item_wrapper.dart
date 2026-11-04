@@ -13,8 +13,8 @@ import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/models/music_models.dart';
 import 'package:finamp/screens/album_screen.dart';
-import 'package:finamp/screens/artist_screen.dart';
 import 'package:finamp/screens/genre_screen.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/finamp_user_helper.dart';
@@ -106,15 +106,12 @@ class _ItemCollectionWrapperState extends ConsumerState<ItemWrapper> {
                     showModalTrackMenu(context: context, item: mutableItem, source: widget.source);
                     break;
                   case BaseItemDtoType.artist:
-                    Navigator.of(context).push(
-                      MaterialPageRoute<ArtistScreen>(
-                        builder: (_) => ArtistScreen(
-                          widgetArtist: mutableItem,
-                          genreFilter: (ref.watch(finampSettingsProvider.genreFilterArtistScreens))
-                              ? widget.genreFilter
-                              : null,
-                        ),
-                      ),
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: mutableItem,
+                      genreFilter: (ref.watch(finampSettingsProvider.genreFilterArtistScreens))
+                          ? widget.genreFilter
+                          : null,
                     );
                     break;
                   case BaseItemDtoType.genre:

@@ -1,64 +1,137 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ArtistImageService {
-  static final Map<String, String> _cache = {
-    // MusicBrainz MBIDs
-    'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d':
-        'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
-    'e0c97a4d-c392-41a9-a374-57af3e3eeab3':
-        'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
-    '83d91898-7763-47d7-b03b-b92132375c47':
-        'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/500x500-000000-80-0-0.jpg',
-    'a74b1b7f-71a5-4011-9441-d0b5e4122711':
-        'https://cdn-images.dzcdn.net/images/artist/0d58cfbc90f2e776608bcdc0c45a4711/500x500-000000-80-0-0.jpg',
-    '678d88b2-87b0-403b-b63d-5da7465aecc3':
-        'https://cdn-images.dzcdn.net/images/artist/2cf138b96a63da677ac6fb79846607c8/500x500-000000-80-0-0.jpg',
-    'b071f9f8-14b0-4217-8e97-eb41da73f59e':
-        'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/500x500-000000-80-0-0.jpg',
-    'f72671c6-11f2-452f-87a3-4889c6569106':
-        'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/500x500-000000-80-0-0.jpg',
+  static final Map<String, String> _imageCache = {};
+  static final Map<String, String> _bioCache = {};
+  static final Map<String, List<Map<String, String>>> _similarCache = {};
+  static bool _initialized = false;
 
-    // Normalized lowercase artist names
-    'the beatles':
-        'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
-    'beatles':
-        'https://e-cdns-images.dzcdn.net/images/artist/16925ed8f96eb621ecd56c2c8ba3da6e/500x500-000000-80-0-0.jpg',
-    'geese':
-        'https://e-cdns-images.dzcdn.net/images/artist/f21589416d59cc1b172748ad72e8a3e9/500x500-000000-80-0-0.jpg',
-    'radiohead':
-        'https://cdn-images.dzcdn.net/images/artist/0d58cfbc90f2e776608bcdc0c45a4711/500x500-000000-80-0-0.jpg',
-    'pink floyd':
-        'https://cdn-images.dzcdn.net/images/artist/0aaad29662a33e33350f999d6b26e517/500x500-000000-80-0-0.jpg',
-    'black country, new road':
-        'https://cdn-images.dzcdn.net/images/artist/5d8bf8877cefa207508196c2e61a2ad8/500x500-000000-80-0-0.jpg',
-    'led zeppelin':
-        'https://cdn-images.dzcdn.net/images/artist/2cf138b96a63da677ac6fb79846607c8/500x500-000000-80-0-0.jpg',
-    'the rolling stones':
-        'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/500x500-000000-80-0-0.jpg',
-    'rolling stones':
-        'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/500x500-000000-80-0-0.jpg',
-    'drake':
-        'https://cdn-images.dzcdn.net/images/artist/eb0ed5b21d1ea5af021fc074ded0e91f/500x500-000000-80-0-0.jpg',
-    'mj lenderman':
-        'https://cdn-images.dzcdn.net/images/artist/99d12aa8eef867cc63f2e7ba80414b88/500x500-000000-80-0-0.jpg',
-    'billie eilish':
-        'https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg',
-    'fleetwood mac':
-        'https://cdn-images.dzcdn.net/images/artist/ef23278cf3a67a3ca8404ddaa38699d4/500x500-000000-80-0-0.jpg',
-  };
+  /// Initialize persistent caches from SharedPreferences.
+  static Future<void> init() async {
+    if (_initialized) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith('artist_img:')) {
+          final k = key.substring('artist_img:'.length);
+          final v = prefs.getString(key);
+          if (v != null) _imageCache[k] = v;
+        } else if (key.startsWith('artist_bio:')) {
+          final k = key.substring('artist_bio:'.length);
+          final v = prefs.getString(key);
+          if (v != null) _bioCache[k] = v;
+        } else if (key.startsWith('artist_similar:')) {
+          final k = key.substring('artist_similar:'.length);
+          final v = prefs.getString(key);
+          if (v != null) {
+            try {
+              final list = (jsonDecode(v) as List)
+                  .map((e) => Map<String, String>.from(e as Map))
+                  .toList();
+              _similarCache[k] = list;
+            } catch (_) {}
+          }
+        }
+      }
+      _initialized = true;
+    } catch (_) {}
+  }
 
-  /// Returns a cached artist image URL if available synchronously.
+  /// Returns a cached artist image URL if available synchronously in memory.
   static String? getKnownArtistImageUrl(String nameOrId) {
     final key = nameOrId.trim().toLowerCase();
-    if (_cache.containsKey(key)) return _cache[key];
+    if (_imageCache.containsKey(key)) return _imageCache[key];
     return null;
   }
 
-  /// Fetches an artist image asynchronously if not cached, querying Deezer API.
+  /// Fetches an artist image asynchronously if not cached, querying legitimate public sources
+  /// (Wikipedia REST API first for verified canonical photos, Deezer API for high-resolution backup).
   static Future<String?> fetchArtistImageUrl(String artistName) async {
+    await init();
     final key = artistName.trim().toLowerCase();
-    if (_cache.containsKey(key)) return _cache[key];
+    if (_imageCache.containsKey(key) && _imageCache[key]!.isNotEmpty) {
+      return _imageCache[key];
+    }
+
+    // 1. Try Wikipedia REST API summary
+    try {
+      final cleanTitle = Uri.encodeComponent(artistName.trim().replaceAll(' ', '_'));
+      final wikiUri = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$cleanTitle');
+      final wikiRes = await http.get(wikiUri, headers: {'User-Agent': 'FinampCatalog/0.1'}).timeout(const Duration(seconds: 4));
+      if (wikiRes.statusCode == 200) {
+        final data = jsonDecode(wikiRes.body);
+        if (data is Map<String, dynamic>) {
+          final orig = data['originalimage']?['source'] as String?;
+          final thumb = data['thumbnail']?['source'] as String?;
+          final url = orig ?? thumb;
+          if (url != null && url.isNotEmpty) {
+            _saveImage(key, url);
+            return url;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Try Deezer Search API
+    try {
+      final uri = Uri.parse('https://api.deezer.com/search/artist?q=${Uri.encodeComponent(artistName)}');
+      final response = await http.get(uri).timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic> && data['data'] is List && (data['data'] as List).isNotEmpty) {
+          final first = data['data'][0] as Map<String, dynamic>;
+          final url = first['picture_xl'] ?? first['picture_big'] ?? first['picture_medium'];
+          if (url is String && url.isNotEmpty) {
+            _saveImage(key, url);
+            return url;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  /// Fetches legitimate artist biography from Wikipedia REST API.
+  static Future<String?> fetchArtistBio(String artistName) async {
+    await init();
+    final key = artistName.trim().toLowerCase();
+    if (_bioCache.containsKey(key) && _bioCache[key]!.isNotEmpty) {
+      return _bioCache[key];
+    }
+
+    try {
+      final cleanTitle = Uri.encodeComponent(artistName.trim().replaceAll(' ', '_'));
+      final wikiUri = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$cleanTitle');
+      final wikiRes = await http.get(wikiUri, headers: {'User-Agent': 'FinampCatalog/0.1'}).timeout(const Duration(seconds: 4));
+      if (wikiRes.statusCode == 200) {
+        final data = jsonDecode(wikiRes.body);
+        if (data is Map<String, dynamic>) {
+          final extract = data['extract'] as String?;
+          if (extract != null && extract.isNotEmpty) {
+            _bioCache[key] = extract;
+            unawaited(SharedPreferences.getInstance().then((prefs) {
+              prefs.setString('artist_bio:$key', extract);
+            }).catchError((_) {}));
+            return extract;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  /// Fetches legitimate related/similar artists from Deezer API dynamically without hardcoding.
+  static Future<List<Map<String, String>>> fetchSimilarArtists(String artistName) async {
+    await init();
+    final key = artistName.trim().toLowerCase();
+    if (_similarCache.containsKey(key) && _similarCache[key]!.isNotEmpty) {
+      return _similarCache[key]!;
+    }
 
     try {
       final uri = Uri.parse('https://api.deezer.com/search/artist?q=${Uri.encodeComponent(artistName)}');
@@ -67,16 +140,47 @@ class ArtistImageService {
         final data = jsonDecode(response.body);
         if (data is Map<String, dynamic> && data['data'] is List && (data['data'] as List).isNotEmpty) {
           final first = data['data'][0] as Map<String, dynamic>;
-          final url = first['picture_big'] ?? first['picture_medium'] ?? first['picture'];
-          if (url is String && url.isNotEmpty) {
-            _cache[key] = url;
-            return url;
+          final dzId = first['id'];
+          if (dzId != null) {
+            final relUri = Uri.parse('https://api.deezer.com/artist/$dzId/related');
+            final relRes = await http.get(relUri).timeout(const Duration(seconds: 4));
+            if (relRes.statusCode == 200) {
+              final relData = jsonDecode(relRes.body);
+              if (relData is Map<String, dynamic> && relData['data'] is List) {
+                final list = <Map<String, String>>[];
+                for (final item in (relData['data'] as List).take(10)) {
+                  if (item is Map<String, dynamic>) {
+                    final name = item['name'] as String?;
+                    final pic = (item['picture_medium'] ?? item['picture_big'] ?? item['picture']) as String?;
+                    if (name != null && name.isNotEmpty) {
+                      list.add({
+                        'name': name,
+                        'imageUrl': pic ?? '',
+                      });
+                    }
+                  }
+                }
+                if (list.isNotEmpty) {
+                  _similarCache[key] = list;
+                  unawaited(SharedPreferences.getInstance().then((prefs) {
+                    prefs.setString('artist_similar:$key', jsonEncode(list));
+                  }).catchError((_) {}));
+                  return list;
+                }
+              }
+            }
           }
         }
       }
-    } catch (_) {
-      // Ignore network errors gracefully
-    }
-    return null;
+    } catch (_) {}
+
+    return const [];
+  }
+
+  static void _saveImage(String key, String url) {
+    _imageCache[key] = url;
+    unawaited(SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('artist_img:$key', url);
+    }).catchError((_) {}));
   }
 }

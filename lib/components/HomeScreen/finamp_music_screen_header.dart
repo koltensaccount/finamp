@@ -13,6 +13,7 @@ import 'package:finamp/screens/downloads_screen.dart';
 import 'package:finamp/screens/quick_settings_screen.dart';
 import 'package:finamp/screens/settings_screen.dart';
 import 'package:finamp/screens/tabs_settings_screen.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/downloads_service.dart';
 import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
@@ -284,11 +285,14 @@ class FinampMusicScreenHeader extends ConsumerWidget implements PreferredSizeWid
                           // nop, we're already there
                           return;
                         }
+                        if (BaseItemDtoType.fromItem(item) == BaseItemDtoType.artist) {
+                          await ArtistResolutionHelper.navigateToArtist(context, artistItem: item);
+                          return;
+                        }
                         await Navigator.pushNamed(context, switch (BaseItemDtoType.fromItem(item)) {
                           BaseItemDtoType.album => AlbumScreen.routeName,
                           BaseItemDtoType.playlist => AlbumScreen.routeName,
                           BaseItemDtoType.genre => GenreScreen.routeName,
-                          BaseItemDtoType.artist => ArtistScreen.routeName,
                           _ => AlbumScreen.routeName,
                         }, arguments: item);
                       },

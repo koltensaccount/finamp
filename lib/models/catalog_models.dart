@@ -356,6 +356,13 @@ class CatalogArtist {
   const CatalogArtist({
     required this.id,
     required this.name,
+    this.disambiguation,
+    this.type,
+    this.country,
+    this.imageUrl,
+    this.bannerUrl,
+    this.bio,
+    this.genres = const [],
     this.albums = const [],
     this.recordings = const [],
   });
@@ -366,6 +373,13 @@ class CatalogArtist {
     return CatalogArtist(
       id: json['id'] as String,
       name: (json['name'] ?? '') as String,
+      disambiguation: json['disambiguation'] as String?,
+      type: json['type'] as String?,
+      country: json['country'] as String?,
+      imageUrl: json['image_url'] as String?,
+      bannerUrl: json['banner_url'] as String?,
+      bio: json['bio'] as String?,
+      genres: _parseStringList(json['genres']),
       albums: rawAlbums
           .whereType<Map<String, dynamic>>()
           .map((a) => CatalogSearchResult.fromJson({...a, 'kind': 'album'}))
@@ -379,6 +393,13 @@ class CatalogArtist {
 
   final String id;
   final String name;
+  final String? disambiguation;
+  final String? type;
+  final String? country;
+  final String? imageUrl;
+  final String? bannerUrl;
+  final String? bio;
+  final List<String> genres;
   final List<CatalogSearchResult> albums;
   final List<CatalogSearchResult> recordings;
 }

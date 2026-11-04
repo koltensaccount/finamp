@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/jellyfin_models.dart' as jellyfin_models;
-import '../../screens/artist_screen.dart';
-import '../../screens/catalog_search_screen.dart';
 import '../../screens/player_screen.dart';
 import '../../services/artist_resolution_helper.dart';
 import '../../services/favorite_provider.dart';
@@ -73,17 +71,11 @@ class TrackNameContent extends ConsumerWidget {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    if (artistTarget != null) {
-                      Navigator.of(context).pushNamed(
-                        ArtistScreen.routeName,
-                        arguments: artistTarget,
-                      );
-                    } else if (artistName.isNotEmpty) {
-                      Navigator.of(context).pushNamed(
-                        CatalogSearchScreen.routeName,
-                        arguments: artistName,
-                      );
-                    }
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artistTarget,
+                      artistName: artistName.isNotEmpty ? artistName : null,
+                    );
                   },
                   child: Text(
                     artistName.isNotEmpty ? artistName : AppLocalizations.of(context)!.unknownArtist,

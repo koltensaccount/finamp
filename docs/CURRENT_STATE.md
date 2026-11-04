@@ -51,6 +51,33 @@ Stable Finamp playback, queue, lyrics, normalization, offline download, and lice
      * Track action sheet verified with working "Go to Album" and "Go to Artist" navigation routes.
      * 100% test pass rate: 14/14 Flutter tests (`flutter test`) and 16/16 backend tests (`python3 -m unittest`).
 
+7. **Unified Artist Navigation & Discography Experience:**
+   - Reconciled and completed unified artist routing across all entry points:
+     * Header & collection tiles (`finamp_music_screen_header.dart`, `item_wrapper.dart`)
+     * Player chips & Now Playing title spans (`artist_chip.dart`, `track_name_content.dart`)
+     * Track text spans & multi-artist credits (`artist_text_spans.dart`, `artists_text_spans.dart`)
+     * Context menus & action sheets (`go_to_artist_menu_entry.dart`)
+     * Album screen header artist navigation (`album_screen.dart`)
+     * Deep-linking & scene URL handling (`main.dart`, `SceneDelegate.swift`)
+   - Implemented deterministic `ArtistIdentityService` and safe `ArtistResolutionHelper` routing:
+     * Validates genuine MusicBrainz UUIDs (`isMbid`) vs Jellyfin IDs without fabrication.
+     * Checks local item provider IDs (`MusicBrainzArtist`/`MusicBrainzAlbumArtist`).
+     * Queries backend `/v1/artists/resolve` before exact name fallback.
+     * Caches confirmed mappings persistently in `SharedPreferences`.
+     * Strict offline fallback to local `ArtistScreen` with offline library toggle.
+   - Clarified discography metric labeling:
+     * Corrected artist header metrics to explicitly show `${artist.recordings.length} Songs in Library` rather than ambiguous `In Library`.
+     * Clean categorization of releases into Studio Albums, Singles & EPs, Compilations, and Live & Other without duplicate release groups.
+   - Dynamic artist metadata enrichment (`ArtistImageService`):
+     * Replaced hardcoded artist image maps with dynamic Deezer and Wikipedia REST API lookups and persistent caching.
+   - Toolchain verification & reproducible build:
+     * Flutter 3.47.7 pinned at `.tool/flutter/bin/flutter`.
+     * Pinned rustup compiler (`RUSTC`, `RUSTDOC`) avoiding Homebrew interference.
+     * Reconstituted `Info.plist` and dylib inside `objective_c.framework` for simulator compliance.
+     * Built and installed on iPhone 17 Pro simulator (`485A60A4-3455-4C34-9671-E2F9EB2491B8`).
+     * Live UI verified with screenshots across The Beatles (`75 Albums · 501 Releases · 248 Songs in Library`), Metro Boomin (`8 Albums · 34 Releases · 41 Songs in Library`), George Harrison (`11 Albums · 139 Releases · 23 Songs in Library`), and Clairo (`3 Albums · 113 Releases · 32 Songs in Library`).
+   - 100% automated test suite pass rate: 23/23 Flutter tests and 17/17 backend tests.
+
 ## Live Status & Verification
 
 1. **Toolchain & Build Environment:**

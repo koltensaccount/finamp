@@ -47,6 +47,9 @@ import 'package:finamp/services/client_certificate_installer.dart';
 import 'package:finamp/services/data_source_service.dart';
 import 'package:finamp/services/catalog_api_client.dart';
 import 'package:finamp/services/catalog_credential_store.dart';
+import 'package:finamp/services/artist_identity_service.dart';
+import 'package:finamp/services/artist_image_service.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/dbus_manager.dart';
 import 'package:finamp/services/discord_rpc.dart';
 import 'package:finamp/services/downloads_service.dart';
@@ -244,6 +247,8 @@ Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
   GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
   GetIt.instance.registerSingleton(LikedSongsService());
+  unawaited(ArtistIdentityService.init());
+  unawaited(ArtistImageService.init());
 }
 
 void _setupOfflineListenLogHelper() {
@@ -825,7 +830,17 @@ class _FinampState extends State<Finamp> with WindowListener {
   void initState() {
     super.initState();
 
-    SchedulerBinding.instance.addPostFrameCallback((_) {
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final initialUri = await AppLinks().getInitialLink();
+        if (initialUri != null) {
+          final state = GlobalSnackbar.navigatorState;
+          if (state != null) {
+            _handleAppLink(initialUri, state);
+          }
+        }
+      } catch (_) {}
+
       _uriLinkSubscription = AppLinks().uriLinkStream.listen((uri) async {
         linkHandlingLogger.info("Received link: $uri");
 
@@ -853,7 +868,22 @@ class _FinampState extends State<Finamp> with WindowListener {
 
   void _handleAppLink(Uri uri, NavigatorState state) async {
     final container = GetIt.instance<ProviderContainer>();
-    switch (uri.host) {
+    final hostOrPath = uri.host.isNotEmpty ? uri.host : (uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '');
+    switch (hostOrPath) {
+      case "artist":
+        final mbid = uri.queryParameters['mbid'];
+        final jfId = uri.queryParameters['id'] ??
+            (uri.pathSegments.length > 1
+                ? uri.pathSegments[1]
+                : (uri.host == 'artist' && uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null));
+        final name = uri.queryParameters['name'];
+        await ArtistResolutionHelper.navigateToArtist(
+          state.context,
+          artistMbid: mbid,
+          jellyfinId: jfId,
+          artistName: name,
+        );
+
       case "internal":
         await state.pushNamed(uri.path);
 

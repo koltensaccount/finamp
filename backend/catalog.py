@@ -24,11 +24,35 @@ class Catalog:
     def __init__(self, path):
         self.db = sqlite3.connect(path, timeout=30.0)
         self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA busy_timeout = 30000;")
         self.db.executescript(SCHEMA)
-        try:
-            self.db.execute('ALTER TABLE release_groups ADD COLUMN secondary_types TEXT')
-        except sqlite3.OperationalError:
-            pass
+        self._ensure_columns()
+
+    def _ensure_columns(self):
+        rg_cols = {c[1] for c in self.db.execute("PRAGMA table_info(release_groups)").fetchall()}
+        if 'secondary_types' not in rg_cols:
+            try:
+                self.db.execute('ALTER TABLE release_groups ADD COLUMN secondary_types TEXT')
+            except sqlite3.OperationalError:
+                pass
+
+        art_cols = {c[1] for c in self.db.execute("PRAGMA table_info(artists)").fetchall()}
+        needed_art = {
+            'disambiguation': 'TEXT',
+            'type': 'TEXT',
+            'country': 'TEXT',
+            'image_url': 'TEXT',
+            'banner_url': 'TEXT',
+            'bio': 'TEXT',
+            'genres': 'TEXT'
+        }
+        for col, col_type in needed_art.items():
+            if col not in art_cols:
+                try:
+                    self.db.execute(f'ALTER TABLE artists ADD COLUMN {col} {col_type}')
+                except sqlite3.OperationalError:
+                    pass
+        self.db.commit()
 
     def credits(self, kind, ident, values):
         self.db.execute('DELETE FROM credits WHERE entity_type=? AND entity_id=?', (kind, ident))
@@ -37,7 +61,7 @@ class Catalog:
             aid = a.get('id')
             if not aid:
                 continue
-            self.db.execute('INSERT OR REPLACE INTO artists VALUES(?,?)', (aid, a.get('name', v.get('name', ''))))
+            self.db.execute('INSERT INTO artists(id, name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name', (aid, a.get('name', v.get('name', ''))))
             self.db.execute('INSERT INTO credits VALUES(?,?,?,?,?,?)', (kind, ident, aid, i, v.get('name', a.get('name', '')), v.get('joinphrase', '')))
 
     def get_credits(self, entity_type, entity_id):
@@ -410,7 +434,92 @@ class Catalog:
             rec['display_artist'] = disp
             recordings.append(rec)
             
-        return {**dict(artist), 'albums': groups, 'recordings': recordings}
+        artist_data = dict(artist)
+        if 'genres' in artist_data and artist_data['genres']:
+            try:
+                artist_data['genres'] = json.loads(artist_data['genres']) if isinstance(artist_data['genres'], str) else artist_data['genres']
+            except Exception:
+                artist_data['genres'] = []
+        else:
+            artist_data['genres'] = []
+
+        if not artist_data.get('image_url') and groups:
+            artist_data['image_url'] = groups[0].get('image_url')
+
+        return {**artist_data, 'albums': groups, 'recordings': recordings}
+
+    def resolve_artist(self, item_id=None, jellyfin_id=None, name=None):
+        """
+        Deterministically resolve a Jellyfin item ID, track ID, album ID, MusicBrainz ID,
+        or artist name to a canonical MusicBrainz artist identity for navigation.
+        """
+        if name:
+            art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (name.strip(),)).fetchone()
+            if art:
+                return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'confidence': 'verified'}
+
+        target_id = item_id or jellyfin_id
+        if not target_id:
+            return None
+
+        # 1. Direct MusicBrainz artist ID
+        art = self.db.execute('SELECT * FROM artists WHERE id=?', (target_id,)).fetchone()
+        if art:
+            return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'direct_mbid'}
+
+        # 2. Local item (track) by Jellyfin ItemId
+        loc = self.db.execute('SELECT server_id, item_id, payload FROM local_items WHERE item_id=?', (target_id,)).fetchone()
+        if loc:
+            try:
+                payload = json.loads(loc['payload'])
+            except Exception:
+                payload = {}
+
+            # A. Check ProviderIds for MusicBrainzArtist or MusicBrainzAlbumArtist
+            pids = payload.get('ProviderIds') or {}
+            mb_artist = pids.get('MusicBrainzArtist') or pids.get('MusicBrainzAlbumArtist')
+            if mb_artist:
+                art = self.db.execute('SELECT name FROM artists WHERE id=?', (mb_artist,)).fetchone()
+                name = art['name'] if art else (payload.get('AlbumArtists') or payload.get('ArtistItems') or [{'Name': ''}])[0].get('Name', '')
+                return {'id': mb_artist, 'artist_id': mb_artist, 'name': name, 'item_id': target_id, 'confidence': 'exact'}
+
+            # B. Check verified mappings
+            m = self.db.execute("SELECT recording_id, confidence FROM mappings WHERE server_id=? AND item_id=?", (loc['server_id'], target_id)).fetchone()
+            if m and m['recording_id']:
+                c = self.db.execute("SELECT c.artist_id, a.name FROM credits c JOIN artists a ON a.id=c.artist_id WHERE c.entity_type='recording' AND c.entity_id=? ORDER BY c.position LIMIT 1", (m['recording_id'],)).fetchone()
+                if c:
+                    return {'id': c['artist_id'], 'artist_id': c['artist_id'], 'name': c['name'], 'item_id': target_id, 'confidence': m['confidence']}
+
+            # C. Check ArtistItems / AlbumArtists by exact name match against catalog artists
+            for k in ('ArtistItems', 'AlbumArtists'):
+                for a in (payload.get(k) or []):
+                    aname = a.get('Name')
+                    if aname:
+                        art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (aname,)).fetchone()
+                        if art:
+                            return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'name_match'}
+
+        # 3. ItemId matches a Jellyfin Artist or Album ID nested inside local_items payloads
+        loc2 = self.db.execute('SELECT payload FROM local_items WHERE payload LIKE ? LIMIT 1', (f'%"{target_id}"%',)).fetchone()
+        if loc2:
+            try:
+                payload = json.loads(loc2['payload'])
+                pids = payload.get('ProviderIds') or {}
+                mb_artist = pids.get('MusicBrainzArtist') or pids.get('MusicBrainzAlbumArtist')
+                if mb_artist:
+                    art = self.db.execute('SELECT name FROM artists WHERE id=?', (mb_artist,)).fetchone()
+                    name = art['name'] if art else (payload.get('AlbumArtists') or [{'Name': ''}])[0].get('Name', '')
+                    return {'id': mb_artist, 'artist_id': mb_artist, 'name': name, 'item_id': target_id, 'confidence': 'exact'}
+                for k in ('ArtistItems', 'AlbumArtists'):
+                    for a in (payload.get(k) or []):
+                        if a.get('Id') == target_id and a.get('Name'):
+                            art = self.db.execute('SELECT id, name FROM artists WHERE lower(name)=lower(?)', (a['Name'],)).fetchone()
+                            if art:
+                                return {'id': art['id'], 'artist_id': art['id'], 'name': art['name'], 'item_id': target_id, 'confidence': 'name_match'}
+            except Exception:
+                pass
+
+        return None
 
     def request(self, release_id, scope='album', origin='explicit_user'):
         if scope != 'album':

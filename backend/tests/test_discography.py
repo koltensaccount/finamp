@@ -8,7 +8,7 @@ class DiscographyTests(unittest.TestCase):
     def setUp(self):
         self.c = Catalog(':memory:')
         self.artist_id = 'art-1'
-        self.c.db.execute("INSERT INTO artists VALUES(?, 'The Example')", (self.artist_id,))
+        self.c.db.execute("INSERT INTO artists (id, name) VALUES(?, 'The Example')", (self.artist_id,))
 
         # Studio Album (primary_type=Album, no secondary types)
         self.c.db.execute("INSERT INTO release_groups VALUES('g-studio', 'Studio Album', 'Album', '1965-01-01', '[]')")
@@ -58,6 +58,24 @@ class DiscographyTests(unittest.TestCase):
         self.assertEqual(len(recs), 1)
         self.assertEqual(recs[0]['id'], 'rec-1')
         self.assertEqual(recs[0]['availability']['state'], 'available')
+
+    def test_resolve_artist_by_mapping_and_name(self):
+        # 1. Resolve by local mapping item_id
+        resolved = self.c.resolve_artist(jellyfin_id='item-1')
+        self.assertIsNotNone(resolved)
+        self.assertEqual(resolved['id'], self.artist_id)
+        self.assertEqual(resolved['name'], 'The Example')
+        self.assertEqual(resolved['confidence'], 'verified')
+
+        # 2. Resolve by exact name match
+        resolved_name = self.c.resolve_artist(name='the example')
+        self.assertIsNotNone(resolved_name)
+        self.assertEqual(resolved_name['id'], self.artist_id)
+        self.assertEqual(resolved_name['confidence'], 'verified')
+
+        # 3. Unknown name returns None
+        self.assertIsNull = self.assertIsNone
+        self.assertIsNone(self.c.resolve_artist(name='Nonexistent Artist'))
 
 if __name__ == '__main__':
     unittest.main()
