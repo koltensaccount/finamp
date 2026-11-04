@@ -66,8 +66,64 @@ def refresh(a):
     prov['MusicBrainzAlbum'] = alb_p['MusicBrainzAlbum']
    if 'MusicBrainzReleaseGroup' not in prov and 'MusicBrainzReleaseGroup' in alb_p:
     prov['MusicBrainzReleaseGroup'] = alb_p['MusicBrainzReleaseGroup']
+  p = it.get('Path')
+  if p and p not in evidence:
+   prov = it.get('ProviderIds', {})
+   mb_rec = prov.get('MusicBrainzRecording')
+   mb_alb = prov.get('MusicBrainzAlbum')
+   mb_trk = prov.get('MusicBrainzTrack')
+   if mb_rec or mb_alb:
+    evidence[p] = {
+     'category': 'verified_identity' if mb_rec else 'ambiguous',
+     'identifiers': {'recording': [mb_rec] if mb_rec else [], 'release': [mb_alb] if mb_alb else []},
+     'release_track': mb_trk,
+     'source': 'jellyfin_providerids'
+    }
  c.sync(items,evidence)
  with c.db:
+  for it in items:
+   prov = it.get('ProviderIds', {})
+   mb_alb = prov.get('MusicBrainzAlbum')
+   mb_grp = prov.get('MusicBrainzReleaseGroup')
+   mb_rec = prov.get('MusicBrainzRecording')
+   mb_trk = prov.get('MusicBrainzTrack')
+   dur = int(it.get('RunTimeTicks', 0) / 10000)
+   disc = it.get('ParentIndexNumber') or 1
+   pos = it.get('IndexNumber') or 0
+   if mb_rec:
+    c.db.execute('INSERT OR IGNORE INTO recordings VALUES(?,?,?)', (mb_rec, it.get('Name'), dur))
+   if mb_grp:
+    c.db.execute('''
+        INSERT INTO release_groups(id, title, primary_type, first_date, secondary_types)
+        VALUES(?,?,?,?,?)
+        ON CONFLICT(id) DO UPDATE SET title=excluded.title
+    ''', (mb_grp, it.get('Album'), 'Album', str(it.get('ProductionYear', ''))[:4], '[]'))
+   server = it.get('ServerId', '')
+   ident = it.get('Id', '')
+   local_id = 'local:' + server + ':' + ident
+   rec_id = mb_rec or local_id
+   if mb_alb:
+    c.db.execute('INSERT OR IGNORE INTO releases VALUES(?,?,?)', (mb_alb, mb_grp, it.get('Album')))
+    trk_id = mb_trk or f"{mb_alb}:{disc}:{pos}"
+    c.db.execute('INSERT OR IGNORE INTO release_tracks VALUES(?,?,?,?,?,?,?)', (trk_id, mb_alb, rec_id, disc, pos, it.get('Name'), dur))
+   for art in it.get('AlbumArtists', []):
+    art_mb = art.get('ProviderIds', {}).get('MusicBrainzArtist') or prov.get('MusicBrainzAlbumArtist') or prov.get('MusicBrainzArtist')
+    if not art_mb and art.get('Name'):
+     row = c.db.execute('SELECT id FROM artists WHERE lower(name)=lower(?)', (art['Name'].strip(),)).fetchone()
+     if row: art_mb = row[0]
+    if art_mb:
+     c.db.execute('INSERT INTO artists(id, name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name', (art_mb, art.get('Name')))
+     if mb_grp:
+      c.db.execute("INSERT OR IGNORE INTO credits VALUES('group', ?, ?, 0, ?, '')", (mb_grp, art_mb, art.get('Name')))
+   for art in it.get('ArtistItems', []):
+    art_mb = art.get('ProviderIds', {}).get('MusicBrainzArtist') or prov.get('MusicBrainzArtist')
+    if not art_mb and art.get('Name'):
+     row = c.db.execute('SELECT id FROM artists WHERE lower(name)=lower(?)', (art['Name'].strip(),)).fetchone()
+     if row: art_mb = row[0]
+    if art_mb:
+     c.db.execute('INSERT INTO artists(id, name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name', (art_mb, art.get('Name')))
+     if rec_id:
+      c.db.execute("INSERT OR IGNORE INTO credits VALUES('recording', ?, ?, 0, ?, '')", (rec_id, art_mb, art.get('Name')))
   for rel_id, in c.db.execute("SELECT id FROM releases").fetchall():
    c.reconcile_release(rel_id)
  try:
