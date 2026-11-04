@@ -37,7 +37,7 @@ def mock_release(ident='edition-1', group='group-1'):
 class MockLidarrClient:
     def __init__(self):
         self.artists = [{'id': 101, 'artistName': 'Artist X', 'foreignArtistId': 'art-1'}]
-        self.albums = [{'id': 201, 'artistId': 101, 'title': 'Album Title', 'monitored': False, 'statistics': {'percentOfTracks': 0}}]
+        self.albums = [{'id': 201, 'artistId': 101, 'title': 'Album Title', 'foreignAlbumId': 'group-1', 'monitored': False, 'statistics': {'percentOfTracks': 0}}]
         self.commands = []
 
     def get_artists(self):
@@ -162,7 +162,7 @@ class AcquisitionTests(unittest.TestCase):
         # 3. Simulate Lidarr import completion -> imported
         for a in self.lidarr.albums:
             if a['id'] == 201:
-                a['statistics'] = {'percentOfTracks': 100}
+                a['statistics'] = {'percentOfTracks': 100, 'trackFileCount': 2}
         self.slskd.downloads = []
         self.dispatcher.poll_lifecycle()
         updated_req = self.dispatcher.get_request(req['id'])
@@ -191,6 +191,88 @@ class AcquisitionTests(unittest.TestCase):
         updated_req = self.dispatcher.get_request(req['id'])
         self.assertEqual(updated_req['state'], 'available')
         self.assertEqual(updated_req['progress'], 1.0)
+
+    def test_dispatch_exact_mbid_match(self):
+        # Album in Lidarr has foreignAlbumId matching MB release group
+        self.lidarr.albums = [
+            {'id': 301, 'artistId': 101, 'title': 'Some Different Title', 'foreignAlbumId': 'group-1', 'monitored': False, 'statistics': {}},
+            {'id': 302, 'artistId': 101, 'title': 'Album Title', 'foreignAlbumId': 'other-group', 'monitored': False, 'statistics': {}}
+        ]
+        req = self.dispatcher.submit_request('edition-1')
+        self.assertEqual(req['state'], 'dispatched')
+        self.assertEqual(req['backend_id'], '301')
+
+    def test_dispatch_nested_release_mbid_match(self):
+        # Album in Lidarr matches via nested release foreignReleaseId
+        self.lidarr.albums = [
+            {
+                'id': 401, 'artistId': 101, 'title': 'Album Title Box Set',
+                'foreignAlbumId': 'unrelated-group',
+                'releases': [{'id': 901, 'foreignReleaseId': 'edition-1', 'title': 'Album Title'}],
+                'monitored': False, 'statistics': {}
+            }
+        ]
+        req = self.dispatcher.submit_request('edition-1')
+        self.assertEqual(req['state'], 'dispatched')
+        self.assertEqual(req['backend_id'], '401')
+
+    def test_dispatch_ambiguous_candidate_refusal(self):
+        # Two albums with same title and no matching MBID
+        self.lidarr.albums = [
+            {'id': 501, 'artistId': 101, 'title': 'Album Title', 'foreignAlbumId': 'non-matching-1', 'monitored': False, 'statistics': {}},
+            {'id': 502, 'artistId': 101, 'title': 'Album Title', 'foreignAlbumId': 'non-matching-2', 'monitored': False, 'statistics': {}}
+        ]
+        req = self.dispatcher.submit_request('edition-1')
+        self.assertEqual(req['state'], 'failed')
+        self.assertIn('Ambiguous album identity', req.get('failure_reason', ''))
+
+    def test_dispatch_substring_title_rejected(self):
+        # Only substring title present (e.g. Deluxe Edition) without MBID
+        self.lidarr.albums = [
+            {'id': 601, 'artistId': 101, 'title': 'Album Title (Deluxe Remaster)', 'foreignAlbumId': 'non-matching', 'monitored': False, 'statistics': {}}
+        ]
+        req = self.dispatcher.submit_request('edition-1')
+        # Substring should not match exact title "Album Title"
+        self.assertNotEqual(req['state'], 'dispatched')
+
+    def test_soulseek_requires_artist_and_album(self):
+        req = self.dispatcher.submit_request('edition-1')
+        self.assertEqual(req['state'], 'dispatched')
+
+        # Download from a different artist with matching album title should NOT match
+        self.slskd.downloads = [{
+            'username': 'OtherUser',
+            'directories': [{
+                'directory': 'Artist Y - Album Title',
+                'files': [{'state': 'Downloading'}]
+            }]
+        }]
+        self.dispatcher.poll_lifecycle()
+        req_check = self.dispatcher.get_request(req['id'])
+        self.assertEqual(req_check['state'], 'dispatched')
+
+        # Download with both artist and album matches
+        self.slskd.downloads = [{
+            'username': 'OtherUser',
+            'directories': [{
+                'directory': 'Artist X - Album Title [FLAC]',
+                'files': [{'state': 'Downloading'}]
+            }]
+        }]
+        self.dispatcher.poll_lifecycle()
+        req_check = self.dispatcher.get_request(req['id'])
+        self.assertEqual(req_check['state'], 'downloading')
+
+    def test_no_imported_if_zero_track_files(self):
+        req = self.dispatcher.submit_request('edition-1')
+        for a in self.lidarr.albums:
+            if a['id'] == 201:
+                # 100% percentOfTracks but 0 track files (e.g. empty stub)
+                a['statistics'] = {'percentOfTracks': 100, 'trackFileCount': 0}
+        self.dispatcher.poll_lifecycle()
+        req_check = self.dispatcher.get_request(req['id'])
+        # Should not have transitioned to imported
+        self.assertNotEqual(req_check['state'], 'imported')
 
     def test_recovery_after_restart(self):
         # Create a dispatched request in DB

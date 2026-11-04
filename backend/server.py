@@ -150,30 +150,72 @@ def fetch_mb_artist(c, artist_id, force=False):
             disambiguation = a_data.get('disambiguation')
             genres = [g['name'] for g in a_data.get('genres', [])]
 
+            relations = a_data.get('relations', [])
+            deezer_artist_id = None
+            wiki_title = None
+
+            for r in relations:
+                rtype = r.get('type')
+                rurl = r.get('url', {}).get('resource', '')
+                if 'deezer.com/artist/' in rurl:
+                    parts = rurl.rstrip('/').split('/')
+                    if parts and parts[-1].isdigit():
+                        deezer_artist_id = parts[-1]
+                elif rtype == 'wikipedia' or 'wikipedia.org/wiki/' in rurl:
+                    wiki_title = rurl.split('/wiki/')[-1]
+                elif not wiki_title and ('wikidata.org/wiki/Q' in rurl or rtype == 'wikidata'):
+                    qid = rurl.split('/')[-1]
+                    try:
+                        wd_url = f'https://www.wikidata.org/wiki/Special:EntityData/{qid}.json'
+                        wd_req = urllib.request.Request(wd_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                        with urllib.request.urlopen(wd_req, timeout=5) as wd_resp:
+                            wd_data = json.loads(wd_resp.read().decode())
+                            sitelink = wd_data.get('entities', {}).get(qid, {}).get('sitelinks', {}).get('enwiki', {}).get('title')
+                            if sitelink:
+                                wiki_title = urllib.parse.quote(sitelink.replace(' ', '_'))
+                    except Exception:
+                        pass
+
             # Deezer artist photo
             image_url = None
-            try:
-                dz_url = 'https://api.deezer.com/search/artist?' + urllib.parse.urlencode({'q': name})
-                dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
-                with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
-                    dz_data = json.loads(dz_resp.read().decode())
-                    dz_items = dz_data.get('data', [])
-                    if dz_items:
-                        image_url = dz_items[0].get('picture_xl') or dz_items[0].get('picture_big')
-            except Exception:
-                pass
+            if deezer_artist_id:
+                try:
+                    dz_url = f'https://api.deezer.com/artist/{deezer_artist_id}'
+                    dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                    with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
+                        dz_data = json.loads(dz_resp.read().decode())
+                        image_url = dz_data.get('picture_xl') or dz_data.get('picture_big')
+                except Exception:
+                    pass
+
+            if not image_url:
+                try:
+                    dz_url = 'https://api.deezer.com/search/artist?' + urllib.parse.urlencode({'q': f'"{name}"'})
+                    dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                    with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
+                        dz_data = json.loads(dz_resp.read().decode())
+                        dz_items = dz_data.get('data', [])
+                        for item in dz_items:
+                            if item.get('name', '').strip().lower() == name.strip().lower():
+                                image_url = item.get('picture_xl') or item.get('picture_big')
+                                break
+                except Exception:
+                    pass
 
             # Wikipedia bio
             bio = None
+            if not wiki_title:
+                wiki_title = urllib.parse.quote(name.replace(' ', '_'))
+
             try:
-                w_title = urllib.parse.quote(name.replace(' ', '_'))
-                w_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{w_title}'
+                w_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{wiki_title}'
                 w_req = urllib.request.Request(w_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
                 with urllib.request.urlopen(w_req, timeout=5) as w_resp:
                     w_data = json.loads(w_resp.read().decode())
-                    bio = w_data.get('extract')
-                    if not image_url:
-                        image_url = w_data.get('thumbnail', {}).get('source')
+                    if w_data.get('type') != 'disambiguation':
+                        bio = w_data.get('extract')
+                        if not image_url:
+                            image_url = w_data.get('thumbnail', {}).get('source')
             except Exception:
                 pass
 

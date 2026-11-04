@@ -8,12 +8,40 @@ from pathlib import Path
 logger = logging.getLogger("acquisition")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
+def _load_runtime_secrets():
+    """Load runtime secrets from environment or protected config files."""
+    candidate_files = [
+        Path.cwd() / ".catalog_secrets",
+        Path(__file__).resolve().parent / ".catalog_secrets",
+        Path.home() / ".config" / "music-catalog" / "secrets.env",
+    ]
+    for p in candidate_files:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if line.startswith("export "):
+                            line = line[7:].strip()
+                        if "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip("'\"")
+                            if k and k not in os.environ:
+                                os.environ[k] = v
+            except Exception as e:
+                logger.warning(f"Could not load secrets from {p}: {e}")
+
 class RealLidarrClient:
     def __init__(self, base_url, api_key):
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key
 
     def _req(self, method, endpoint, payload=None):
+        if not self.api_key:
+            raise RuntimeError("LIDARR_API_KEY is not configured in runtime environment")
         url = f"{self.base_url}/api/v1/{endpoint}"
         headers = {"X-Api-Key": self.api_key, "Content-Type": "application/json"}
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
@@ -46,6 +74,8 @@ class RealSlskdClient:
         self.api_key = api_key
 
     def get_downloads(self):
+        if not self.api_key:
+            raise RuntimeError("SLSKD_API_KEY is not configured in runtime environment")
         url = f"{self.base_url}/api/v0/transfers/downloads"
         headers = {"X-API-KEY": self.api_key}
         req = urllib.request.Request(url, headers=headers)
@@ -63,6 +93,8 @@ class RealJellyfinClient:
         self.token = token
 
     def refresh_library(self):
+        if not self.token:
+            raise RuntimeError("JELLYFIN_TOKEN is not configured in runtime environment")
         url = f"{self.base_url}/Library/Media/Updated"
         req = urllib.request.Request(url, headers={"X-Emby-Token": self.token}, method="POST")
         try:
@@ -75,16 +107,17 @@ class RealJellyfinClient:
 class AcquisitionDispatcher:
     def __init__(self, catalog, dispatch_enabled=False, dry_run=False,
                  lidarr_client=None, slskd_client=None, jellyfin_client=None):
+        _load_runtime_secrets()
         self.c = catalog
         self.dispatch_enabled = dispatch_enabled or (os.environ.get("CATALOG_DISPATCH_ENABLED", "0") in ("1", "true", "True"))
         self.dry_run = dry_run or (os.environ.get("CATALOG_DISPATCH_DRY_RUN", "0") in ("1", "true", "True"))
 
         lidarr_url = os.environ.get("LIDARR_URL", "http://127.0.0.1:8686")
-        lidarr_key = os.environ.get("LIDARR_API_KEY", "8caa7cceb8a5463b977b10928c424d6e")
+        lidarr_key = os.environ.get("LIDARR_API_KEY", "")
         slskd_url = os.environ.get("SLSKD_URL", "http://127.0.0.1:5030")
-        slskd_key = os.environ.get("SLSKD_API_KEY", "dKFTvjXGZxosAGrisUwGzuaAgSpN")
+        slskd_key = os.environ.get("SLSKD_API_KEY", "")
         jf_url = os.environ.get("JELLYFIN_URL", "http://127.0.0.1:8096")
-        jf_token = os.environ.get("JELLYFIN_TOKEN", "b00648d43061428bb88da32778c1b5fd")
+        jf_token = os.environ.get("JELLYFIN_TOKEN", "")
 
         self.lidarr = lidarr_client or RealLidarrClient(lidarr_url, lidarr_key)
         self.slskd = slskd_client or RealSlskdClient(slskd_url, slskd_key)
@@ -215,21 +248,40 @@ class AcquisitionDispatcher:
             artist_id = art_match["id"]
             albums = self.lidarr.get_artist_albums(artist_id)
             target_alb = None
-            clean_target = title.lower().split("(")[0].strip()
 
+            # Authoritative MusicBrainz match:
+            # - match foreignAlbumId to release group_id or release_id
+            # - match foreignReleaseId in any nested release to release_id
+            matching_albums = []
             for alb in albums:
-                alb_clean = alb.get("title", "").lower().split("(")[0].strip()
-                if clean_target == alb_clean or clean_target in alb_clean or alb_clean in clean_target:
-                    target_alb = alb
-                    break
-
-            if not target_alb:
-                logger.warning(f"Target album '{title}' not found in Lidarr artist discography.")
-                retries = req.get("retry_count", 0) + 1
-                if retries >= 3:
-                    self.c.db.execute("UPDATE requests SET state='failed', failure_reason='Album not in Lidarr discography', updated_at=? WHERE id=?", (time.time(), request_id))
+                alb_rg = alb.get("foreignAlbumId")
+                matched = False
+                if alb_rg and (alb_rg == group_id or alb_rg == release_id):
+                    matched = True
                 else:
-                    self.c.db.execute("UPDATE requests SET retry_count=?, updated_at=? WHERE id=?", (retries, time.time(), request_id))
+                    for r in alb.get("releases", []):
+                        if r.get("foreignReleaseId") and r.get("foreignReleaseId") == release_id:
+                            matched = True
+                            break
+                if matched:
+                    matching_albums.append(alb)
+
+            if len(matching_albums) == 1:
+                target_alb = matching_albums[0]
+            elif len(matching_albums) > 1:
+                logger.warning(f"Multiple candidate albums for '{title}' match MusicBrainz IDs; refusing ambiguous dispatch.")
+                self.c.db.execute(
+                    "UPDATE requests SET state='failed', failure_reason='Ambiguous album identity: multiple candidate albums in Lidarr match MusicBrainz ID', updated_at=? WHERE id=?",
+                    (time.time(), request_id)
+                )
+                self.c.db.commit()
+                return False
+            else:
+                logger.warning(f"Target album '{title}' (MBID: {release_id}) has no authoritative MusicBrainz release match in Lidarr discography.")
+                self.c.db.execute(
+                    "UPDATE requests SET state='failed', failure_reason='Ambiguous album identity: no authoritative MusicBrainz release match in Lidarr discography', updated_at=? WHERE id=?",
+                    (time.time(), request_id)
+                )
                 self.c.db.commit()
                 return False
 
@@ -280,7 +332,17 @@ class AcquisitionDispatcher:
             lidarr_album_id = int(req["backend_id"]) if req.get("backend_id") else None
             details = json.loads(req["details_json"]) if req.get("details_json") else {}
 
-            target_title = details.get("album_title", "").lower().split("(")[0].strip()
+            target_artist = details.get("artist_name", "").strip().lower()
+            target_title = details.get("album_title", "").strip().lower()
+            target_title_clean = target_title.split("(")[0].strip()
+
+            def _match_transfer_dir(d_name):
+                d_lower = d_name.lower()
+                if not target_title_clean or target_title_clean not in d_lower:
+                    return False
+                if target_artist and target_artist not in d_lower:
+                    return False
+                return True
 
             # 1. State: dispatched -> downloading
             if state == 'dispatched':
@@ -288,8 +350,8 @@ class AcquisitionDispatcher:
                 progress = 0.0
                 for u in slskd_downloads:
                     for d in u.get("directories", []):
-                        d_name = d.get("directory", "").lower()
-                        if target_title and target_title in d_name:
+                        d_name = d.get("directory", "")
+                        if _match_transfer_dir(d_name):
                             match_found = True
                             files = d.get("files", [])
                             if files:
@@ -308,12 +370,15 @@ class AcquisitionDispatcher:
                 if lidarr_album_id:
                     try:
                         alb_data = self.lidarr.get_album(lidarr_album_id)
-                        if alb_data.get("statistics", {}).get("percentOfTracks", 0) == 100:
+                        stats = alb_data.get("statistics", {})
+                        pct = stats.get("percentOfTracks", 0)
+                        track_files = stats.get("trackFileCount", 0)
+                        if pct == 100 and track_files > 0:
                             self.c.db.execute("UPDATE requests SET state='imported', progress=1.0, updated_at=? WHERE id=?", (time.time(), req_id))
                             self.c.db.commit()
                             continue
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"Error querying Lidarr album {lidarr_album_id}: {e}")
 
             # 2. State: downloading -> imported
             elif state == 'downloading':
@@ -321,8 +386,8 @@ class AcquisitionDispatcher:
                 progress = req.get("progress", 0.0)
                 for u in slskd_downloads:
                     for d in u.get("directories", []):
-                        d_name = d.get("directory", "").lower()
-                        if target_title and target_title in d_name:
+                        d_name = d.get("directory", "")
+                        if _match_transfer_dir(d_name):
                             downloading_now = True
                             files = d.get("files", [])
                             if files:
@@ -338,13 +403,15 @@ class AcquisitionDispatcher:
                     if lidarr_album_id:
                         try:
                             alb_data = self.lidarr.get_album(lidarr_album_id)
-                            pct = alb_data.get("statistics", {}).get("percentOfTracks", 0)
-                            if pct == 100:
+                            stats = alb_data.get("statistics", {})
+                            pct = stats.get("percentOfTracks", 0)
+                            track_files = stats.get("trackFileCount", 0)
+                            if pct == 100 and track_files > 0:
                                 self.c.db.execute("UPDATE requests SET state='imported', progress=1.0, updated_at=? WHERE id=?", (time.time(), req_id))
                                 self.c.db.commit()
                                 continue
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(f"Error querying Lidarr album {lidarr_album_id}: {e}")
 
             # 3. State: imported -> available
             elif state == 'imported':
@@ -357,8 +424,8 @@ class AcquisitionDispatcher:
                         self.c.db.execute("UPDATE requests SET state='available', progress=1.0, updated_at=? WHERE id=?", (time.time(), req_id))
                         self.c.db.commit()
                         logger.info(f"Request {req_id} ({release_id}) is now fully AVAILABLE!")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Error checking availability for request {req_id}: {e}")
 
         return {"active_count": len(self.get_active_requests())}
 

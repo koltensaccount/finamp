@@ -8,7 +8,7 @@ Flutter client working tree (`work/finamp-catalog-client`) on branch `antigravit
 
 - **Music Library Size**: 9,743 indexed Jellyfin audio items across 684 reconstructed album entities in `/mnt/media/Music`.
 - **Display Title Cleanup**: 277 FLAC files across 20 multi-disc albums cleaned with zero lossless audio degradation (bit-for-bit stream MD5 and decoded PCM `s32le` SHA-256 verified; pre-write backups in `production-fixes-backup/` with logging in `production-fixes-journal.jsonl`).
-- **Jellyfin Favorites Synchronization**: 1,306 total favorites on active user account `music` (`F6CF8A7A-5D89-48FE-8D8A-A63826C68C07`). Additively synchronized 315 exact Spotify liked songs using session token `b00648d43061428bb88da32778c1b5fd`; zero existing favorites touched.
+- **Jellyfin Favorites Synchronization**: 1,306 total favorites on active user account `music` (`F6CF8A7A-5D89-48FE-8D8A-A63826C68C07`). Additively synchronized 315 exact Spotify liked songs; zero existing favorites touched.
 - **Beatles Preferred Mix Invariance**: Verified bit-for-bit preservation of original mono and stereo mixes; no unvetted overwrites.
 
 ## 2. End-to-End Acquisition Pipeline (`acquisition.py`)

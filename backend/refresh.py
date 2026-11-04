@@ -126,17 +126,17 @@ def refresh(a):
       c.db.execute("INSERT OR IGNORE INTO credits VALUES('recording', ?, ?, 0, ?, '')", (rec_id, art_mb, art.get('Name')))
   for rel_id, in c.db.execute("SELECT id FROM releases").fetchall():
    c.reconcile_release(rel_id)
+ summary={'jellyfin_audio_items':len(items),'public_recordings':c.db.execute("select count(*) from recordings where id not like 'local:%'").fetchone()[0],'confident_mappings':c.db.execute("select count(*) from mappings where confidence='verified'").fetchone()[0],'local_only_mappings':c.db.execute("select count(*) from mappings where confidence='local_identity'").fetchone()[0],'ambiguous_candidates':c.db.execute("select count(*) from mappings where confidence='ambiguous'").fetchone()[0]}
+ old={p.replace('/mnt/media/','/media/',1) for p, in inv.execute("select path from files where scope='library'")};current={i['Path'] for i in items}
+ summary.update(new_since_inventory=len(current-old),inventory_paths_not_in_jellyfin=len(old-current))
  try:
   from acquisition import AcquisitionDispatcher
   dispatcher = AcquisitionDispatcher(c)
   poll_res = dispatcher.poll_lifecycle()
   if poll_res.get('active_count', 0) > 0:
    summary['active_requests'] = poll_res['active_count']
- except Exception:
-  pass
- summary={'jellyfin_audio_items':len(items),'public_recordings':c.db.execute("select count(*) from recordings where id not like 'local:%'").fetchone()[0],'confident_mappings':c.db.execute("select count(*) from mappings where confidence='verified'").fetchone()[0],'local_only_mappings':c.db.execute("select count(*) from mappings where confidence='local_identity'").fetchone()[0],'ambiguous_candidates':c.db.execute("select count(*) from mappings where confidence='ambiguous'").fetchone()[0]}
- old={p.replace('/mnt/media/','/media/',1) for p, in inv.execute("select path from files where scope='library'")};current={i['Path'] for i in items}
- summary.update(new_since_inventory=len(current-old),inventory_paths_not_in_jellyfin=len(old-current))
+ except Exception as e:
+  print(f"[refresh] lifecycle polling error: {e}", flush=True)
  print(json.dumps(summary));Path(a.database).with_suffix('.summary.json').write_text(json.dumps(summary,indent=2))
 if __name__=='__main__':
  ap=argparse.ArgumentParser();ap.add_argument('--audit',type=Path,default=Path.home()/'music-metadata-audit');ap.add_argument('--database',required=True);ap.add_argument('--watch',action='store_true');a=ap.parse_args()

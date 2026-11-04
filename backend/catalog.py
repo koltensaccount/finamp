@@ -52,6 +52,21 @@ class Catalog:
                     self.db.execute(f'ALTER TABLE artists ADD COLUMN {col} {col_type}')
                 except sqlite3.OperationalError:
                     pass
+
+        # 1. Correct misclassified local: recordings that were marked as verified
+        self.db.execute("""
+            UPDATE mappings 
+            SET confidence='local_identity' 
+            WHERE confidence='verified' AND recording_id LIKE 'local:%'
+        """)
+        # 2. Cleanup: prune duplicate local_identity mappings where verified mapping exists
+        self.db.execute("""
+            DELETE FROM mappings 
+            WHERE confidence='local_identity' 
+              AND (server_id, item_id) IN (
+                  SELECT server_id, item_id FROM mappings WHERE confidence='verified' AND recording_id NOT LIKE 'local:%'
+              )
+        """)
         self.db.commit()
 
     def credits(self, kind, ident, values):
@@ -117,17 +132,35 @@ class Catalog:
                 pos = d.get('IndexNumber') or 0
                 if disc == t['disc'] and pos == t['position']:
                     dur_ms = int(d.get('RunTimeTicks', 0) / 10000)
-                    if norm(d.get('Name')) == norm(t['title']) or (not t['duration_ms'] or abs(dur_ms - t['duration_ms']) <= 4000):
-                        to_insert.append((srv_id, it_id, rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by album track position and duration'})))
-                        matched = True
-                        break
+                    title_match = norm(d.get('Name')) == norm(t['title'])
+                    dur_match = bool(t['duration_ms'] and abs(dur_ms - t['duration_ms']) <= 4000)
+
+                    if rec_id.startswith('local:'):
+                        if title_match or dur_match:
+                            to_insert.append((srv_id, it_id, rec_id, t['id'], 'local_identity', json.dumps({'reason': 'matched local track position and duration'})))
+                            matched = True
+                            break
+                    else:
+                        if title_match and dur_match:
+                            to_insert.append((srv_id, it_id, rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by album track position, title, and duration'})))
+                            matched = True
+                            break
+                        elif title_match or dur_match:
+                            to_insert.append((srv_id, it_id, rec_id, t['id'], 'ambiguous', json.dumps({'reason': 'candidate with position match but title or duration discrepancy'})))
+                            matched = True
+                            break
             if not matched:
                 row = self.db.execute("SELECT server_id, item_id FROM local_items WHERE active=1 AND (payload LIKE ? OR payload LIKE ?) LIMIT 1",
                     (f'%"MusicBrainzTrack": "{rec_id}"%', f'%"musicbrainz_trackid": ["{rec_id}"]%')).fetchone()
                 if row:
-                    to_insert.append((row['server_id'], row['item_id'], rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by MusicBrainzTrack hint'})))
+                    conf = 'local_identity' if rec_id.startswith('local:') else 'verified'
+                    to_insert.append((row['server_id'], row['item_id'], rec_id, t['id'], conf, json.dumps({'reason': 'verified by MusicBrainzTrack hint'})))
         if to_insert:
             with self.db:
+                for item in to_insert:
+                    srv_id, it_id, rec_id, _, conf, _ = item
+                    if conf == 'verified' and not rec_id.startswith('local:'):
+                        self.db.execute("DELETE FROM mappings WHERE server_id=? AND item_id=? AND (confidence='local_identity' OR recording_id LIKE 'local:%')", (srv_id, it_id))
                 self.db.executemany('INSERT OR REPLACE INTO mappings VALUES(?,?,?,?,?,?)', to_insert)
 
     def release(self, r):
