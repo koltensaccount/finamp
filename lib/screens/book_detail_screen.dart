@@ -50,6 +50,17 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
+        if (_downloadService != null) {
+          final localDetail = await _downloadService!.getLocalBookDetail(widget.workId);
+          if (localDetail != null) {
+            setState(() {
+              _book = localDetail;
+              _isLoading = false;
+              _errorMessage = null;
+            });
+            return;
+          }
+        }
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
@@ -244,7 +255,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                                 ),
                             ],
                           ),
-                          if (_book!.hasEpub) ...[
+                          if (_book!.hasEpub || _book!.hasAudiobook) ...[
                             const SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
@@ -457,7 +468,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   }
 
   Widget _buildDownloadButton(BuildContext context, bool isDark) {
-    if (_downloadService == null || !_book!.hasEpub) return const SizedBox.shrink();
+    if (_downloadService == null || (!_book!.hasEpub && !_book!.hasAudiobook)) return const SizedBox.shrink();
 
     return ValueListenableBuilder<Set<String>>(
       valueListenable: _downloadService!.downloadedWorkIds,
@@ -533,10 +544,51 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             return OutlinedButton.icon(
               onPressed: () async {
                 try {
-                  await _downloadService!.downloadWork(widget.workId);
+                  BookDownloadMode mode = BookDownloadMode.both;
+                  if (_book!.hasEpub && _book!.hasAudiobook) {
+                    final selected = await showModalBottomSheet<BookDownloadMode>(
+                      context: context,
+                      backgroundColor: isDark ? const Color(0xFF1B1B1E) : Colors.white,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                      builder: (ctx) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 12),
+                            const Text('Download Options', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            ListTile(
+                              leading: const Icon(Icons.cloud_download_rounded, color: Color(0xFFFA2D48)),
+                              title: const Text('Download Both (Reading & Audiobook)'),
+                              subtitle: const Text('Recommended for offline reading & listening'),
+                              onTap: () => Navigator.of(ctx).pop(BookDownloadMode.both),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.menu_book_rounded),
+                              title: const Text('EPUB Only'),
+                              onTap: () => Navigator.of(ctx).pop(BookDownloadMode.epubOnly),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.headphones_rounded),
+                              title: const Text('Audiobook Only'),
+                              onTap: () => Navigator.of(ctx).pop(BookDownloadMode.audioOnly),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                    if (selected == null) return;
+                    mode = selected;
+                  } else if (_book!.hasEpub) {
+                    mode = BookDownloadMode.epubOnly;
+                  } else {
+                    mode = BookDownloadMode.audioOnly;
+                  }
+
+                  await _downloadService!.downloadWork(widget.workId, mode: mode, bookDetail: _book);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Book downloaded for offline reading')),
+                      const SnackBar(content: Text('Book downloaded for offline use')),
                     );
                   }
                 } catch (e) {
@@ -548,7 +600,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 }
               },
               icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-              label: const Text('Download for Offline Reading'),
+              label: Text(_book!.hasEpub && _book!.hasAudiobook
+                  ? 'Download for Offline Use'
+                  : (_book!.hasEpub ? 'Download for Offline Reading' : 'Download for Offline Listening')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: isDark ? Colors.white70 : Colors.black87,
                 side: BorderSide(color: isDark ? Colors.white12 : Colors.black12),

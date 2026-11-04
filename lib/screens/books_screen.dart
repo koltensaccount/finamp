@@ -23,6 +23,7 @@ class _BooksScreenState extends State<BooksScreen> {
 
   List<BookSummary> _allBooks = [];
   bool _isLoading = true;
+  bool _isOffline = false;
   String? _errorMessage;
   String _activeFilter = 'all'; // 'all', 'epub', 'audiobook'
 
@@ -57,10 +58,23 @@ class _BooksScreenState extends State<BooksScreen> {
         setState(() {
           _allBooks = books;
           _isLoading = false;
+          _isOffline = false;
         });
       }
     } catch (e) {
       if (mounted) {
+        if (_downloadService != null) {
+          final offlineBooks = await _downloadService!.listDownloadedBooks();
+          if (offlineBooks.isNotEmpty) {
+            setState(() {
+              _allBooks = offlineBooks;
+              _isLoading = false;
+              _isOffline = true;
+              _errorMessage = null;
+            });
+            return;
+          }
+        }
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
@@ -101,6 +115,31 @@ class _BooksScreenState extends State<BooksScreen> {
                           fontSize: 34,
                         ),
                       ),
+                      if (_isOffline) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
+                              SizedBox(width: 6),
+                              Text(
+                                'Offline Library',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       // Search bar
                       Container(

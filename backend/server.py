@@ -1,5 +1,5 @@
 """Loopback authenticated catalog API; no acquisition dispatch is enabled."""
-import argparse, json, os, time, urllib.request, urllib.parse, urllib.error, threading
+import argparse, hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 try:
     from catalog import Catalog, norm
@@ -11,6 +11,30 @@ except ImportError:
     from backend.books_core import BooksCore
 
 LAST = 0
+
+def generate_media_ticket(secret: str, path: str, expires_at: int) -> str:
+    message = f"{path}:{expires_at}".encode("utf-8")
+    return hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+def verify_auth_and_ticket(headers, path: str, query_params: dict, secret: str) -> bool:
+    if not secret:
+        return False
+    auth = headers.get('Authorization')
+    if auth == 'Bearer ' + secret:
+        return True
+
+    ticket_list = query_params.get('ticket')
+    expires_list = query_params.get('expires')
+    if ticket_list and expires_list:
+        try:
+            expires_at = int(expires_list[0])
+            if time.time() <= expires_at:
+                expected = generate_media_ticket(secret, path, expires_at)
+                if hmac.compare_digest(expected, ticket_list[0]):
+                    return True
+        except (ValueError, TypeError):
+            pass
+    return False
 
 def _mb_get(url):
     global LAST
@@ -235,14 +259,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def dispatch(self):
         route = urllib.parse.urlsplit(self.path)
-        is_cover_req = route.path.endswith('/cover')
-        if not is_cover_req and self.headers.get('Authorization') != 'Bearer ' + os.environ['CATALOG_API_TOKEN']:
+        q = urllib.parse.parse_qs(route.query)
+        secret = os.environ.get('CATALOG_API_TOKEN', '')
+        if not verify_auth_and_ticket(self.headers, route.path, q, secret):
             self.send_error(401)
             return
         c = Catalog(self.server.database)
         try:
             parts = route.path.strip('/').split('/')
-            q = urllib.parse.parse_qs(route.query)
             if route.path == '/v1/search':
                 text = q.get('q', [''])[0][:200]
                 cached_results = c.search(text)
@@ -250,6 +274,17 @@ class Handler(BaseHTTPRequestHandler):
                     provider(c, text)
                     cached_results = c.search(text)
                 result = {'results': cached_results, 'cached': True}
+            elif route.path == '/v1/ticket' and self.command == 'GET':
+                target_path = q.get('path', [''])[0]
+                ttl = int(q.get('ttl', [86400])[0])
+                expires = int(time.time()) + ttl
+                sig = generate_media_ticket(secret, target_path, expires)
+                result = {
+                    'path': target_path,
+                    'ticket': sig,
+                    'expires': expires,
+                    'query_params': f"ticket={sig}&expires={expires}"
+                }
             elif parts[:2] == ['v1', 'releases'] and len(parts) == 3:
                 release_id = parts[2]
                 result = c.album(release_id)
@@ -355,9 +390,24 @@ class Handler(BaseHTTPRequestHandler):
                         result = books.add_annotation(parts[2], **body)
                 elif len(parts) == 5 and parts[3] == 'annotations' and self.command == 'DELETE':
                     result = books.delete_annotation(parts[4], user_id=q.get('user_id', ['default'])[0])
-                elif len(parts) == 4 and parts[3] == 'alignment' and self.command == 'GET':
-                    bk = books.get_book(parts[2])
-                    result = bk.get('alignment') if bk else None
+                elif len(parts) == 4 and parts[3] == 'alignment':
+                    if self.command == 'GET':
+                        result = books.get_alignment(parts[2])
+                    elif self.command == 'POST':
+                        size = int(self.headers.get('Content-Length', 0))
+                        body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                        result = books.store_alignment(parts[2], **body)
+                elif len(parts) == 5 and parts[3] == 'align' and parts[4] == 'audio-to-cfi' and self.command == 'GET':
+                    try:
+                        track = int(q.get('track', [1])[0])
+                        sec = float(q.get('sec', [0.0])[0])
+                        result = books.map_audio_to_reading_location(parts[2], track, sec)
+                    except (ValueError, TypeError):
+                        self.send_error(400)
+                        return
+                elif len(parts) == 5 and parts[3] == 'align' and parts[4] == 'cfi-to-audio' and self.command == 'GET':
+                    cfi = q.get('cfi', [''])[0]
+                    result = books.map_reading_location_to_audio(parts[2], cfi)
                 elif len(parts) == 4 and parts[3] == 'epub' and self.command == 'GET':
                     bk = books.get_book(parts[2])
                     if not bk:
@@ -413,6 +463,65 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception:
                         self.send_error(404)
                         return
+                elif len(parts) == 5 and parts[3] == 'audio' and self.command == 'GET':
+                    try:
+                        track_num = int(parts[4])
+                    except ValueError:
+                        self.send_error(400)
+                        return
+                    bk = books.get_book(parts[2])
+                    if not bk:
+                        self.send_error(404)
+                        return
+                    audio_ed = next((ed for ed in bk.get('editions', []) if ed.get('format') == 'audiobook'), None)
+                    if not audio_ed or not audio_ed.get('assets'):
+                        self.send_error(404)
+                        return
+                    asset = next((a for a in audio_ed['assets'] if a.get('track_number') == track_num), None)
+                    if not asset or not asset.get('abs_item_id') or not asset.get('abs_file_ino'):
+                        self.send_error(404)
+                        return
+                    abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')
+                    abs_token = os.environ.get('ABS_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0')
+                    upstream_url = f"{abs_url}/api/items/{asset['abs_item_id']}/file/{asset['abs_file_ino']}"
+                    upstream_headers = {'Authorization': f'Bearer {abs_token}'}
+                    if 'Range' in self.headers:
+                        upstream_headers['Range'] = self.headers['Range']
+                    req = urllib.request.Request(upstream_url, headers=upstream_headers)
+                    try:
+                        with urllib.request.urlopen(req, timeout=30) as resp:
+                            self.send_response(resp.status)
+                            for h in ('Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges'):
+                                if h in resp.headers:
+                                    self.send_header(h, resp.headers[h])
+                            self.end_headers()
+                            while chunk := resp.read(65536):
+                                self.wfile.write(chunk)
+                            return
+                    except urllib.error.HTTPError as e:
+                        self.send_error(e.code)
+                        return
+                else:
+                    self.send_error(404)
+                    return
+            elif parts[:2] == ['v1', 'tasks']:
+                if not hasattr(self.server, 'books') or self.server.books is None:
+                    books = BooksCore(os.environ.get('BOOKS_DATABASE', 'books.sqlite'))
+                    self.server.books = books
+                else:
+                    books = self.server.books
+
+                if len(parts) == 2:
+                    if self.command == 'GET':
+                        result = {'tasks': books.list_tasks(state=q.get('state', [None])[0], priority=q.get('priority', [None])[0])}
+                    elif self.command == 'POST':
+                        size = int(self.headers.get('Content-Length', 0))
+                        body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                        result = books.enqueue_task(**body)
+                elif len(parts) == 3 and parts[2] == 'process-next' and self.command == 'POST':
+                    result = books.process_next_task()
+                elif len(parts) == 3 and self.command == 'GET':
+                    result = books.get_task(parts[2])
                 else:
                     self.send_error(404)
                     return

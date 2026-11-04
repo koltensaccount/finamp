@@ -80,9 +80,11 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
       final parsed = EpubReaderService.parse(bytes);
 
       int targetChapter = 0;
+      int targetParagraph = 0;
       if (widget.initialCfi != null) {
-        final (chIdx, _) = parsed.parseCfi(widget.initialCfi);
+        final (chIdx, pIdx) = parsed.parseCfi(widget.initialCfi);
         targetChapter = chIdx;
+        targetParagraph = pIdx;
       }
 
       if (mounted) {
@@ -91,6 +93,19 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
           _currentChapterIndex = targetChapter;
           _isLoading = false;
         });
+
+        if (targetParagraph > 0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              final totalParas = parsed.chapters[targetChapter].paragraphs.length;
+              if (totalParas > 0) {
+                final ratio = (targetParagraph / totalParas).clamp(0.0, 1.0);
+                final targetOffset = ratio * _scrollController.position.maxScrollExtent;
+                _scrollController.jumpTo(targetOffset);
+              }
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -111,8 +126,9 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     final progressRatio = (currentScroll / maxScroll).clamp(0.0, 1.0);
     final overallProgress = ((_currentChapterIndex + progressRatio) / _bookData!.chapters.length).clamp(0.0, 1.0);
 
-    // Save stable CFI
-    final cfi = _bookData!.makeCfi(_currentChapterIndex, (progressRatio * 10).toInt());
+    final totalParas = _bookData!.chapters[_currentChapterIndex].paragraphs.length;
+    final paraIdx = totalParas > 0 ? (progressRatio * totalParas).floor() : 0;
+    final cfi = _bookData!.makeCfi(_currentChapterIndex, paraIdx);
     _saveProgress(cfi, overallProgress);
   }
 

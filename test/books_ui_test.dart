@@ -160,7 +160,7 @@ void main() {
       expect(find.text('F. Scott Fitzgerald'), findsOneWidget);
       expect(find.text('Resume Reading'), findsOneWidget);
       expect(find.text('Listen'), findsOneWidget);
-      expect(find.text('Download for Offline Reading'), findsOneWidget);
+      expect(find.text('Download for Offline Use'), findsOneWidget);
       expect(find.text('PAIRED SYNC'), findsOneWidget);
       expect(find.text('Scribner'), findsWidgets);
     });
@@ -225,5 +225,51 @@ void main() {
       expect(find.textContaining('About half way between West Egg and New York'), findsOneWidget);
       expect(find.text('Chapter II'), findsWidgets);
     });
+
+    testWidgets('BooksScreen falls back to offline downloaded books when backend is unreachable', (tester) async {
+      // Mock client that fails network requests (simulating offline mode)
+      final failingClient = MockClient((request) async {
+        return http.Response('Network unreachable', 503);
+      });
+
+      final apiClient = BooksApiClient(credentials: FakeCredStore(), client: failingClient);
+      getIt.registerSingleton<BooksApiClient>(apiClient);
+
+      final fakeOfflineBook = BookSummary(
+        id: 'work-offline-1',
+        title: 'The Hobbit (Downloaded)',
+        author: 'J.R.R. Tolkien',
+        availableFormats: const ['audiobook'],
+        isPaired: false,
+        progress: const BookProgress(),
+      );
+
+      final mockDownloadService = _MockOfflineDownloadService([fakeOfflineBook], apiClient: apiClient);
+      getIt.registerSingleton<BooksDownloadService>(mockDownloadService);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BooksScreen(),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify that offline book is loaded and displayed despite network failure
+      expect(find.text('The Hobbit (Downloaded)'), findsWidgets);
+      expect(find.text('J.R.R. Tolkien'), findsWidgets);
+      expect(find.text('Offline Library'), findsOneWidget);
+    });
   });
+}
+
+class _MockOfflineDownloadService extends BooksDownloadService {
+  final List<BookSummary> _offline;
+  _MockOfflineDownloadService(this._offline, {required super.apiClient});
+
+  @override
+  Future<List<BookSummary>> listDownloadedBooks() async => _offline;
+
+  @override
+  bool isDownloaded(String workId) => _offline.any((b) => b.id == workId);
 }

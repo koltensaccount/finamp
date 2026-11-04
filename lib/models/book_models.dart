@@ -319,3 +319,41 @@ class BookAnnotation {
   final double? audioTimestamp;
   final double? createdAt;
 }
+
+enum BookDownloadMode {
+  both,
+  epubOnly,
+  audioOnly,
+}
+
+class BookDownloadManifest {
+  const BookDownloadManifest({
+    required this.workId,
+    required this.downloadedAt,
+    required this.mode,
+    required this.totalBytes,
+    this.files = const [],
+  });
+
+  factory BookDownloadManifest.fromJson(Map<String, dynamic> json) => BookDownloadManifest(
+    workId: json['work_id'] as String? ?? '',
+    downloadedAt: (json['downloaded_at'] as num?)?.toDouble() ?? 0.0,
+    mode: json['mode'] as String? ?? 'both',
+    totalBytes: json['total_bytes'] as int? ?? 0,
+    files: (json['files'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+  );
+
+  final String workId;
+  final double downloadedAt;
+  final String mode;
+  final int totalBytes;
+  final List<String> files;
+
+  Map<String, dynamic> toJson() => {
+    'work_id': workId,
+    'downloaded_at': downloadedAt,
+    'mode': mode,
+    'total_bytes': totalBytes,
+    'files': files,
+  };
+}

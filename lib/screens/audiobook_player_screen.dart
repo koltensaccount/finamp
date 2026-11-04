@@ -6,6 +6,9 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/book_models.dart';
 import '../services/books_api_client.dart';
+import '../services/books_download_service.dart';
+import '../services/catalog_credential_store.dart';
+import '../services/music_player_background_task.dart';
 import 'epub_reader_screen.dart';
 
 class AudiobookPlayerScreen extends StatefulWidget {
@@ -30,6 +33,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
+  bool _initialSeekDone = false;
   double _speed = 1.0;
   Timer? _sleepTimer;
   int? _sleepTimerMinutes;
@@ -48,6 +52,16 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
   }
 
   Future<void> _initPlayer() async {
+    // Pause background music player if active to prevent dual audio collision
+    if (GetIt.instance.isRegistered<MusicPlayerBackgroundTask>()) {
+      try {
+        final musicHandler = GetIt.instance<MusicPlayerBackgroundTask>();
+        if (musicHandler.playbackState.value.playing) {
+          unawaited(musicHandler.pause());
+        }
+      } catch (_) {}
+    }
+
     _posSub = _player.positionStream.listen((pos) {
       if (mounted) setState(() => _position = pos);
       _saveProgress(pos);
@@ -57,6 +71,9 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
     });
     _stateSub = _player.playerStateStream.listen((state) {
       if (mounted) setState(() => _isPlaying = state.playing);
+      if (state.processingState == ProcessingState.completed) {
+        _nextChapterOrTrack();
+      }
     });
 
     final chapters = widget.audioEdition.chapters;
@@ -71,6 +88,56 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
     // Set initial position if saved progress exists
     if (widget.book.progress.listeningSeconds > 0) {
       _position = Duration(seconds: widget.book.progress.listeningSeconds.toInt());
+    }
+
+    await _loadTrack(_currentChapterIndex);
+  }
+
+  Future<void> _loadTrack(int chapterIndex) async {
+    final trackNum = chapterIndex + 1;
+    final downloadService = GetIt.instance.isRegistered<BooksDownloadService>()
+        ? GetIt.instance<BooksDownloadService>()
+        : null;
+
+    try {
+      final offlineFile = await downloadService?.getLocalAudioFile(widget.book.id, trackNum);
+      if (offlineFile != null && await offlineFile.exists()) {
+        await _player.setFilePath(offlineFile.path);
+      } else {
+        final credStore = GetIt.instance.isRegistered<CatalogCredentialStore>()
+            ? GetIt.instance<CatalogCredentialStore>()
+            : null;
+        final creds = await credStore?.read();
+        final endpoint = creds?.endpoint.toString() ?? 'http://127.0.0.1:8765';
+        final uri = Uri.parse('$endpoint/v1/books/${widget.book.id}/audio/$trackNum');
+        await _player.setAudioSource(
+          AudioSource.uri(uri, headers: creds != null ? {'Authorization': 'Bearer ${creds.token}'} : null),
+        );
+      }
+
+      if (!_initialSeekDone && widget.book.progress.listeningSeconds > 0) {
+        await _player.seek(Duration(seconds: widget.book.progress.listeningSeconds.toInt()));
+        _initialSeekDone = true;
+      }
+    } catch (e) {
+      debugPrint('Audio track load error: $e');
+    }
+  }
+
+  Future<void> _nextChapterOrTrack() async {
+    final chapters = widget.audioEdition.chapters;
+    if (_currentChapterIndex < chapters.length - 1) {
+      setState(() => _currentChapterIndex++);
+      await _loadTrack(_currentChapterIndex);
+      await _player.play();
+    }
+  }
+
+  Future<void> _prevChapterOrTrack() async {
+    if (_currentChapterIndex > 0) {
+      setState(() => _currentChapterIndex--);
+      await _loadTrack(_currentChapterIndex);
+      await _player.play();
     }
   }
 
@@ -95,22 +162,26 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
     );
   }
 
-  void _togglePlayPause() {
-    setState(() => _isPlaying = !_isPlaying);
+  Future<void> _togglePlayPause() async {
+    if (_isPlaying) {
+      await _player.pause();
+    } else {
+      await _player.play();
+    }
   }
 
-  void _skip(int seconds) {
+  Future<void> _skip(int seconds) async {
     final newPos = _position + Duration(seconds: seconds);
     final clamped = newPos < Duration.zero
         ? Duration.zero
         : (newPos > _duration ? _duration : newPos);
-    setState(() => _position = clamped);
+    await _player.seek(clamped);
     _saveProgress(clamped);
   }
 
-  void _setSpeed(double speed) {
+  Future<void> _setSpeed(double speed) async {
     setState(() => _speed = speed);
-    _player.setSpeed(speed);
+    await _player.setSpeed(speed);
   }
 
   void _setSleepTimer(int minutes) {
@@ -280,7 +351,11 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                   max: _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0,
                   onChanged: (val) {
                     setState(() => _position = Duration(seconds: val.toInt()));
-                    _saveProgress(_position);
+                  },
+                  onChangeEnd: (val) async {
+                    final target = Duration(seconds: val.toInt());
+                    await _player.seek(target);
+                    _saveProgress(target);
                   },
                 ),
               ),
@@ -349,7 +424,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.list_rounded, size: 24),
-                    onPressed: () {},
+                    onPressed: _showChaptersSheet,
                   ),
                 ],
               ),
@@ -358,6 +433,107 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showChaptersSheet() {
+    final chapters = widget.audioEdition.chapters;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1B1B1E) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (_, controller) {
+            return Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 36,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black26,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Chapters (${chapters.length})',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    controller: controller,
+                    itemCount: chapters.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: isDark ? Colors.white12 : Colors.black12,
+                    ),
+                    itemBuilder: (context, idx) {
+                      final ch = chapters[idx];
+                      final isSelected = idx == _currentChapterIndex;
+                      final durSec = (ch.endSeconds ?? 0) - (ch.startSeconds ?? 0);
+                      final durStr = durSec > 0
+                          ? '${(durSec ~/ 60)}:${(durSec % 60).toInt().toString().padLeft(2, '0')}'
+                          : '';
+
+                      return ListTile(
+                        leading: Text(
+                          '${idx + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? const Color(0xFFFA2D48) : (isDark ? Colors.white38 : Colors.black38),
+                          ),
+                        ),
+                        title: Text(
+                          ch.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isSelected ? const Color(0xFFFA2D48) : null,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (durStr.isNotEmpty)
+                              Text(durStr, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38)),
+                            if (isSelected) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.volume_up_rounded, color: Color(0xFFFA2D48), size: 18),
+                            ],
+                          ],
+                        ),
+                        onTap: () async {
+                          Navigator.of(context).pop();
+                          setState(() => _currentChapterIndex = idx);
+                          await _loadTrack(idx);
+                          await _player.play();
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

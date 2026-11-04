@@ -157,6 +157,26 @@ class BooksApiClient {
     return resp.bodyBytes;
   }
 
+  Future<Uint8List> downloadAudioTrack(String workId, int trackNumber) async {
+    final uri = await _buildUri('/v1/books/$workId/audio/$trackNumber');
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200 && resp.statusCode != 206) {
+      throw Exception('Failed to download audio track $trackNumber for $workId: ${resp.statusCode}');
+    }
+    return resp.bodyBytes;
+  }
+
+  Future<Uint8List> downloadCoverBytes(String workId) async {
+    final uri = await _buildUri('/v1/books/$workId/cover');
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to download cover for $workId: ${resp.statusCode}');
+    }
+    return resp.bodyBytes;
+  }
+
   Future<Map<String, dynamic>?> getAlignment(String workId) async {
     final uri = await _buildUri('/v1/books/$workId/alignment');
     final headers = await _authHeaders();
