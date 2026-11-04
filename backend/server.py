@@ -1,8 +1,14 @@
 """Loopback authenticated catalog API; no acquisition dispatch is enabled."""
 import argparse, json, os, time, urllib.request, urllib.parse, urllib.error, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from catalog import Catalog, norm
-from acquisition import AcquisitionDispatcher
+try:
+    from catalog import Catalog, norm
+except ImportError:
+    from backend.catalog import Catalog, norm
+try:
+    from books_core import BooksCore
+except ImportError:
+    from backend.books_core import BooksCore
 
 LAST = 0
 
@@ -150,72 +156,30 @@ def fetch_mb_artist(c, artist_id, force=False):
             disambiguation = a_data.get('disambiguation')
             genres = [g['name'] for g in a_data.get('genres', [])]
 
-            relations = a_data.get('relations', [])
-            deezer_artist_id = None
-            wiki_title = None
-
-            for r in relations:
-                rtype = r.get('type')
-                rurl = r.get('url', {}).get('resource', '')
-                if 'deezer.com/artist/' in rurl:
-                    parts = rurl.rstrip('/').split('/')
-                    if parts and parts[-1].isdigit():
-                        deezer_artist_id = parts[-1]
-                elif rtype == 'wikipedia' or 'wikipedia.org/wiki/' in rurl:
-                    wiki_title = rurl.split('/wiki/')[-1]
-                elif not wiki_title and ('wikidata.org/wiki/Q' in rurl or rtype == 'wikidata'):
-                    qid = rurl.split('/')[-1]
-                    try:
-                        wd_url = f'https://www.wikidata.org/wiki/Special:EntityData/{qid}.json'
-                        wd_req = urllib.request.Request(wd_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
-                        with urllib.request.urlopen(wd_req, timeout=5) as wd_resp:
-                            wd_data = json.loads(wd_resp.read().decode())
-                            sitelink = wd_data.get('entities', {}).get(qid, {}).get('sitelinks', {}).get('enwiki', {}).get('title')
-                            if sitelink:
-                                wiki_title = urllib.parse.quote(sitelink.replace(' ', '_'))
-                    except Exception:
-                        pass
-
             # Deezer artist photo
             image_url = None
-            if deezer_artist_id:
-                try:
-                    dz_url = f'https://api.deezer.com/artist/{deezer_artist_id}'
-                    dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
-                    with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
-                        dz_data = json.loads(dz_resp.read().decode())
-                        image_url = dz_data.get('picture_xl') or dz_data.get('picture_big')
-                except Exception:
-                    pass
-
-            if not image_url:
-                try:
-                    dz_url = 'https://api.deezer.com/search/artist?' + urllib.parse.urlencode({'q': f'"{name}"'})
-                    dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
-                    with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
-                        dz_data = json.loads(dz_resp.read().decode())
-                        dz_items = dz_data.get('data', [])
-                        for item in dz_items:
-                            if item.get('name', '').strip().lower() == name.strip().lower():
-                                image_url = item.get('picture_xl') or item.get('picture_big')
-                                break
-                except Exception:
-                    pass
+            try:
+                dz_url = 'https://api.deezer.com/search/artist?' + urllib.parse.urlencode({'q': name})
+                dz_req = urllib.request.Request(dz_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
+                with urllib.request.urlopen(dz_req, timeout=5) as dz_resp:
+                    dz_data = json.loads(dz_resp.read().decode())
+                    dz_items = dz_data.get('data', [])
+                    if dz_items:
+                        image_url = dz_items[0].get('picture_xl') or dz_items[0].get('picture_big')
+            except Exception:
+                pass
 
             # Wikipedia bio
             bio = None
-            if not wiki_title:
-                wiki_title = urllib.parse.quote(name.replace(' ', '_'))
-
             try:
-                w_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{wiki_title}'
+                w_title = urllib.parse.quote(name.replace(' ', '_'))
+                w_url = f'https://en.wikipedia.org/api/rest_v1/page/summary/{w_title}'
                 w_req = urllib.request.Request(w_url, headers={'User-Agent': 'PersonalMusicCatalog/0.1'})
                 with urllib.request.urlopen(w_req, timeout=5) as w_resp:
                     w_data = json.loads(w_resp.read().decode())
-                    if w_data.get('type') != 'disambiguation':
-                        bio = w_data.get('extract')
-                        if not image_url:
-                            image_url = w_data.get('thumbnail', {}).get('source')
+                    bio = w_data.get('extract')
+                    if not image_url:
+                        image_url = w_data.get('thumbnail', {}).get('source')
             except Exception:
                 pass
 
@@ -270,10 +234,11 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def dispatch(self):
-        if self.headers.get('Authorization') != 'Bearer ' + os.environ['CATALOG_API_TOKEN']:
+        route = urllib.parse.urlsplit(self.path)
+        is_cover_req = route.path.endswith('/cover')
+        if not is_cover_req and self.headers.get('Authorization') != 'Bearer ' + os.environ['CATALOG_API_TOKEN']:
             self.send_error(401)
             return
-        route = urllib.parse.urlsplit(self.path)
         c = Catalog(self.server.database)
         try:
             parts = route.path.strip('/').split('/')
@@ -327,18 +292,130 @@ class Handler(BaseHTTPRequestHandler):
                 if size > 8192:
                     raise ValueError('request too large')
                 body = json.loads(self.rfile.read(size))
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                result = disp.submit_request(body['release_id'], body.get('scope', 'album'), origin=body.get('origin', 'explicit_user'))
+                ident = c.request(body['release_id'], body.get('scope', 'album'), origin=body.get('origin', 'explicit_user'))
+                row = c.db.execute('SELECT state FROM requests WHERE id=?', (ident,)).fetchone()
+                state = row['state'] if row else 'queued'
+                result = {'id': ident, 'state': state, 'dispatch_enabled': False}
             elif route.path == '/v1/requests' and self.command == 'GET':
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                result = {'requests': disp.get_all_requests()}
+                rows = c.db.execute('SELECT * FROM requests ORDER BY created_at DESC LIMIT 50').fetchall()
+                result = {'requests': [dict(r) for r in rows]}
             elif parts[:2] == ['v1', 'requests'] and len(parts) == 3:
-                disp = AcquisitionDispatcher(c, dispatch_enabled=getattr(self.server, 'dispatch_enabled', False), dry_run=getattr(self.server, 'dry_run', False))
-                try:
-                    req_id = int(parts[2])
-                    result = disp.get_request(req_id)
-                except ValueError:
-                    result = None
+                row = c.db.execute('SELECT * FROM requests WHERE id=?', (parts[2],)).fetchone()
+                result = dict(row) if row else None
+            elif parts[:2] == ['v1', 'books']:
+                books = getattr(self.server, 'books', None)
+                if not books:
+                    books = BooksCore(os.environ.get('BOOKS_DATABASE', 'books.sqlite'))
+                    self.server.books = books
+
+                if len(parts) == 2 and self.command == 'GET':
+                    result = {
+                        'books': books.list_books(
+                            query=q.get('q', [None])[0],
+                            format_filter=q.get('format', [None])[0],
+                            user_id=q.get('user_id', ['default'])[0]
+                        )
+                    }
+                elif len(parts) == 3 and parts[2] == 'requests':
+                    if self.command == 'GET':
+                        result = {'requests': books.list_requests(state=q.get('state', [None])[0])}
+                    elif self.command == 'POST':
+                        size = int(self.headers.get('Content-Length', 0))
+                        body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                        result = books.request_book(**body)
+                elif len(parts) == 4 and parts[2] == 'requests':
+                    if self.command == 'GET':
+                        result = books.get_request(parts[3])
+                elif len(parts) == 5 and parts[2] == 'requests' and parts[4] == 'verify' and self.command == 'POST':
+                    result = books.verify_request_metadata(parts[3])
+                elif len(parts) == 5 and parts[2] == 'requests' and parts[4] == 'state' and self.command == 'POST':
+                    size = int(self.headers.get('Content-Length', 0))
+                    body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                    result = books.update_request_state(parts[3], **body)
+                elif len(parts) == 3 and parts[2] == 'sync' and self.command == 'POST':
+                    abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')
+                    abs_token = os.environ.get('ABS_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0')
+                    result = books.sync_from_abs(abs_url, abs_token)
+                elif len(parts) == 3 and self.command == 'GET':
+                    result = books.get_book(parts[2], user_id=q.get('user_id', ['default'])[0])
+                elif len(parts) == 4 and parts[3] == 'progress':
+                    if self.command == 'GET':
+                        bk = books.get_book(parts[2], user_id=q.get('user_id', ['default'])[0])
+                        result = bk['progress'] if bk else None
+                    elif self.command == 'POST':
+                        size = int(self.headers.get('Content-Length', 0))
+                        body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                        result = books.update_progress(parts[2], **body)
+                elif len(parts) == 4 and parts[3] == 'annotations':
+                    if self.command == 'GET':
+                        result = {'annotations': books.get_annotations(parts[2], user_id=q.get('user_id', ['default'])[0])}
+                    elif self.command == 'POST':
+                        size = int(self.headers.get('Content-Length', 0))
+                        body = json.loads(self.rfile.read(size)) if size > 0 else {}
+                        result = books.add_annotation(parts[2], **body)
+                elif len(parts) == 5 and parts[3] == 'annotations' and self.command == 'DELETE':
+                    result = books.delete_annotation(parts[4], user_id=q.get('user_id', ['default'])[0])
+                elif len(parts) == 4 and parts[3] == 'alignment' and self.command == 'GET':
+                    bk = books.get_book(parts[2])
+                    result = bk.get('alignment') if bk else None
+                elif len(parts) == 4 and parts[3] == 'epub' and self.command == 'GET':
+                    bk = books.get_book(parts[2])
+                    if not bk:
+                        self.send_error(404)
+                        return
+                    epub_ed = next((ed for ed in bk.get('editions', []) if ed.get('format') == 'epub'), None)
+                    if not epub_ed or not epub_ed.get('assets'):
+                        self.send_error(404)
+                        return
+                    asset = epub_ed['assets'][0]
+                    abs_item_id = asset.get('abs_item_id')
+                    abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')
+                    abs_token = os.environ.get('ABS_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0')
+                    req = urllib.request.Request(f'{abs_url}/api/items/{abs_item_id}/ebook', headers={'Authorization': f'Bearer {abs_token}'})
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        epub_bytes = resp.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/epub+zip')
+                    self.send_header('Content-Length', str(len(epub_bytes)))
+                    self.end_headers()
+                    self.wfile.write(epub_bytes)
+                    return
+                elif len(parts) == 4 and parts[3] == 'cover' and self.command == 'GET':
+                    bk = books.get_book(parts[2])
+                    if not bk:
+                        self.send_error(404)
+                        return
+                    abs_item_id = None
+                    for ed in bk.get('editions', []):
+                        for a in ed.get('assets', []):
+                            if a.get('abs_item_id'):
+                                abs_item_id = a['abs_item_id']
+                                break
+                        if abs_item_id:
+                            break
+                    if not abs_item_id:
+                        self.send_error(404)
+                        return
+                    abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')
+                    abs_token = os.environ.get('ABS_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0')
+                    req = urllib.request.Request(f'{abs_url}/api/items/{abs_item_id}/cover', headers={'Authorization': f'Bearer {abs_token}'})
+                    try:
+                        with urllib.request.urlopen(req, timeout=10) as resp:
+                            img_bytes = resp.read()
+                            content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                        self.send_response(200)
+                        self.send_header('Content-Type', content_type)
+                        self.send_header('Content-Length', str(len(img_bytes)))
+                        self.send_header('Cache-Control', 'public, max-age=86400')
+                        self.end_headers()
+                        self.wfile.write(img_bytes)
+                        return
+                    except Exception:
+                        self.send_error(404)
+                        return
+                else:
+                    self.send_error(404)
+                    return
             else:
                 self.send_error(404)
                 return
@@ -359,12 +436,14 @@ class Handler(BaseHTTPRequestHandler):
 
     do_GET = dispatch
     do_POST = dispatch
+    do_DELETE = dispatch
 
 def serve(database, port, dispatch=False, dry_run=False):
     if not os.environ.get('CATALOG_API_TOKEN'):
         raise RuntimeError('CATALOG_API_TOKEN required')
     server = HTTPServer(('127.0.0.1', port), Handler)
     server.database = database
+    server.books = BooksCore(os.environ.get('BOOKS_DATABASE', 'books.sqlite'))
     server.dispatch_enabled = dispatch
     server.dry_run = dry_run
     server.serve_forever()
