@@ -351,6 +351,22 @@ class Handler(BaseHTTPRequestHandler):
                             user_id=q.get('user_id', ['default'])[0]
                         )
                     }
+                elif len(parts) == 3 and parts[2] == 'search' and self.command == 'GET':
+                    try:
+                        from backend.book_discovery import WorldwideDiscoveryService
+                    except ImportError:
+                        from book_discovery import WorldwideDiscoveryService
+                    discovery = WorldwideDiscoveryService(books)
+                    query = q.get('q', [''])[0]
+                    format_filter = q.get('format', [None])[0]
+                    bypass_cache = q.get('refresh', ['false'])[0] == 'true'
+                    result = {
+                        'results': discovery.search(
+                            query=query,
+                            format_filter=format_filter,
+                            bypass_cache=bypass_cache
+                        )
+                    }
                 elif len(parts) == 3 and parts[2] == 'requests':
                     if self.command == 'GET':
                         result = {'requests': books.list_requests(state=q.get('state', [None])[0])}
@@ -361,6 +377,13 @@ class Handler(BaseHTTPRequestHandler):
                 elif len(parts) == 4 and parts[2] == 'requests':
                     if self.command == 'GET':
                         result = books.get_request(parts[3])
+                elif len(parts) == 5 and parts[2] == 'requests' and parts[4] == 'process' and self.command == 'POST':
+                    try:
+                        from backend.book_acquisition import AcquisitionCoordinator
+                    except ImportError:
+                        from book_acquisition import AcquisitionCoordinator
+                    coordinator = AcquisitionCoordinator(books)
+                    result = coordinator.process_acquisition(parts[3])
                 elif len(parts) == 5 and parts[2] == 'requests' and parts[4] == 'verify' and self.command == 'POST':
                     result = books.verify_request_metadata(parts[3])
                 elif len(parts) == 5 and parts[2] == 'requests' and parts[4] == 'state' and self.command == 'POST':
