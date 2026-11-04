@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/jellyfin_models.dart' as jellyfin_models;
 import '../../screens/artist_screen.dart';
+import '../../screens/catalog_search_screen.dart';
 import '../../screens/player_screen.dart';
 import '../../services/favorite_provider.dart';
 import '../../services/queue_service.dart';
@@ -34,11 +35,15 @@ class TrackNameContent extends ConsumerWidget {
         '';
 
     final artistItem = (trackBaseItemDto.artistItems ?? trackBaseItemDto.albumArtists)?.firstOrNull;
-    final artistTarget = artistItem != null
-        ? jellyfin_models.BaseItemDto(id: artistItem.id, name: artistItem.name, type: "MusicArtist")
-        : (artistName.isNotEmpty
-            ? jellyfin_models.BaseItemDto(id: trackBaseItemDto.id, name: artistName, type: "MusicArtist")
-            : null);
+    final genuineArtistId = artistItem?.id;
+    final hasGenuineArtist = genuineArtistId != null && genuineArtistId.raw.isNotEmpty;
+    final artistTarget = hasGenuineArtist
+        ? jellyfin_models.BaseItemDto(
+            id: genuineArtistId,
+            name: artistItem?.name ?? artistName,
+            type: "MusicArtist",
+          )
+        : null;
 
     final title = currentTrack.item.title;
 
@@ -76,6 +81,11 @@ class TrackNameContent extends ConsumerWidget {
                       Navigator.of(context).pushNamed(
                         ArtistScreen.routeName,
                         arguments: artistTarget,
+                      );
+                    } else if (artistName.isNotEmpty) {
+                      Navigator.of(context).pushNamed(
+                        CatalogSearchScreen.routeName,
+                        arguments: artistName,
                       );
                     }
                   },

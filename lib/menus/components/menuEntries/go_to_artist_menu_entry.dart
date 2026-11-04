@@ -20,7 +20,8 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
   Widget build(BuildContext context, WidgetRef ref) {
     final jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
 
-    final canGoToArtist = (baseItem.artistItems?.isNotEmpty ?? false);
+    final artistItem = (baseItem.artistItems ?? baseItem.albumArtists)?.firstOrNull;
+    final canGoToArtist = artistItem != null && artistItem.id.raw.isNotEmpty;
 
     return Visibility(
       visible: canGoToArtist,
@@ -32,9 +33,9 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
           try {
             if (FinampSettingsHelper.finampSettings.isOffline) {
               final downloadsService = GetIt.instance<DownloadsService>();
-              artist = (await downloadsService.getCollectionInfo(id: baseItem.artistItems!.first.id))!.baseItem!;
+              artist = (await downloadsService.getCollectionInfo(id: artistItem.id))!.baseItem!;
             } else {
-              artist = await jellyfinApiHelper.getItemById(baseItem.artistItems!.first.id);
+              artist = await jellyfinApiHelper.getItemById(artistItem.id);
             }
           } catch (e) {
             GlobalSnackbar.error(e);
@@ -50,5 +51,8 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
   }
 
   @override
-  bool get isVisible => baseItem.artistItems?.isNotEmpty ?? false;
+  bool get isVisible {
+    final artistItem = (baseItem.artistItems ?? baseItem.albumArtists)?.firstOrNull;
+    return artistItem != null && artistItem.id.raw.isNotEmpty;
+  }
 }

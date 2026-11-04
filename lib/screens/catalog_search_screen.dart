@@ -78,6 +78,16 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final modalArgs = ModalRoute.of(context)?.settings.arguments;
+    if (modalArgs is String && modalArgs.trim().isNotEmpty && _controller.text.isEmpty) {
+      _controller.text = modalArgs.trim();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _search());
+    }
+  }
+
   void _addRecentSearch(RecentSearchItem item) {
     _recentSearches.removeWhere((x) => x.id == item.id || x.title.toLowerCase() == item.title.toLowerCase());
     _recentSearches.insert(0, item);

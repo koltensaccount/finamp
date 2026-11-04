@@ -13,6 +13,7 @@ import '../services/favorite_provider.dart';
 import '../services/jellyfin_api_helper.dart';
 import '../services/queue_service.dart';
 import 'artist_screen.dart';
+import 'catalog_search_screen.dart';
 
 class AlbumScreen extends ConsumerStatefulWidget {
   const AlbumScreen({super.key, this.parent, this.genreFilter});
@@ -154,14 +155,16 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           // Artist Name (Tappable with Apple Red accent)
           GestureDetector(
             onTap: () {
-              if (resolvedParent.artistItems?.isNotEmpty ?? false) {
-                final artistItem = resolvedParent.artistItems!.first;
+              final artistItem = (resolvedParent.artistItems ?? resolvedParent.albumArtists)?.firstOrNull;
+              if (artistItem?.id != null && artistItem!.id.raw.isNotEmpty) {
                 final artistStub = BaseItemDto(
                   id: artistItem.id,
-                  name: artistItem.name,
+                  name: artistItem.name ?? artistName,
                   type: 'MusicArtist',
                 );
                 Navigator.of(context).pushNamed(ArtistScreen.routeName, arguments: artistStub);
+              } else if (artistName.isNotEmpty) {
+                Navigator.of(context).pushNamed(CatalogSearchScreen.routeName, arguments: artistName);
               }
             },
             child: Text(
