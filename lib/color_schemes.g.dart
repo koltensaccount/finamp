@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:dynamic_color/dynamic_color.dart';
-import 'package:finamp/services/finamp_settings_helper.dart';
 
-const jellyfinBlueColor = Color(0xFF00A4DC);
-const jellyfinPurpleColor = Color(0xFFAA5CC3);
+const jellyfinBlueColor = Color(0xFFFA2D48);
+const jellyfinPurpleColor = Color(0xFFFA2D48);
 
 const lightColorScheme = ColorScheme(
   brightness: Brightness.light,
   // Primary
-  primary: Color(0xFF00668A),
+  primary: Color(0xFFFA2D48),
   onPrimary: Color(0xFFFFFFFF),
-  primaryContainer: Color(0xFFC4E8FF),
-  onPrimaryContainer: Color(0xFF001E2C),
+  primaryContainer: Color(0xFFFFD8E4),
+  onPrimaryContainer: Color(0xFF3B000F),
   // Secondary
   secondary: Color(0xFF406374),
   onSecondary: Color(0xFFFFFFFF),
@@ -49,10 +47,10 @@ const lightColorScheme = ColorScheme(
 const darkColorScheme = ColorScheme(
   brightness: Brightness.dark,
   // Primary
-  primary: jellyfinBlueColor,
-  onPrimary: Color(0xFF001E2C),
-  primaryContainer: Color(0xFF004C68),
-  onPrimaryContainer: Color(0xFFC3E7FF),
+  primary: Color(0xFFFA2D48),
+  onPrimary: Color(0xFFFFFFFF),
+  primaryContainer: Color(0xFF3B000F),
+  onPrimaryContainer: Color(0xFFFFD8E4),
   // Secondary
   secondary: Color(0xFF60B4DD),
   onSecondary: Color(0xFF112732),

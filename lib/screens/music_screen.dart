@@ -297,9 +297,15 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
           body: IndexedStack(
             index: _rootTabIndex,
             children: [
-              HomeScreenContent(refresh: refreshMap[ContentType.home]),
-              const LibraryScreenContent(),
-              const CatalogSearchScreen(isTab: true),
+              PrimaryScrollController.none(
+                child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
+              ),
+              const PrimaryScrollController.none(
+                child: LibraryScreenContent(),
+              ),
+              const PrimaryScrollController.none(
+                child: CatalogSearchScreen(isTab: true),
+              ),
             ],
           ),
           bottomNavigationBar: Column(

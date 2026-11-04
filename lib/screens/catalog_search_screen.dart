@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 
 import '../components/finamp_app_bar_back_button.dart';
@@ -11,7 +11,6 @@ import '../services/catalog_api_client.dart';
 import '../services/catalog_playback_helper.dart';
 import 'catalog_album_screen.dart';
 import 'catalog_artist_screen.dart';
-import 'catalog_settings_screen.dart';
 import '../services/artist_image_service.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
@@ -50,6 +49,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   CatalogSearchCategory _category = CatalogSearchCategory.all;
   CatalogSearchScope _scope = CatalogSearchScope.musicSearch;
 
+  static const Color appleAccentColor = Color(0xFFFA2D48);
+
   final List<RecentSearchItem> _recentSearches = [
     RecentSearchItem(
       id: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
@@ -66,6 +67,16 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       imageUrl: ArtistImageService.getKnownArtistImageUrl('the beatles'),
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    const initialQuery = String.fromEnvironment('DEBUG_SEARCH_QUERY', defaultValue: '');
+    if (initialQuery.isNotEmpty) {
+      _controller.text = initialQuery;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _search());
+    }
+  }
 
   void _addRecentSearch(RecentSearchItem item) {
     _recentSearches.removeWhere((x) => x.id == item.id || x.title.toLowerCase() == item.title.toLowerCase());
@@ -100,146 +111,150 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Search', style: TextStyle(fontWeight: FontWeight.bold)),
-      leading: widget.isTab ? null : const FinampAppBarBackButton(),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.tune),
-          tooltip: 'Catalog Settings',
-          onPressed: () async {
-            final changed = await Navigator.of(context).pushNamed(CatalogSettingsScreen.routeName);
-            if (changed == true && _controller.text.trim().isNotEmpty) {
-              unawaited(_search());
-            }
-          },
-        ),
-      ],
-    ),
-    bottomNavigationBar: widget.isTab ? null : const NowPlayingBar(),
-    body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: TextField(
-            controller: _controller,
-            autofocus: true,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _search(),
-            decoration: InputDecoration(
-              hintText: 'Artists, Songs, Lyrics & More',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1C1C1E)
-                  : const Color(0xFFE5E5EA),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_controller.text.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.cancel, size: 18),
-                      onPressed: () {
-                        _controller.clear();
-                        setState(() => _response = null);
-                      },
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward, size: 20),
-                    onPressed: () => _search(),
-                  ),
-                ],
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
+      appBar: widget.isTab
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: const FinampAppBarBackButton(),
+              title: null,
+            ),
+      bottomNavigationBar: widget.isTab ? null : const NowPlayingBar(),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Apple-style Large Left-Aligned Page Title
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Text(
+                'Search',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
               ),
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          child: SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<CatalogSearchScope>(
-              segments: const [
-                ButtonSegment(
-                  value: CatalogSearchScope.musicSearch,
-                  label: Text('Music Search'),
+            // Clean Apple-style Search Input Field
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                ButtonSegment(
-                  value: CatalogSearchScope.library,
-                  label: Text('Library'),
-                ),
-              ],
-              selected: {_scope},
-              onSelectionChanged: (newSelection) {
-                setState(() => _scope = newSelection.first);
-              },
-            ),
-          ),
-        ),
-        if (_loading) const LinearProgressIndicator(),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Card(
-              color: Theme.of(context).colorScheme.errorContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onErrorContainer),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Catalog is currently unavailable. Your downloaded and local Jellyfin library remain fully functional.',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onErrorContainer,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: isDark ? Colors.white54 : Colors.black54,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _error!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onErrorContainer.withValues(alpha: 0.8),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _search(),
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'Artists, Songs, Lyrics & More',
+                          hintStyle: TextStyle(
+                            fontSize: 14.5,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      icon: const Icon(Icons.settings),
-                      label: const Text('Configure Catalog Connection'),
-                      onPressed: () async {
-                        final changed = await Navigator.of(context).pushNamed(CatalogSettingsScreen.routeName);
-                        if (changed == true && _controller.text.trim().isNotEmpty) {
-                          unawaited(_search());
-                        }
-                      },
-                    ),
+                    if (_controller.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _controller.clear();
+                          setState(() => _response = null);
+                        },
+                        child: Icon(
+                          Icons.cancel_rounded,
+                          size: 18,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
-          ),
-        Expanded(
-          child: _buildBodyContent(),
+            // Apple-style Cupertino Sliding Segmented Scope Switcher
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoSlidingSegmentedControl<CatalogSearchScope>(
+                  groupValue: _scope,
+                  backgroundColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
+                  thumbColor: isDark ? const Color(0xFF3A3A3C) : Colors.white,
+                  children: {
+                    CatalogSearchScope.musicSearch: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      child: Text(
+                        'Music Search',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    CatalogSearchScope.library: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      child: Text(
+                        'Library',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  },
+                  onValueChanged: (val) {
+                    if (val != null) setState(() => _scope = val);
+                  },
+                ),
+              ),
+            ),
+            if (_loading)
+              const LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: Colors.transparent,
+                color: appleAccentColor,
+              ),
+            Expanded(
+              child: _buildBodyContent(isDark),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
-  Widget _buildBodyContent() {
+  Widget _buildBodyContent(bool isDark) {
     if (_response == null && !_loading && _error == null) {
-      return _buildRecentlySearchedView();
+      return _buildRecentlySearchedView(isDark);
     }
 
     final allResults = _response?.results ?? const [];
@@ -256,21 +271,19 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
           children: [
             Text(
               _scope == CatalogSearchScope.library
-                  ? 'No matching items found in your library.'
-                  : 'No catalog results found.',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+                  ? 'No matching items found in your library'
+                  : 'No catalog results found',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
             const SizedBox(height: 8),
             if (_scope == CatalogSearchScope.library)
-              TextButton.icon(
-                icon: const Icon(Icons.public),
-                label: const Text('Search full music catalog'),
+              TextButton(
+                child: const Text('Search full catalog', style: TextStyle(color: appleAccentColor)),
                 onPressed: () => setState(() => _scope = CatalogSearchScope.musicSearch),
               )
             else
-              TextButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text('Fetch live MusicBrainz results'),
+              TextButton(
+                child: const Text('Retry Search', style: TextStyle(color: appleAccentColor)),
                 onPressed: () => _search(refresh: true),
               ),
           ],
@@ -282,89 +295,69 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     final albums = results.where((r) => r.kind == 'album').toList();
     final tracks = results.where((r) => r.kind == 'track').toList();
 
+    return switch (_category) {
+      CatalogSearchCategory.artists => _buildCategoryList(artists, 'Artists', isDark),
+      CatalogSearchCategory.albums => _buildCategoryList(albums, 'Albums', isDark),
+      CatalogSearchCategory.songs => _buildCategoryList(tracks, 'Songs', isDark),
+      CatalogSearchCategory.all => _buildAllResultsView(
+          artists: artists,
+          albums: albums,
+          tracks: tracks,
+          isDark: isDark,
+        ),
+    };
+  }
+
+  Widget _buildCategoryList(List<CatalogSearchResult> items, String title, bool isDark) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Row(
             children: [
-              FilterChip(
-                label: Text('All (${results.length})'),
-                selected: _category == CatalogSearchCategory.all,
-                onSelected: (_) => setState(() => _category = CatalogSearchCategory.all),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                onPressed: () => setState(() => _category = CatalogSearchCategory.all),
               ),
-              if (artists.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                FilterChip(
-                  avatar: const Icon(TablerIcons.user, size: 14),
-                  label: Text('Artists (${artists.length})'),
-                  selected: _category == CatalogSearchCategory.artists,
-                  onSelected: (_) => setState(() => _category = CatalogSearchCategory.artists),
-                ),
-              ],
-              if (albums.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                FilterChip(
-                  avatar: const Icon(TablerIcons.disc, size: 14),
-                  label: Text('Albums (${albums.length})'),
-                  selected: _category == CatalogSearchCategory.albums,
-                  onSelected: (_) => setState(() => _category = CatalogSearchCategory.albums),
-                ),
-              ],
-              if (tracks.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                FilterChip(
-                  avatar: const Icon(TablerIcons.music, size: 14),
-                  label: Text('Songs (${tracks.length})'),
-                  selected: _category == CatalogSearchCategory.songs,
-                  onSelected: (_) => setState(() => _category = CatalogSearchCategory.songs),
-                ),
-              ],
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ),
-        const Divider(height: 1),
         Expanded(
-          child: switch (_category) {
-            CatalogSearchCategory.artists => ListView.separated(
-                itemCount: artists.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) => _tile(artists[index]),
-              ),
-            CatalogSearchCategory.albums => ListView.separated(
-                itemCount: albums.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) => _tile(albums[index]),
-              ),
-            CatalogSearchCategory.songs => ListView.separated(
-                itemCount: tracks.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) => _tile(tracks[index]),
-              ),
-            CatalogSearchCategory.all => _buildAllResultsView(
-                artists: artists,
-                albums: albums,
-                tracks: tracks,
-              ),
-          },
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 120),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              indent: 72,
+              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+            ),
+            itemBuilder: (context, index) => _tile(items[index], isDark),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildRecentlySearchedView() {
+  Widget _buildRecentlySearchedView(bool isDark) {
     if (_recentSearches.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Artists, Songs, Lyrics & More',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
         ),
       );
     }
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -377,7 +370,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               onPressed: () => setState(() => _recentSearches.clear()),
               child: const Text(
                 'Clear',
-                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                style: TextStyle(color: appleAccentColor, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -388,7 +381,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               ArtistImageService.getKnownArtistImageUrl(item.title) ??
               ArtistImageService.getKnownArtistImageUrl(item.id);
           return ListTile(
-            contentPadding: EdgeInsets.zero,
+            contentPadding: const EdgeInsets.symmetric(vertical: 2),
             leading: item.kind == 'artist'
                 ? ClipOval(
                     child: artistImg != null
@@ -399,14 +392,14 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => CircleAvatar(
                               radius: 22,
-                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                              child: const Icon(TablerIcons.user, size: 22),
+                              backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                              child: const Icon(Icons.person, size: 22),
                             ),
                           )
                         : CircleAvatar(
                             radius: 22,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Icon(TablerIcons.user, size: 22),
+                            backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                            child: const Icon(Icons.person, size: 22),
                           ),
                   )
                 : ClipRRect(
@@ -414,8 +407,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                     child: Container(
                       width: 44,
                       height: 44,
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      child: const Icon(TablerIcons.disc, size: 24),
+                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                      child: const Icon(Icons.album_rounded, size: 24),
                     ),
                   ),
             title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
@@ -442,6 +435,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     required List<CatalogSearchResult> artists,
     required List<CatalogSearchResult> albums,
     required List<CatalogSearchResult> tracks,
+    required bool isDark,
   }) {
     CatalogSearchResult? topResult;
     final queryLower = _controller.text.trim().toLowerCase();
@@ -462,12 +456,12 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         : artists;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
       children: [
         if (topResult != null) ...[
           _buildSectionHeader('Top Result', null),
-          _buildTopResultCard(topResult),
-          const SizedBox(height: 12),
+          _buildTopResultCard(topResult, isDark),
+          const SizedBox(height: 16),
         ],
         if (albums.isNotEmpty) ...[
           _buildSectionHeader(
@@ -475,19 +469,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             albums.length,
             onSeeAll: () => setState(() => _category = CatalogSearchCategory.albums),
           ),
-          ...albums.take(4).map(_tile),
-          if (albums.length > 4)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Center(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: Text('See all ${albums.length} albums'),
-                  onPressed: () => setState(() => _category = CatalogSearchCategory.albums),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
+          ...albums.take(4).map((a) => _tile(a, isDark)),
+          const SizedBox(height: 16),
         ],
         if (tracks.isNotEmpty) ...[
           _buildSectionHeader(
@@ -495,19 +478,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             tracks.length,
             onSeeAll: () => setState(() => _category = CatalogSearchCategory.songs),
           ),
-          ...tracks.take(5).map(_tile),
-          if (tracks.length > 5)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Center(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: Text('See all ${tracks.length} songs'),
-                  onPressed: () => setState(() => _category = CatalogSearchCategory.songs),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
+          ...tracks.take(5).map((t) => _tile(t, isDark)),
+          const SizedBox(height: 16),
         ],
         if (otherArtists.isNotEmpty) ...[
           _buildSectionHeader(
@@ -515,32 +487,23 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             otherArtists.length,
             onSeeAll: () => setState(() => _category = CatalogSearchCategory.artists),
           ),
-          ...otherArtists.take(3).map(_tile),
-          if (otherArtists.length > 3)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Center(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: Text('See all ${otherArtists.length} artists'),
-                  onPressed: () => setState(() => _category = CatalogSearchCategory.artists),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
+          ...otherArtists.take(3).map((ar) => _tile(ar, isDark)),
+          const SizedBox(height: 16),
         ],
       ],
     );
   }
 
-  Widget _buildTopResultCard(CatalogSearchResult result) {
+  Widget _buildTopResultCard(CatalogSearchResult result, bool isDark) {
     if (result.kind == 'artist') {
       final artistImg = result.imageUrl ??
           ArtistImageService.getKnownArtistImageUrl(result.title) ??
           ArtistImageService.getKnownArtistImageUrl(result.id);
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      return Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
@@ -553,7 +516,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
             ));
             Navigator.of(context).pushNamed(
               CatalogArtistScreen.routeName,
-              arguments: CatalogArtistScreenArguments.fromSearchResult(result),
+              arguments: CatalogArtistScreenArguments(artistMbid: result.id, initialName: result.title),
             );
           },
           child: Padding(
@@ -564,19 +527,19 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                   child: artistImg != null
                       ? Image.network(
                           artistImg,
-                          width: 72,
-                          height: 72,
+                          width: 64,
+                          height: 64,
                           fit: BoxFit.cover,
                           errorBuilder: (_, _, _) => CircleAvatar(
-                            radius: 36,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Icon(TablerIcons.user, size: 36),
+                            radius: 32,
+                            backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                            child: const Icon(Icons.person, size: 32),
                           ),
                         )
                       : CircleAvatar(
-                          radius: 36,
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: const Icon(TablerIcons.user, size: 36),
+                          radius: 32,
+                          backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                          child: const Icon(Icons.person, size: 32),
                         ),
                 ),
                 const SizedBox(width: 16),
@@ -586,30 +549,23 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                     children: [
                       Text(
                         result.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Artist',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Artist',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, size: 28),
+                const Icon(Icons.chevron_right, size: 24, color: Colors.grey),
               ],
             ),
           ),
@@ -617,9 +573,11 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       );
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
@@ -635,7 +593,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               ClipRRect(
@@ -643,35 +601,35 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                 child: result.imageUrl != null && result.imageUrl!.isNotEmpty
                     ? Image.network(
                         result.imageUrl!,
-                        width: 72,
-                        height: 72,
+                        width: 64,
+                        height: 64,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 72,
-                          height: 72,
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          child: const Icon(TablerIcons.disc, size: 36),
+                        errorBuilder: (_, _, _) => Container(
+                          width: 64,
+                          height: 64,
+                          color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                          child: const Icon(Icons.album_rounded, size: 32),
                         ),
                       )
                     : Container(
-                        width: 72,
-                        height: 72,
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        child: const Icon(TablerIcons.disc, size: 36),
+                        width: 64,
+                        height: 64,
+                        color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                        child: const Icon(Icons.album_rounded, size: 32),
                       ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       result.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       [
                         if (result.displayArtist != null) result.displayArtist!,
@@ -684,7 +642,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 28),
+              const Icon(Icons.chevron_right, size: 24, color: Colors.grey),
             ],
           ),
         ),
@@ -694,42 +652,24 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _buildSectionHeader(String title, int? count, {VoidCallback? onSeeAll}) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          if (count != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-          const Spacer(),
           if (onSeeAll != null)
-            TextButton(
-              onPressed: onSeeAll,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('See All'),
-                  SizedBox(width: 2),
-                  Icon(Icons.chevron_right, size: 16),
-                ],
+            GestureDetector(
+              onTap: onSeeAll,
+              child: const Text(
+                'See All',
+                style: TextStyle(
+                  color: appleAccentColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
         ],
@@ -737,12 +677,13 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     );
   }
 
-  Widget _tile(CatalogSearchResult result) {
+  Widget _tile(CatalogSearchResult result, bool isDark) {
     if (result.kind == 'artist') {
       final artistImg = result.imageUrl ??
           ArtistImageService.getKnownArtistImageUrl(result.title) ??
           ArtistImageService.getKnownArtistImageUrl(result.id);
       return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         leading: ClipOval(
           child: artistImg != null
               ? Image.network(
@@ -751,18 +692,20 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                   height: 44,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: const Icon(TablerIcons.user, size: 20),
+                    radius: 22,
+                    backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                    child: const Icon(Icons.person, size: 22),
                   ),
                 )
               : CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: const Icon(TablerIcons.user, size: 20),
+                  radius: 22,
+                  backgroundColor: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                  child: const Icon(Icons.person, size: 22),
                 ),
         ),
-        title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: const Text('Artist'),
-        trailing: const Icon(Icons.chevron_right),
+        title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        subtitle: const Text('Artist', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
+        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
           _addRecentSearch(RecentSearchItem(
             id: result.id,
@@ -783,90 +726,39 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       final info = [
         if (result.displayArtist != null && result.displayArtist!.isNotEmpty) result.displayArtist!,
         if (result.primaryType != null) result.primaryType,
-        if (result.firstDate != null && result.firstDate!.length >= 4) result.firstDate!.substring(0, 4) else if (result.firstDate != null) result.firstDate!,
-        if (result.editionIds.isNotEmpty) '${result.editionIds.length} edition(s)',
+        if (result.firstDate != null && result.firstDate!.length >= 4)
+          result.firstDate!.substring(0, 4)
+        else if (result.firstDate != null)
+          result.firstDate!,
       ].join(' • ');
 
-      Widget leadingWidget;
-      if (result.imageUrl != null && result.imageUrl!.isNotEmpty) {
-        leadingWidget = ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: Image.network(
-            result.imageUrl!,
-            width: 44,
-            height: 44,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: 44,
-              height: 44,
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: const Icon(TablerIcons.disc, size: 24),
-            ),
-          ),
-        );
-      } else {
-        leadingWidget = Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Icon(TablerIcons.disc, size: 24),
-        );
-      }
-
-      Widget trailingWidget;
-      if (result.isFullyOwned) {
-        trailingWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green, width: 1),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, size: 12, color: Colors.green),
-              SizedBox(width: 4),
-              Text('In Library', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        );
-      } else if (result.isPartiallyOwned) {
-        trailingWidget = Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.amber.shade800, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.pie_chart, size: 12, color: Colors.amber.shade800),
-              const SizedBox(width: 4),
-              Text('Partial', style: TextStyle(color: Colors.amber.shade800, fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        );
-      } else {
-        trailingWidget = const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_outlined, size: 16, color: Colors.grey),
-            SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 18, color: Colors.grey),
-          ],
-        );
-      }
-
       return ListTile(
-        leading: leadingWidget,
-        title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(info.isNotEmpty ? info : 'Album concept'),
-        trailing: trailingWidget,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: result.imageUrl != null && result.imageUrl!.isNotEmpty
+              ? Image.network(
+                  result.imageUrl!,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 44,
+                    height: 44,
+                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                    child: Icon(Icons.album_rounded, size: 24, color: isDark ? Colors.white38 : Colors.black38),
+                  ),
+                )
+              : Container(
+                  width: 44,
+                  height: 44,
+                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                  child: Icon(Icons.album_rounded, size: 24, color: isDark ? Colors.white38 : Colors.black38),
+                ),
+        ),
+        title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        subtitle: Text(info, style: const TextStyle(color: Colors.grey, fontSize: 12.5)),
+        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
           _addRecentSearch(RecentSearchItem(
             id: result.id,
@@ -882,88 +774,45 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       );
     }
 
-    // track
-    final availability = result.availability;
-    final canPlay = availability?.canPlay ?? false;
-    final isAmbiguous = (availability?.selectionRequired ?? false) ||
-        availability?.state == CatalogAvailabilityState.possiblyAvailable;
-
-    String statusText;
-    Color statusColor;
-    Widget trailingIcon;
-
-    if (canPlay) {
-      statusText = 'Available in Jellyfin';
-      statusColor = Colors.green;
-      trailingIcon = const Icon(Icons.play_circle_fill, color: Colors.green);
-    } else if (isAmbiguous) {
-      statusText = 'Multiple local versions match';
-      statusColor = Colors.orange;
-      trailingIcon = const Icon(Icons.call_split, color: Colors.orange);
-    } else if (availability?.state == CatalogAvailabilityState.pending) {
-      statusText = 'Request pending';
-      statusColor = Colors.blue;
-      trailingIcon = const Icon(Icons.hourglass_empty, color: Colors.blue);
-    } else {
-      statusText = 'Not in library';
-      statusColor = Colors.grey;
-      trailingIcon = const Icon(Icons.cloud_off, color: Colors.grey);
-    }
+    final subtitleParts = [
+      if (result.displayArtist != null && result.displayArtist!.isNotEmpty) result.displayArtist!,
+      if (result.formattedDuration.isNotEmpty) result.formattedDuration,
+    ];
 
     return ListTile(
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: const Icon(TablerIcons.music, size: 22),
-      ),
-      title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (result.displayArtist != null && result.displayArtist!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                result.displayArtist!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 13,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: result.imageUrl != null && result.imageUrl!.isNotEmpty
+            ? Image.network(
+                result.imageUrl!,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  width: 44,
+                  height: 44,
+                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                  child: Icon(Icons.music_note_rounded, size: 22, color: isDark ? Colors.white38 : Colors.black38),
                 ),
-                overflow: TextOverflow.ellipsis,
+              )
+            : Container(
+                width: 44,
+                height: 44,
+                color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                child: Icon(Icons.music_note_rounded, size: 22, color: isDark ? Colors.white38 : Colors.black38),
               ),
-            ),
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  [
-                    statusText,
-                    if (result.formattedDuration.isNotEmpty) result.formattedDuration,
-                  ].join(' • '),
-                  style: TextStyle(color: statusColor, fontSize: 13),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
-      trailing: trailingIcon,
+      title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: Text(
+        subtitleParts.join(' • '),
+        style: const TextStyle(color: Colors.grey, fontSize: 12.5),
+      ),
+      trailing: const Icon(Icons.more_horiz, size: 20, color: Colors.grey),
       onTap: () => CatalogPlaybackHelper.handleTrackTap(
         context,
         title: result.title,
-        availability: availability,
+        availability: result.availability,
       ),
     );
   }

@@ -2,14 +2,11 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:balanced_text/balanced_text.dart';
-import 'package:finamp/components/AlbumScreen/download_button.dart';
 import 'package:finamp/components/Buttons/cta_small.dart';
 import 'package:finamp/components/MusicScreen/item_card.dart';
 import 'package:finamp/components/MusicScreen/item_wrapper.dart';
 import 'package:finamp/components/MusicScreen/music_screen_tab_view.dart';
 import 'package:finamp/components/finamp_section_header.dart';
-import 'package:finamp/l10n/app_localizations.dart';
-import 'package:finamp/menus/components/icon_button_with_semantics.dart';
 import 'package:finamp/menus/home_section_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/music_models.dart';
@@ -19,7 +16,6 @@ import 'package:finamp/services/audio_service_helper.dart';
 import 'package:finamp/screens/music_screen.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
 import 'package:finamp/services/music_screen_provider.dart';
-import 'package:finamp/services/queue_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -338,8 +334,6 @@ class HomeScreenSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sectionDisplayable = ref.watch(resolveSectionProvider(sectionInfo)).value;
-
     final viewPadding = MediaQuery.paddingOf(context);
     return SliverPadding(
       padding: const EdgeInsets.only(bottom: 20.0),
@@ -351,41 +345,7 @@ class HomeScreenSection extends ConsumerWidget {
         titleTrailingIcon: TablerIcons.chevron_right,
         headerPadding: EdgeInsets.only(left: viewPadding.left + 14.0, right: viewPadding.right + 20.0),
         contentPadding: EdgeInsets.zero,
-        actions: [
-          if (sectionDisplayable is FinampPlayable) ...[
-            IconButtonWithSemantics(
-              onPressed: () async {
-                final queueService = GetIt.instance<QueueService>();
-                final playable = sectionDisplayable as FinampPlayable;
-                await queueService.startSlicePlayback(
-                  await ref.read(getPlayableSliceProvider(item: playable, startingOffset: 0).future),
-                );
-              },
-              label: AppLocalizations.of(context)!.playButtonLabel,
-              icon: TablerIcons.player_play,
-            ),
-            IconButtonWithSemantics(
-              onPressed: () async {
-                final queueService = GetIt.instance<QueueService>();
-                final playable = sectionDisplayable as FinampPlayable;
-                // TODO better shuffling?  need to think about shuffle all versus shuffle first
-                await queueService.startSlicePlayback(
-                  (await ref.read(getPlayableSliceProvider(item: playable, startingOffset: 0).future)).shuffle(),
-                );
-              },
-              label: context.l10n.shuffleButtonLabel,
-              icon: TablerIcons.arrows_shuffle,
-            ),
-          ],
-          // bind function result to downloadInfo and proceed if not null
-          if (getHomeDownloadInfo(ref, context.l10n, sectionInfo, sectionDisplayable?.maybeItem) case var downloadInfo?)
-            DownloadButton(
-              item: downloadInfo.stub,
-              allowServerDelete: false,
-              warningMessage: downloadInfo.warning,
-              downloadOnly: true,
-            ),
-        ],
+        actions: const [],
         onTap: () {
           Navigator.of(
             context,

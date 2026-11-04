@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
@@ -83,28 +84,29 @@ class CatalogPlaybackHelper {
     String title,
     VoidCallback? onRequestAlbum,
   ) async {
-    await showDialog<void>(
+    await showCupertinoDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Track Unavailable'),
-        content: Text(
-          '"$title" is not in your Jellyfin library.\n\n'
-          'Single-track acquisition is not supported by the backend to prevent mismatched tracks. '
-          'You can request the complete album instead.',
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Track Not in Library'),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Text(
+            '"$title" is not available locally. You can add the full album to your library.',
+          ),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: const Text('Cancel'),
           ),
           if (onRequestAlbum != null)
-            FilledButton.icon(
-              icon: const Icon(TablerIcons.disc),
-              label: const Text('Request Album'),
+            CupertinoDialogAction(
+              isDefaultAction: true,
               onPressed: () {
                 Navigator.of(context).pop();
                 onRequestAlbum();
               },
+              child: const Text('Add Album'),
             ),
         ],
       ),
@@ -117,17 +119,19 @@ class CatalogPlaybackHelper {
     List<CatalogLocalItem> localItems,
   ) async {
     if (localItems.isEmpty) {
-      await showDialog<void>(
+      await showCupertinoDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Ambiguous Match'),
-          content: Text(
-            'Multiple candidates or ambiguous metadata were found for "$title", '
-            'but no local files could be resolved. To avoid playing an incorrect recording, '
-            'automatic playback is disabled.',
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Track Unavailable'),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'No local match was found for "$title".',
+            ),
           ),
           actions: [
-            TextButton(
+            CupertinoDialogAction(
+              isDefaultAction: true,
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('OK'),
             ),

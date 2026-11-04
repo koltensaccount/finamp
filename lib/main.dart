@@ -1244,8 +1244,11 @@ class FinampScrollBehavior extends MaterialScrollBehavior {
       case Axis.horizontal:
         return child;
       case Axis.vertical:
-        assert(details.controller != null);
-        return Scrollbar(controller: details.controller, interactive: interactive, child: child);
+        final controller = details.controller;
+        if (controller == null || controller.positions.length > 1) {
+          return child;
+        }
+        return Scrollbar(controller: controller, interactive: interactive, child: child);
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import '../components/MusicScreen/sort_and_filter_row.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
+import '../services/finamp_settings_helper.dart';
 import 'downloads_screen.dart';
 import 'liked_songs_screen.dart';
 import 'music_screen.dart';
@@ -14,16 +15,19 @@ class LibraryScreenContent extends ConsumerWidget {
 
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
-  void _openTab(BuildContext context, ContentType contentType) {
+  void _openTab(BuildContext context, WidgetRef ref, ContentType contentType) {
+    final actualContentType = contentType == ContentType.genericArtists
+        ? ref.read(finampSettingsProvider.defaultArtistType).tabType
+        : contentType;
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) => MusicScreen(
           singleTabConfig: HomeScreenSectionConfiguration(
             base: TabsHomeSection(
               libraryId: currentLibraryPlaceholder,
-              contentType: contentType,
+              contentType: actualContentType,
             ),
-            sortConfig: SortAndFilterController.trackSettings(contentType).resolveConfig(),
+            sortConfig: SortAndFilterController.trackSettings(actualContentType).resolveConfig(),
           ),
         ),
       ),
@@ -38,22 +42,22 @@ class LibraryScreenContent extends ConsumerWidget {
       {
         'title': 'Playlists',
         'icon': TablerIcons.playlist,
-        'action': () => _openTab(context, ContentType.playlists),
+        'action': () => _openTab(context, ref, ContentType.playlists),
       },
       {
         'title': 'Artists',
         'icon': TablerIcons.microphone_2,
-        'action': () => _openTab(context, ContentType.genericArtists),
+        'action': () => _openTab(context, ref, ContentType.genericArtists),
       },
       {
         'title': 'Albums',
         'icon': TablerIcons.disc,
-        'action': () => _openTab(context, ContentType.albums),
+        'action': () => _openTab(context, ref, ContentType.albums),
       },
       {
         'title': 'Songs',
         'icon': TablerIcons.music,
-        'action': () => _openTab(context, ContentType.tracks),
+        'action': () => _openTab(context, ref, ContentType.tracks),
       },
       {
         'title': 'Liked Songs',
