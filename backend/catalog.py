@@ -88,26 +88,15 @@ class Catalog:
         candidates = []
         title = release['title']
         group_id = release['group_id']
-        query = '''
-            SELECT server_id, item_id, payload 
-            FROM local_items 
-            WHERE active=1 AND (
-                payload LIKE ? 
-                OR payload LIKE ? 
-                OR payload LIKE ? 
-                OR path LIKE ? 
-                OR path LIKE ?
-            )
-        '''
-        params = (
-            f'%"Album": "%{title}%',
-            f'%"{release_id}"%',
-            f'%"{group_id}"%' if group_id else f'%"{release_id}"%',
-            f'%/{title} %/%',
-            f'%/{title}/%',
-        )
-        for row in self.db.execute(query, params).fetchall():
-            candidates.append((row['server_id'], row['item_id'], json.loads(row['payload'])))
+        # Compare structured album identity, never substrings in JSON or paths
+        # (the album "1" otherwise matches "1000 gecs").
+        for row in self.db.execute('SELECT server_id, item_id, payload FROM local_items WHERE active=1'):
+            item = json.loads(row['payload'])
+            providers = item.get('ProviderIds') or {}
+            if (providers.get('MusicBrainzAlbum') == release_id
+                    or (group_id and providers.get('MusicBrainzReleaseGroup') == group_id)
+                    or norm(item.get('Album')) == norm(title)):
+                candidates.append((row['server_id'], row['item_id'], item))
         to_insert = []
         for t in unmapped:
             rec_id = t['recording_id']
@@ -117,8 +106,14 @@ class Catalog:
                 pos = d.get('IndexNumber') or 0
                 if disc == t['disc'] and pos == t['position']:
                     dur_ms = int(d.get('RunTimeTicks', 0) / 10000)
-                    if norm(d.get('Name')) == norm(t['title']) or (not t['duration_ms'] or abs(dur_ms - t['duration_ms']) <= 4000):
-                        to_insert.append((srv_id, it_id, rec_id, t['id'], 'verified', json.dumps({'reason': 'verified by album track position and duration'})))
+                    credits = {norm(row[0]) for row in self.db.execute(
+                        "SELECT display_name FROM credits WHERE entity_type='recording' AND entity_id=?",
+                        (rec_id,))}
+                    artists = {norm(name) for name in d.get('Artists', [])}
+                    if (norm(d.get('Name')) == norm(t['title'])
+                            and credits and artists == credits
+                            and (not t['duration_ms'] or abs(dur_ms - t['duration_ms']) <= 4000)):
+                        to_insert.append((srv_id, it_id, rec_id, t['id'], 'local_identity' if rec_id.startswith('local:') else 'verified', json.dumps({'reason': 'verified by album identity, artist, track title, position and duration'})))
                         matched = True
                         break
             if not matched:
@@ -211,7 +206,23 @@ class Catalog:
 
     def availability(self, recording_id, release_id=None):
         rows = self.db.execute('SELECT m.*,l.payload FROM mappings m JOIN local_items l USING(server_id,item_id) WHERE recording_id=? AND active=1', (recording_id,)).fetchall()
-        exact = [r for r in rows if r['confidence'] in ('verified', 'local_identity')]
+        def valid_candidate(row):
+            if row['confidence'] not in ('verified', 'local_identity'):
+                return False
+            evidence = json.loads(row['evidence'] or '{}')
+            reason = evidence.get('reason', '')
+            if not (reason.startswith('matched local track position')
+                    or reason.startswith('verified by album track position')):
+                return True
+            # Older reconciliation accepted unrelated songs on duration alone.
+            # Reject that stale evidence at read time, without altering files.
+            recording = self.db.execute('SELECT title FROM recordings WHERE id=?', (recording_id,)).fetchone()
+            item = json.loads(row['payload'])
+            credits = {norm(credit[0]) for credit in self.db.execute(
+                "SELECT display_name FROM credits WHERE entity_type='recording' AND entity_id=?", (recording_id,))}
+            return bool(recording and norm(item.get('Name')) == norm(recording['title'])
+                        and credits and {norm(name) for name in item.get('Artists', [])} == credits)
+        exact = [r for r in rows if valid_candidate(r)]
         state = 'available' if exact else 'possibly_available' if rows else 'not_found'
         pending = False
         if release_id:
