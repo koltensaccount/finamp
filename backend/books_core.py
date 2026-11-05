@@ -167,21 +167,63 @@ class BooksCore:
                     author TEXT NOT NULL,
                     isbn TEXT,
                     format_requested TEXT NOT NULL, -- 'epub', 'audiobook', 'paired'
-                    state TEXT NOT NULL DEFAULT 'requested', -- 'requested', 'staging', 'metadata_verified', 'imported', 'failed'
+                    state TEXT NOT NULL DEFAULT 'requested', -- 'requested', 'searching', 'acquiring', 'staging', 'verifying', 'importing', 'available', 'partial', 'needs_review', 'failed'
                     origin TEXT NOT NULL DEFAULT 'user',
                     metadata_json TEXT,
                     staging_path TEXT,
                     error_message TEXT,
+                    acquired_formats TEXT DEFAULT '[]', -- JSON array of successfully acquired formats e.g. ['epub']
+                    progress_percentage REAL DEFAULT 0.0,
+                    external_work_id TEXT,
                     created_at REAL NOT NULL,
                     updated_at REAL NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS catalog_search_cache (
+                    query_hash TEXT PRIMARY KEY,
+                    query_text TEXT NOT NULL,
+                    results_json TEXT NOT NULL,
+                    expires_at REAL NOT NULL,
+                    created_at REAL NOT NULL
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_works_author ON works(author);
+                CREATE INDEX IF NOT EXISTS idx_works_title ON works(title);
                 CREATE INDEX IF NOT EXISTS idx_editions_work ON editions(work_id);
                 CREATE INDEX IF NOT EXISTS idx_assets_edition ON assets(edition_id);
                 CREATE INDEX IF NOT EXISTS idx_chapters_edition ON chapters(edition_id);
                 CREATE INDEX IF NOT EXISTS idx_book_requests_state ON book_requests(state);
+                CREATE INDEX IF NOT EXISTS idx_catalog_cache_expires ON catalog_search_cache(expires_at);
+                CREATE INDEX IF NOT EXISTS idx_background_tasks_state_prio ON background_tasks(state, priority);
             """)
+            self._run_migrations(db)
+
+    def _run_migrations(self, db):
+        try:
+            req_cols = [r["name"] for r in db.execute("PRAGMA table_info(book_requests)").fetchall()]
+            if "acquired_formats" not in req_cols:
+                db.execute("ALTER TABLE book_requests ADD COLUMN acquired_formats TEXT DEFAULT '[]'")
+            if "progress_percentage" not in req_cols:
+                db.execute("ALTER TABLE book_requests ADD COLUMN progress_percentage REAL DEFAULT 0.0")
+            if "external_work_id" not in req_cols:
+                db.execute("ALTER TABLE book_requests ADD COLUMN external_work_id TEXT")
+
+            works_cols = [r["name"] for r in db.execute("PRAGMA table_info(works)").fetchall()]
+            if "is_verified" not in works_cols:
+                db.execute("ALTER TABLE works ADD COLUMN is_verified INTEGER DEFAULT 0")
+
+            ed_cols = [r["name"] for r in db.execute("PRAGMA table_info(editions)").fetchall()]
+            if "is_verified" not in ed_cols:
+                db.execute("ALTER TABLE editions ADD COLUMN is_verified INTEGER DEFAULT 0")
+            if "external_ids" not in ed_cols:
+                db.execute("ALTER TABLE editions ADD COLUMN external_ids TEXT")
+
+            asset_cols = [r["name"] for r in db.execute("PRAGMA table_info(assets)").fetchall()]
+            if "sha256_hash" not in asset_cols:
+                db.execute("ALTER TABLE assets ADD COLUMN sha256_hash TEXT")
+            db.commit()
+        except Exception:
+            pass
 
     def list_books(self, query=None, format_filter=None, user_id="default"):
         with self.get_db() as db:
@@ -627,9 +669,18 @@ class BooksCore:
             req_id = f"breq-{uuid.uuid4().hex[:12]}"
             db.execute("""
                 INSERT INTO book_requests (
-                    id, work_id, title, author, isbn, format_requested, state, origin, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?)
+                    id, work_id, title, author, isbn, format_requested, state, origin,
+                    acquired_formats, progress_percentage, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'requested', ?, '[]', 0.0, ?, ?)
             """, (req_id, work_slug, title_clean, author_clean, isbn, format_requested, origin, now, now))
+
+            # Automatically enqueue durable background acquisition task
+            task_id = f"task-{uuid.uuid4().hex[:12]}"
+            task_payload = json.dumps({"request_id": req_id, "format": format_requested})
+            db.execute("""
+                INSERT INTO background_tasks (id, task_type, priority, payload, state, retries, created_at, updated_at)
+                VALUES (?, 'acquire_book', 'immediate', ?, 'queued', 0, ?, ?)
+            """, (task_id, task_payload, now, now))
             db.commit()
 
         try:
@@ -646,7 +697,17 @@ class BooksCore:
                 return None
             d = dict(row)
             if d.get("metadata_json"):
-                d["metadata"] = json.loads(d["metadata_json"])
+                try:
+                    d["metadata"] = json.loads(d["metadata_json"])
+                except Exception:
+                    pass
+            if d.get("acquired_formats"):
+                try:
+                    d["acquired_formats"] = json.loads(d["acquired_formats"]) if isinstance(d["acquired_formats"], str) else d["acquired_formats"]
+                except Exception:
+                    d["acquired_formats"] = []
+            else:
+                d["acquired_formats"] = []
             return d
 
     def list_requests(self, state=None):
@@ -659,18 +720,35 @@ class BooksCore:
             for r in rows:
                 d = dict(r)
                 if d.get("metadata_json"):
-                    d["metadata"] = json.loads(d["metadata_json"])
+                    try:
+                        d["metadata"] = json.loads(d["metadata_json"])
+                    except Exception:
+                        pass
+                if d.get("acquired_formats"):
+                    try:
+                        d["acquired_formats"] = json.loads(d["acquired_formats"]) if isinstance(d["acquired_formats"], str) else d["acquired_formats"]
+                    except Exception:
+                        d["acquired_formats"] = []
+                else:
+                    d["acquired_formats"] = []
                 res.append(d)
             return res
 
-    def update_request_state(self, request_id, state, staging_path=None, error_message=None):
+    def update_request_state(self, request_id, state, staging_path=None, error_message=None, acquired_formats=None, progress_percentage=None, external_work_id=None):
         now = time.time()
+        formats_json = json.dumps(acquired_formats) if acquired_formats is not None else None
         with self.get_db() as db:
             db.execute("""
                 UPDATE book_requests
-                SET state=?, staging_path=COALESCE(?, staging_path), error_message=COALESCE(?, error_message), updated_at=?
+                SET state=?,
+                    staging_path=COALESCE(?, staging_path),
+                    error_message=COALESCE(?, error_message),
+                    acquired_formats=COALESCE(?, acquired_formats),
+                    progress_percentage=COALESCE(?, progress_percentage),
+                    external_work_id=COALESCE(?, external_work_id),
+                    updated_at=?
                 WHERE id=?
-            """, (state, staging_path, error_message, now, request_id))
+            """, (state, staging_path, error_message, formats_json, progress_percentage, external_work_id, now, request_id))
             db.commit()
         return self.get_request(request_id)
 
@@ -1043,5 +1121,23 @@ class BooksCore:
                     unmatched_regions=payload.get("unmatched_regions"),
                 )
             return {"status": "alignment_queued_or_ready", "work_id": work_id}
+        elif task_type == "acquire_book":
+            req_id = payload.get("request_id")
+            try:
+                try:
+                    from book_acquisition import AcquisitionCoordinator
+                except ImportError:
+                    from backend.book_acquisition import AcquisitionCoordinator
+                coordinator = getattr(self, "acquisition_coordinator", None)
+                if not coordinator:
+                    coordinator = AcquisitionCoordinator(
+                        self,
+                        staging_dir=getattr(self, "staging_dir", None),
+                        metadata_engine=getattr(self, "metadata_engine", None),
+                    )
+                return coordinator.process_acquisition(req_id)
+            except Exception as e:
+                logger.error(f"Acquisition error for {req_id}: {e}")
+                raise
         else:
             return {"status": "no_op", "task_type": task_type}

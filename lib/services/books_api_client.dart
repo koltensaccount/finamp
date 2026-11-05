@@ -190,4 +190,59 @@ class BooksApiClient {
     final headers = await _authHeaders();
     await _client.post(uri, headers: headers);
   }
+
+  Future<List<WorldwideBookResult>> searchWorldwideBooks({
+    required String query,
+    String? formatFilter,
+    bool refresh = false,
+  }) async {
+    final queryParams = <String, String>{
+      'q': query,
+    };
+    if (formatFilter != null && formatFilter != 'all') {
+      queryParams['format'] = formatFilter;
+    }
+    if (refresh) {
+      queryParams['refresh'] = 'true';
+    }
+
+    final uri = await _buildUri('/v1/books/search', queryParams);
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to search books: ${resp.statusCode}');
+    }
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    final list = data['results'] as List<dynamic>? ?? [];
+    return list.map((e) => WorldwideBookResult.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<BookRequestItem> submitBookRequest({
+    required String title,
+    required String author,
+    String? isbn,
+    String format = 'paired',
+  }) async {
+    final uri = await _buildUri('/v1/books/requests');
+    final headers = await _authHeaders(jsonBody: true);
+    final payload = {
+      'title': title,
+      'author': author,
+      if (isbn != null) 'isbn': isbn,
+      'format_requested': format,
+    };
+    final resp = await _client.post(uri, headers: headers, body: jsonEncode(payload));
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw Exception('Failed to request book: ${resp.statusCode}');
+    }
+    return BookRequestItem.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+  }
+
+  Future<BookRequestItem?> getBookRequest(String requestId) async {
+    final uri = await _buildUri('/v1/books/requests/$requestId');
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200) return null;
+    return BookRequestItem.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+  }
 }

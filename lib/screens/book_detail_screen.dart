@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -8,10 +9,15 @@ import 'audiobook_player_screen.dart';
 import 'epub_reader_screen.dart';
 
 class BookDetailScreen extends StatefulWidget {
-  const BookDetailScreen({super.key, required this.workId});
+  const BookDetailScreen({
+    super.key,
+    this.workId,
+    this.worldwideItem,
+  }) : assert(workId != null || worldwideItem != null);
 
   static const routeName = '/book_detail';
-  final String workId;
+  final String? workId;
+  final WorldwideBookResult? worldwideItem;
 
   @override
   State<BookDetailScreen> createState() => _BookDetailScreenState();
@@ -21,7 +27,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   late final BooksApiClient _apiClient;
   BooksDownloadService? _downloadService;
   BookDetail? _book;
+  WorldwideBookResult? _worldwideItem;
+  BookRequestItem? _requestItem;
+  Timer? _pollTimer;
   bool _isLoading = true;
+  bool _isRequesting = false;
   String? _errorMessage;
 
   @override
@@ -31,17 +41,36 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     if (GetIt.instance.isRegistered<BooksDownloadService>()) {
       _downloadService = GetIt.instance<BooksDownloadService>();
     }
-    _loadBook();
+    _worldwideItem = widget.worldwideItem;
+
+    final targetWorkId = widget.workId ?? widget.worldwideItem?.localWorkId;
+    if (targetWorkId != null && targetWorkId.isNotEmpty) {
+      _loadBook(targetWorkId);
+    } else if (widget.worldwideItem != null) {
+      _isLoading = false;
+      if (widget.worldwideItem!.requestId != null) {
+        _startPollingRequest(widget.worldwideItem!.requestId!);
+      }
+    }
   }
 
-  Future<void> _loadBook() async {
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadBook([String? workId]) async {
+    final wid = workId ?? widget.workId ?? _worldwideItem?.localWorkId;
+    if (wid == null) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final book = await _apiClient.getBook(widget.workId);
+      final book = await _apiClient.getBook(wid);
       if (mounted) {
         setState(() {
           _book = book;
@@ -51,7 +80,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     } catch (e) {
       if (mounted) {
         if (_downloadService != null) {
-          final localDetail = await _downloadService!.getLocalBookDetail(widget.workId);
+          final localDetail = await _downloadService!.getLocalBookDetail(wid);
           if (localDetail != null) {
             setState(() {
               _book = localDetail;
@@ -61,10 +90,91 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             return;
           }
         }
+        // If this is a worldwide item not yet in library, error is expected
+        if (_worldwideItem != null) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = null;
+          });
+        } else {
+          setState(() {
+            _errorMessage = e.toString();
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _startPollingRequest(String reqId) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      try {
+        final req = await _apiClient.getBookRequest(reqId);
+        if (req != null && mounted) {
+          setState(() {
+            _requestItem = req;
+          });
+          if (req.isCompleted) {
+            timer.cancel();
+            if (req.workId != null) {
+              await _loadBook(req.workId);
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Book successfully acquired and ready to read/listen!'),
+                  backgroundColor: Color(0xFF34C759),
+                ),
+              );
+            }
+          } else if (req.isFailed) {
+            timer.cancel();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(req.errorMessage ?? 'Acquisition could not be completed'),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _handleBookRequest(String format) async {
+    final title = _book?.title ?? _worldwideItem?.title;
+    final author = _book?.author ?? _worldwideItem?.author;
+    if (title == null || author == null) return;
+
+    setState(() => _isRequesting = true);
+    try {
+      final req = await _apiClient.submitBookRequest(
+        title: title,
+        author: author,
+        isbn: _worldwideItem?.isbns.isNotEmpty == true ? _worldwideItem!.isbns.first : null,
+        format: format,
+      );
+      if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
+          _requestItem = req;
+          _isRequesting = false;
         });
+        _startPollingRequest(req.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Requested "$title". Searching authorized sources...'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRequesting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Request failed: $e')),
+        );
       }
     }
   }
@@ -139,188 +249,328 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     ],
                   ),
                 )
-              : _book == null
+              : _book == null && _worldwideItem == null
                   ? const Center(child: Text('Book not found'))
-                  : SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Book Cover Hero
-                          Center(
-                            child: Container(
-                              width: 170,
-                              height: 250,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: _book!.coverUrl != null
-                                    ? Image.network(
-                                        _book!.coverUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => _buildPlaceholderCover(),
-                                      )
-                                    : _buildPlaceholderCover(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          // Title & Author
-                          Text(
-                            _book!.title,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _book!.author,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? Colors.white70 : Colors.black87,
-                            ),
-                          ),
-                          if (_book!.seriesName != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_book!.seriesName} • Book ${_book!.seriesOrder ?? 1}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark ? Colors.white38 : Colors.black45,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          // Badges Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (_book!.hasEpub)
-                                _buildFormatTag('EPUB', Icons.menu_book_rounded, isDark),
-                              if (_book!.hasEpub && _book!.hasAudiobook)
-                                const SizedBox(width: 8),
-                              if (_book!.hasAudiobook)
-                                _buildFormatTag('AUDIOBOOK', Icons.headphones_rounded, isDark),
-                              if (_book!.isPaired) ...[
-                                const SizedBox(width: 8),
-                                _buildFormatTag('PAIRED SYNC', Icons.sync_rounded, isDark, accent: true),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Action Buttons
-                          Row(
-                            children: [
-                              if (_book!.hasEpub)
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed: () => _openReader(context),
-                                    icon: const Icon(Icons.auto_stories_rounded, size: 18),
-                                    label: Text(_book!.progress.readingPercentage > 0 ? 'Resume Reading' : 'Read'),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xFFFA2D48),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                  ),
-                                ),
-                              if (_book!.hasEpub && _book!.hasAudiobook)
-                                const SizedBox(width: 12),
-                              if (_book!.hasAudiobook)
-                                Expanded(
-                                  child: FilledButton.tonalIcon(
-                                    onPressed: () => _openAudioPlayer(context),
-                                    icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                                    label: Text(_book!.progress.listeningSeconds > 0 ? 'Resume Audio' : 'Listen'),
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          if (_book!.hasEpub || _book!.hasAudiobook) ...[
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: _buildDownloadButton(context, isDark),
-                            ),
-                          ],
-                          // Listen From Here / Read From Here Sync Banner
-                          if (_book!.isPaired) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFA2D48).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFFA2D48).withValues(alpha: 0.25),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.sync_rounded, color: Color(0xFFFA2D48), size: 18),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
-                                    child: Text(
-                                      'Sentence-level reading & listening synchronization enabled',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFA2D48)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 28),
-                          // Description
-                          if (_book!.description != null && _book!.description!.isNotEmpty) ...[
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'About this book',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _book!.description!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                height: 1.5,
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                          ],
-                          // Chapters Section
-                          _buildChaptersSection(theme, isDark),
-                          const SizedBox(height: 28),
-                          // Metadata Details
-                          _buildMetadataDetails(theme, isDark),
-                        ],
+                  : _buildDetailContent(context, theme, isDark),
+    );
+  }
+
+  Widget _buildDetailContent(BuildContext context, ThemeData theme, bool isDark) {
+    final title = _book?.title ?? _worldwideItem!.title;
+    final author = _book?.author ?? _worldwideItem!.author;
+    final coverUrl = _book?.coverUrl ?? _worldwideItem?.coverUrl;
+    final seriesName = _book?.seriesName;
+    final description = _book?.description ?? _worldwideItem?.description;
+    final hasEpub = _book?.hasEpub ?? _worldwideItem?.hasEpub ?? false;
+    final hasAudiobook = _book?.hasAudiobook ?? _worldwideItem?.hasAudiobook ?? false;
+    final isPaired = _book?.isPaired ?? false;
+    final isOwned = _book != null;
+    final activeState = _requestItem?.state ?? _worldwideItem?.requestState;
+    final isAcquiring = _isRequesting || (activeState != null && !const ['available', 'failed', 'imported'].contains(activeState));
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Book Cover Hero
+          Center(
+            child: Container(
+              width: 170,
+              height: 250,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: coverUrl != null
+                    ? Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildPlaceholderCover(),
+                      )
+                    : _buildPlaceholderCover(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Title & Author
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            author,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          if (seriesName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              '$seriesName • Book ${_book?.seriesOrder ?? 1}',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white38 : Colors.black45,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          // Badges Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isOwned) ...[
+                if (hasEpub)
+                  _buildFormatTag('EPUB', Icons.menu_book_rounded, isDark),
+                if (hasEpub && hasAudiobook)
+                  const SizedBox(width: 8),
+                if (hasAudiobook)
+                  _buildFormatTag('AUDIOBOOK', Icons.headphones_rounded, isDark),
+                if (isPaired) ...[
+                  const SizedBox(width: 8),
+                  _buildFormatTag('PAIRED SYNC', Icons.sync_rounded, isDark, accent: true),
+                ],
+              ] else if (isAcquiring) ...[
+                _buildFormatTag('ACQUIRING MEDIA', Icons.sync_rounded, isDark, accent: true),
+              ] else ...[
+                _buildFormatTag('WORLDWIDE DISCOVERY', Icons.public_rounded, isDark),
+              ],
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Action Buttons
+          if (isOwned) ...[
+            Row(
+              children: [
+                if (hasEpub)
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _openReader(context),
+                      icon: const Icon(Icons.auto_stories_rounded, size: 18),
+                      label: Text(_book!.progress.readingPercentage > 0 ? 'Resume Reading' : 'Read'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFA2D48),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
+                  ),
+                if (hasEpub && hasAudiobook)
+                  const SizedBox(width: 12),
+                if (hasAudiobook)
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => _openAudioPlayer(context),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      label: Text(_book!.progress.listeningSeconds > 0 ? 'Resume Audio' : 'Listen'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (hasEpub || hasAudiobook) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: _buildDownloadButton(context, isDark),
+              ),
+            ],
+            if (isPaired) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFA2D48).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFFA2D48).withValues(alpha: 0.25),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.sync_rounded, color: Color(0xFFFA2D48), size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sentence-level reading & listening synchronization enabled',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFA2D48)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ] else if (isAcquiring) ...[
+            // Acquisition in progress card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF0F0F3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFFA2D48).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFA2D48)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Server Acquisition In Progress',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Stage: ${(activeState ?? "searching").toUpperCase()} • ${(_requestItem?.progressPercentage ?? 25.0).toInt()}% completed',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: ((_requestItem?.progressPercentage ?? 25.0) / 100.0).clamp(0.05, 1.0),
+                      color: const Color(0xFFFA2D48),
+                      backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            // Request Book Action
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _showRequestDialog(context, isDark),
+                icon: const Icon(Icons.cloud_download_rounded, size: 20),
+                label: const Text('Request Book'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFA2D48),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 28),
+          // Description
+          if (description != null && description.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'About this book',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 28),
+          ],
+          // Chapters Section (if owned)
+          if (_book != null) _buildChaptersSection(theme, isDark),
+          const SizedBox(height: 28),
+          // Metadata Details
+          _buildMetadataDetails(theme, isDark),
+        ],
+      ),
     );
+  }
+
+  void _showRequestDialog(BuildContext context, bool isDark) {
+    showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1B1B1E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            const Text(
+              'Request for Home Server',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.auto_stories_rounded, color: Color(0xFFFA2D48)),
+              title: const Text('Both (Reading & Audiobook)'),
+              subtitle: const Text('Acquire paired editions for reading & listening'),
+              onTap: () => Navigator.of(ctx).pop('paired'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.menu_book_rounded),
+              title: const Text('E-Book Only'),
+              subtitle: const Text('Acquire EPUB edition for reading'),
+              onTap: () => Navigator.of(ctx).pop('epub'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.headphones_rounded),
+              title: const Text('Audiobook Only'),
+              subtitle: const Text('Acquire audiobook edition for listening'),
+              onTap: () => Navigator.of(ctx).pop('audiobook'),
+            ),
+          ],
+        ),
+      ),
+    ).then((selected) {
+      if (selected != null) {
+        _handleBookRequest(selected);
+      }
+    });
   }
 
   Widget _buildFormatTag(String label, IconData icon, bool isDark, {bool accent = false}) {
@@ -420,12 +670,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   }
 
   Widget _buildMetadataDetails(ThemeData theme, bool isDark) {
-    final epubEd = _book!.epubEdition;
-    final audioEd = _book!.audioEdition;
+    final epubEd = _book?.epubEdition;
+    final audioEd = _book?.audioEdition;
     final publisher = epubEd?.publisher ?? audioEd?.publisher;
-    final year = epubEd?.publishedYear ?? audioEd?.publishedYear;
-    final isbn = epubEd?.isbn ?? audioEd?.isbn;
-    final language = epubEd?.language ?? audioEd?.language ?? 'en';
+    final year = epubEd?.publishedYear ?? audioEd?.publishedYear ?? _worldwideItem?.publishedYear;
+    final isbn = epubEd?.isbn ?? audioEd?.isbn ?? (_worldwideItem?.isbns.isNotEmpty == true ? _worldwideItem!.isbns.first : null);
+    final language = epubEd?.language ?? audioEd?.language ?? (_worldwideItem?.languages.isNotEmpty == true ? _worldwideItem!.languages.first : 'en');
+    final genres = _book?.genres ?? _worldwideItem?.genres ?? [];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -439,8 +690,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           if (year != null) _buildMetaRow('Release Year', '$year', isDark),
           if (isbn != null) _buildMetaRow('ISBN', isbn, isDark),
           _buildMetaRow('Language', language.toUpperCase(), isDark),
-          if (_book!.genres.isNotEmpty)
-            _buildMetaRow('Genres', _book!.genres.join(', '), isDark),
+          if (_worldwideItem != null && _worldwideItem!.editionCount > 1)
+            _buildMetaRow('Editions', '${_worldwideItem!.editionCount} editions worldwide', isDark),
+          if (genres.isNotEmpty)
+            _buildMetaRow('Genres', genres.join(', '), isDark),
         ],
       ),
     );
@@ -526,8 +779,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ],
                     ),
                   );
-                  if (confirmed == true) {
-                    await _downloadService!.deleteWork(widget.workId);
+                  final targetId = widget.workId ?? _book?.id;
+                  if (confirmed == true && targetId != null) {
+                    await _downloadService!.deleteWork(targetId);
                   }
                 },
                 icon: const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF34C759)),
@@ -585,11 +839,14 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     mode = BookDownloadMode.audioOnly;
                   }
 
-                  await _downloadService!.downloadWork(widget.workId, mode: mode, bookDetail: _book);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Book downloaded for offline use')),
-                    );
+                  final targetId = widget.workId ?? _book?.id;
+                  if (targetId != null) {
+                    await _downloadService!.downloadWork(targetId, mode: mode, bookDetail: _book);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Book downloaded for offline use')),
+                      );
+                    }
                   }
                 } catch (e) {
                   if (context.mounted) {

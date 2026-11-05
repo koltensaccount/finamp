@@ -5,7 +5,6 @@ import '../models/book_models.dart';
 import '../services/books_api_client.dart';
 import '../services/books_download_service.dart';
 import 'book_detail_screen.dart';
-import 'epub_reader_screen.dart';
 
 class BooksScreen extends StatefulWidget {
   const BooksScreen({super.key});
@@ -27,6 +26,12 @@ class _BooksScreenState extends State<BooksScreen> {
   String? _errorMessage;
   String _activeFilter = 'all'; // 'all', 'epub', 'audiobook'
 
+  // Worldwide discovery search state
+  bool _isSearching = false;
+  bool _isSearchLoading = false;
+  List<WorldwideBookResult> _searchResults = [];
+  String? _searchError;
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +39,13 @@ class _BooksScreenState extends State<BooksScreen> {
     if (GetIt.instance.isRegistered<BooksDownloadService>()) {
       _downloadService = GetIt.instance<BooksDownloadService>();
     }
-    _loadBooks();
+    const initQuery = String.fromEnvironment('INITIAL_BOOK_QUERY', defaultValue: '');
+    if (initQuery.isNotEmpty) {
+      _searchController.text = initQuery;
+      _performWorldwideSearch(initQuery);
+    } else {
+      _loadBooks();
+    }
   }
 
   @override
@@ -83,6 +94,45 @@ class _BooksScreenState extends State<BooksScreen> {
     }
   }
 
+  Future<void> _performWorldwideSearch(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _searchResults = [];
+        _searchError = null;
+      });
+      _loadBooks();
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _isSearchLoading = true;
+      _searchError = null;
+    });
+
+    try {
+      final results = await _apiClient.searchWorldwideBooks(
+        query: trimmed,
+        formatFilter: _activeFilter == 'all' ? null : _activeFilter,
+      );
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearchLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _searchError = e.toString();
+          _isSearchLoading = false;
+        });
+      }
+    }
+  }
+
   List<BookSummary> get _continueBooks {
     return _allBooks.where((b) => b.progress.hasProgress && !b.progress.isFinished).toList();
   }
@@ -120,7 +170,7 @@ class _BooksScreenState extends State<BooksScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.18),
+                            color: Colors.amber.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
@@ -150,7 +200,7 @@ class _BooksScreenState extends State<BooksScreen> {
                         ),
                         child: TextField(
                           controller: _searchController,
-                          onSubmitted: (_) => _loadBooks(),
+                          onSubmitted: (query) => _performWorldwideSearch(query),
                           textInputAction: TextInputAction.search,
                           style: const TextStyle(fontSize: 15),
                           decoration: InputDecoration(
@@ -159,16 +209,21 @@ class _BooksScreenState extends State<BooksScreen> {
                               size: 20,
                               color: isDark ? Colors.white54 : Colors.black45,
                             ),
-                            suffixIcon: _searchController.text.isNotEmpty
+                            suffixIcon: _searchController.text.isNotEmpty || _isSearching
                                 ? IconButton(
                                     icon: const Icon(Icons.clear, size: 18),
                                     onPressed: () {
                                       _searchController.clear();
+                                      setState(() {
+                                        _isSearching = false;
+                                        _searchResults = [];
+                                        _searchError = null;
+                                      });
                                       _loadBooks();
                                     },
                                   )
                                 : null,
-                            hintText: 'Search library & books',
+                            hintText: 'Search library & worldwide books',
                             hintStyle: TextStyle(
                               fontSize: 15,
                               color: isDark ? Colors.white38 : Colors.black38,
@@ -197,7 +252,128 @@ class _BooksScreenState extends State<BooksScreen> {
                 ),
               ),
 
-              if (_isLoading)
+              if (_isSearching) ...[
+                if (_isSearchLoading)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(strokeWidth: 2),
+                          SizedBox(height: 14),
+                          Text('Searching worldwide catalog...', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_searchError != null)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Search error',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _searchError!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13),
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.tonal(
+                              onPressed: () => _performWorldwideSearch(_searchController.text),
+                              child: const Text('Try Again'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_searchResults.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.travel_explore_rounded,
+                            size: 56,
+                            color: isDark ? Colors.white24 : Colors.black26,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No Worldwide Books Found',
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Try searching by title, author, or ISBN',
+                            style: TextStyle(color: isDark ? Colors.white38 : Colors.black38, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Worldwide Results (${_searchResults.length})',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.4,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _isSearching = false;
+                                _searchResults = [];
+                              });
+                              _loadBooks();
+                            },
+                            child: const Text('Clear', style: TextStyle(fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 20,
+                        childAspectRatio: 0.58,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = _searchResults[index];
+                          return _buildWorldwideGridTile(context, item, isDark);
+                        },
+                        childCount: _searchResults.length,
+                      ),
+                    ),
+                  ),
+                ],
+              ] else if (_isLoading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
@@ -347,7 +523,11 @@ class _BooksScreenState extends State<BooksScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _activeFilter = value);
-        _loadBooks();
+        if (_isSearching && _searchController.text.trim().isNotEmpty) {
+          _performWorldwideSearch(_searchController.text.trim());
+        } else {
+          _loadBooks();
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -610,6 +790,180 @@ class _BooksScreenState extends State<BooksScreen> {
             const SizedBox(height: 6),
             Text(
               book.title,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorldwideGridTile(BuildContext context, WorldwideBookResult item, bool isDark) {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => BookDetailScreen(
+              workId: item.localWorkId,
+              worldwideItem: item,
+            ),
+          ),
+        );
+        if (mounted && _searchController.text.trim().isNotEmpty) {
+          _performWorldwideSearch(_searchController.text.trim());
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: item.coverUrl != null
+                      ? Image.network(
+                          item.coverUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildWorldwidePlaceholder(item),
+                        )
+                      : _buildWorldwidePlaceholder(item),
+                ),
+                // Status Badge (Top-Left)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: _buildStatusBadge(item),
+                ),
+                // Owned format tags
+                if (item.isLocal && item.ownedFormats.isNotEmpty)
+                  Positioned(
+                    bottom: 6,
+                    right: 6,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (item.ownedFormats.contains('epub'))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            margin: const EdgeInsets.only(left: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('EPUB', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          ),
+                        if (item.ownedFormats.contains('audiobook'))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            margin: const EdgeInsets.only(left: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFA2D48).withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('AUDIO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.publishedYear != null ? '${item.author} • ${item.publishedYear}' : item.author,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(WorldwideBookResult item) {
+    if (item.isLocal) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF34C759).withValues(alpha: 0.92), // Apple Green
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: const Text(
+          'IN LIBRARY',
+          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3),
+        ),
+      );
+    }
+
+    if (item.requestId != null && item.requestState != null && item.requestState != 'available') {
+      final state = item.requestState!;
+      String label = 'REQUESTED';
+      Color bgColor = Colors.blueAccent;
+
+      if (state == 'acquiring') {
+        label = 'ACQUIRING ${(item.acquisitionProgress * 100).toInt()}%';
+        bgColor = Colors.amber.shade700;
+      } else if (state == 'staging' || state == 'verifying' || state == 'importing') {
+        label = state.toUpperCase();
+        bgColor = Colors.deepPurpleAccent;
+      } else if (state == 'failed') {
+        label = 'FAILED';
+        bgColor = Colors.redAccent;
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: bgColor.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(5),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: const Text(
+        'WORLDWIDE',
+        style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+      ),
+    );
+  }
+
+  Widget _buildWorldwidePlaceholder(WorldwideBookResult item) {
+    return Container(
+      color: const Color(0xFF2C2C2E),
+      padding: const EdgeInsets.all(12),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.travel_explore_rounded, size: 28, color: Colors.white38),
+            const SizedBox(height: 6),
+            Text(
+              item.title,
               maxLines: 2,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,

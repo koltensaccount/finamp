@@ -357,3 +357,135 @@ class BookDownloadManifest {
     'files': files,
   };
 }
+
+class WorldwideBookResult {
+  const WorldwideBookResult({
+    required this.source,
+    this.externalId,
+    required this.title,
+    required this.author,
+    this.authors = const [],
+    this.publishedYear,
+    this.coverUrl,
+    this.isbns = const [],
+    this.editionCount = 1,
+    this.languages = const [],
+    this.description,
+    this.genres = const [],
+    this.isLocal = false,
+    this.localWorkId,
+    this.ownedFormats = const [],
+    this.readingPercentage = 0.0,
+    this.listeningPercentage = 0.0,
+    this.requestId,
+    this.requestState,
+    this.formatRequested,
+    this.acquiredFormats = const [],
+    this.acquisitionProgress = 0.0,
+  });
+
+  factory WorldwideBookResult.fromJson(Map<String, dynamic> json) => WorldwideBookResult(
+    source: json['source'] as String? ?? 'unknown',
+    externalId: json['external_id'] as String?,
+    title: json['title'] as String? ?? '',
+    author: json['author'] as String? ?? '',
+    authors: (json['authors'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    publishedYear: (json['published_year'] as num?)?.toInt(),
+    coverUrl: json['cover_url'] as String?,
+    isbns: (json['isbns'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    editionCount: (json['edition_count'] as num?)?.toInt() ?? 1,
+    languages: (json['languages'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    description: json['description'] as String?,
+    genres: (json['genres'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    isLocal: (json['is_local'] as bool?) ?? false,
+    localWorkId: json['local_work_id'] as String?,
+    ownedFormats: (json['owned_formats'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    readingPercentage: (json['reading_percentage'] as num?)?.toDouble() ?? 0.0,
+    listeningPercentage: (json['listening_percentage'] as num?)?.toDouble() ?? 0.0,
+    requestId: json['request_id'] as String?,
+    requestState: json['request_state'] as String?,
+    formatRequested: json['format_requested'] as String?,
+    acquiredFormats: (json['acquired_formats'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    acquisitionProgress: (json['acquisition_progress'] as num?)?.toDouble() ?? 0.0,
+  );
+
+  final String source;
+  final String? externalId;
+  final String title;
+  final String author;
+  final List<String> authors;
+  final int? publishedYear;
+  final String? coverUrl;
+  final List<String> isbns;
+  final int editionCount;
+  final List<String> languages;
+  final String? description;
+  final List<String> genres;
+  final bool isLocal;
+  final String? localWorkId;
+  final List<String> ownedFormats;
+  final double readingPercentage;
+  final double listeningPercentage;
+  final String? requestId;
+  final String? requestState;
+  final String? formatRequested;
+  final List<String> acquiredFormats;
+  final double acquisitionProgress;
+
+  bool get isOwned => isLocal && ownedFormats.isNotEmpty;
+  bool get hasEpub => ownedFormats.contains('epub') || acquiredFormats.contains('epub');
+  bool get hasAudiobook => ownedFormats.contains('audiobook') || acquiredFormats.contains('audiobook');
+  bool get isAcquiring =>
+      requestId != null &&
+      requestState != null &&
+      !const ['available', 'failed', 'imported'].contains(requestState);
+}
+
+class BookRequestItem {
+  const BookRequestItem({
+    required this.id,
+    this.workId,
+    required this.title,
+    required this.author,
+    this.isbn,
+    required this.formatRequested,
+    required this.state,
+    this.acquiredFormats = const [],
+    this.progressPercentage = 0.0,
+    this.errorMessage,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory BookRequestItem.fromJson(Map<String, dynamic> json) => BookRequestItem(
+    id: json['id'] as String? ?? '',
+    workId: json['work_id'] as String?,
+    title: json['title'] as String? ?? '',
+    author: json['author'] as String? ?? '',
+    isbn: json['isbn'] as String?,
+    formatRequested: json['format_requested'] as String? ?? 'paired',
+    state: json['state'] as String? ?? 'requested',
+    acquiredFormats: (json['acquired_formats'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    progressPercentage: (json['progress_percentage'] as num?)?.toDouble() ?? 0.0,
+    errorMessage: json['error_message'] as String?,
+    createdAt: (json['created_at'] as num?)?.toDouble(),
+    updatedAt: (json['updated_at'] as num?)?.toDouble(),
+  );
+
+  final String id;
+  final String? workId;
+  final String title;
+  final String author;
+  final String? isbn;
+  final String formatRequested;
+  final String state;
+  final List<String> acquiredFormats;
+  final double progressPercentage;
+  final String? errorMessage;
+  final double? createdAt;
+  final double? updatedAt;
+
+  bool get isCompleted => state == 'available' || state == 'imported';
+  bool get isFailed => state == 'failed';
+  bool get isNeedsReview => state == 'needs_review';
+}
