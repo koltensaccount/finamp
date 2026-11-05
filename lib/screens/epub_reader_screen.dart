@@ -410,6 +410,19 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
       } catch (_) {}
     }
 
+    if (mappedSec == 0.0 && book?.alignment != null) {
+      final align = book!.alignment!;
+      if (align['mapping_data'] is List) {
+        for (final item in align['mapping_data'] as List) {
+          if (item is Map<String, dynamic> && item['epub_cfi'] == cfi) {
+            mappedTrack = (item['audio_track'] as num?)?.toInt() ?? mappedTrack;
+            mappedSec = (item['audio_start_sec'] as num?)?.toDouble() ?? 0.0;
+            break;
+          }
+        }
+      }
+    }
+
     if (book == null || book.audioEdition == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
