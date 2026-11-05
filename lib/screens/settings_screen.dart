@@ -6,6 +6,7 @@ import 'package:finamp/menus/client_certificate_authentication_menu.dart';
 import 'package:finamp/menus/quick_connect_authorization_menu.dart';
 import 'package:finamp/menus/server_sharing_menu.dart';
 import 'package:finamp/screens/accessibility_settings_screen.dart';
+import 'package:finamp/screens/account_screen.dart';
 import 'package:finamp/screens/audio_service_settings_screen.dart';
 import 'package:finamp/screens/downloads_settings_screen.dart';
 import 'package:finamp/screens/home_screen_settings_screen.dart';
@@ -138,6 +139,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 200.0),
         children: [
+          ListTile(
+            leading: const Icon(Icons.account_circle, color: Color(0xFF007AFF)),
+            title: const Text('KB Account', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('Devices, pairing, and cross-device sync'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pushNamed(AccountScreen.routeName),
+          ),
           ListTile(
             leading: const Icon(TablerIcons.sparkles),
             title: Text(AppLocalizations.of(context)!.quickSettingsScreen),

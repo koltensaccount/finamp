@@ -16,7 +16,9 @@ import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/models/locale_adapter.dart';
 import 'package:finamp/models/music_models.dart';
 import 'package:finamp/screens/accessibility_settings_screen.dart';
+import 'package:finamp/screens/account_screen.dart';
 import 'package:finamp/screens/advanced_login_options_screen.dart';
+import 'package:finamp/services/kb_account_service.dart';
 import 'package:finamp/screens/album_settings_screen.dart';
 import 'package:finamp/screens/artist_settings_screen.dart';
 import 'package:finamp/screens/content_view_type_settings_screen.dart';
@@ -82,7 +84,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:flutter_user_certificates_android/flutter_user_certificates_android.dart';
 import 'package:gaimon/gaimon.dart';
@@ -250,6 +251,9 @@ Future<void> _setupEdgeToEdgeOverlayStyle() async {
 
 Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
+  final kbAccountService = KBAccountService();
+  GetIt.instance.registerSingleton<KBAccountService>(kbAccountService);
+  unawaited(kbAccountService.init());
   GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
   final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore());
   GetIt.instance.registerSingleton(booksApiClient);
@@ -1021,6 +1025,7 @@ class FinampApp extends ConsumerWidget {
       routes: {
         SplashScreen.routeName: (context) => const SplashScreen(),
         LoginScreen.routeName: (context) => const LoginScreen(),
+        AccountScreen.routeName: (context) => const AccountScreen(),
         AdvancedLoginOptionsScreen.routeName: (context) => const AdvancedLoginOptionsScreen(),
         ViewSelector.routeName: (context) => const ViewSelector(),
         MusicScreen.routeName: (context) => const MusicScreen(),

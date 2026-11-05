@@ -22,6 +22,7 @@ import 'package:finamp/screens/books_screen.dart';
 import 'package:finamp/components/navigation/apple_floating_bottom_bar.dart';
 import 'package:finamp/components/navigation/apple_sidebar_navigation.dart';
 import 'package:finamp/screens/library_screen_content.dart';
+import 'package:finamp/screens/account_screen.dart';
 import 'package:finamp/screens/settings_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -503,7 +504,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
 
   Widget _buildUserAvatar(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
+      onTap: () => Navigator.of(context).pushNamed(AccountScreen.routeName),
       child: Consumer(
         builder: (context, ref, _) {
           final userInfo = ref.watch(UserInfoProviders.currentUserInfoProvider);
