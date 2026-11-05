@@ -185,6 +185,34 @@ class BooksApiClient {
     return jsonDecode(resp.body) as Map<String, dynamic>?;
   }
 
+  Future<Map<String, dynamic>?> mapAudioToReadingLocation(
+    String workId, {
+    required int track,
+    required double seconds,
+  }) async {
+    final uri = await _buildUri('/v1/books/$workId/align/audio-to-cfi', {
+      'track': track.toString(),
+      'sec': seconds.toString(),
+    });
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200) return null;
+    return jsonDecode(resp.body) as Map<String, dynamic>?;
+  }
+
+  Future<Map<String, dynamic>?> mapReadingLocationToAudio(
+    String workId, {
+    required String cfi,
+  }) async {
+    final uri = await _buildUri('/v1/books/$workId/align/cfi-to-audio', {
+      'cfi': cfi,
+    });
+    final headers = await _authHeaders();
+    final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode != 200) return null;
+    return jsonDecode(resp.body) as Map<String, dynamic>?;
+  }
+
   Future<void> triggerSync() async {
     final uri = await _buildUri('/v1/books/sync');
     final headers = await _authHeaders();

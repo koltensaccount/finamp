@@ -114,7 +114,8 @@ class EpubReaderService {
     // 3. Manifest mapping: id -> href
     final manifestMap = <String, String>{};
     for (final item in opfDoc.querySelectorAll('*')) {
-      if (item.localName?.toLowerCase() == 'item') {
+      final tag = item.localName?.toLowerCase() ?? '';
+      if (tag == 'item' || tag.endsWith(':item')) {
         final id = item.attributes['id'];
         final href = item.attributes['href'];
         if (id != null && href != null) {
@@ -153,7 +154,8 @@ class EpubReaderService {
     int chapterIndex = 0;
 
     for (final itemref in opfDoc.querySelectorAll('*')) {
-      if (itemref.localName?.toLowerCase() != 'itemref') continue;
+      final tag = itemref.localName?.toLowerCase() ?? '';
+      if (tag != 'itemref' && !tag.endsWith(':itemref')) continue;
       final idref = itemref.attributes['idref'];
       if (idref == null) continue;
       final relativeHref = manifestMap[idref];

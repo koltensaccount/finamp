@@ -16,10 +16,16 @@ class AudiobookPlayerScreen extends StatefulWidget {
     super.key,
     required this.book,
     required this.audioEdition,
+    this.initialTrack,
+    this.initialPosition,
   });
+
+  static const routeName = '/audiobook_player';
 
   final BookDetail book;
   final BookEdition audioEdition;
+  final int? initialTrack;
+  final Duration? initialPosition;
 
   @override
   State<AudiobookPlayerScreen> createState() => _AudiobookPlayerScreenState();
@@ -77,16 +83,23 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
     });
 
     final chapters = widget.audioEdition.chapters;
-    if (chapters.isNotEmpty) {
+    if (widget.initialTrack != null && widget.initialTrack! > 0) {
+      _currentChapterIndex = (widget.initialTrack! - 1).clamp(0, chapters.isNotEmpty ? chapters.length - 1 : 0);
+    } else if (chapters.isNotEmpty) {
       _currentChapterIndex = 0;
-      final ch = chapters[0];
+    }
+
+    if (chapters.isNotEmpty && _currentChapterIndex < chapters.length) {
+      final ch = chapters[_currentChapterIndex];
       if (ch.endSeconds != null && ch.endSeconds! > 0) {
         _duration = Duration(seconds: ch.endSeconds!.toInt());
       }
     }
 
-    // Set initial position if saved progress exists
-    if (widget.book.progress.listeningSeconds > 0) {
+    // Set initial position if provided or saved progress exists
+    if (widget.initialPosition != null) {
+      _position = widget.initialPosition!;
+    } else if (widget.book.progress.listeningSeconds > 0) {
       _position = Duration(seconds: widget.book.progress.listeningSeconds.toInt());
     }
 
@@ -115,9 +128,14 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
         );
       }
 
-      if (!_initialSeekDone && widget.book.progress.listeningSeconds > 0) {
-        await _player.seek(Duration(seconds: widget.book.progress.listeningSeconds.toInt()));
-        _initialSeekDone = true;
+      if (!_initialSeekDone) {
+        if (widget.initialPosition != null) {
+          await _player.seek(widget.initialPosition!);
+          _initialSeekDone = true;
+        } else if (widget.book.progress.listeningSeconds > 0) {
+          await _player.seek(Duration(seconds: widget.book.progress.listeningSeconds.toInt()));
+          _initialSeekDone = true;
+        }
       }
     } catch (e) {
       debugPrint('Audio track load error: $e');
@@ -198,30 +216,51 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
     });
   }
 
-  void _openReaderHandoff(BuildContext context) {
+  Future<void> _openReaderHandoff(BuildContext context) async {
     if (!widget.book.hasEpub) return;
-    String? targetCfi = widget.book.progress.readingCfi;
+    unawaited(_player.pause());
 
-    final align = widget.book.alignment;
-    if (align != null && align['mapping_data'] is List) {
-      final list = align['mapping_data'] as List;
-      final currentSec = _position.inSeconds.toDouble();
-      Map<String, dynamic>? bestMatch;
-      for (final item in list) {
-        if (item is Map<String, dynamic>) {
-          final startSec = (item['audio_start_sec'] as num?)?.toDouble() ?? 0.0;
-          if (startSec <= currentSec) {
-            bestMatch = item;
-          } else {
-            break;
+    String? targetCfi = widget.book.progress.readingCfi;
+    final trackNum = _currentChapterIndex + 1;
+    final currentSec = _position.inSeconds.toDouble();
+
+    // 1. Try server forced alignment mapping
+    try {
+      final loc = await _apiClient.mapAudioToReadingLocation(
+        widget.book.id,
+        track: trackNum,
+        seconds: currentSec,
+      );
+      if (loc != null && loc['epub_cfi'] != null) {
+        targetCfi = loc['epub_cfi'] as String;
+      }
+    } catch (_) {}
+
+    // 2. Fall back to local alignment if server call failed or returned null
+    if (targetCfi == null || targetCfi == widget.book.progress.readingCfi) {
+      final align = widget.book.alignment;
+      if (align != null && align['mapping_data'] is List) {
+        final list = align['mapping_data'] as List;
+        Map<String, dynamic>? bestMatch;
+        for (final item in list) {
+          if (item is Map<String, dynamic>) {
+            final t = (item['audio_track'] as num?)?.toInt() ?? 1;
+            if (t != trackNum) continue;
+            final startSec = (item['audio_start_sec'] as num?)?.toDouble() ?? 0.0;
+            if (startSec <= currentSec) {
+              bestMatch = item;
+            } else {
+              break;
+            }
           }
         }
-      }
-      if (bestMatch != null && bestMatch['epub_cfi'] != null) {
-        targetCfi = bestMatch['epub_cfi'] as String;
+        if (bestMatch != null && bestMatch['epub_cfi'] != null) {
+          targetCfi = bestMatch['epub_cfi'] as String;
+        }
       }
     }
 
+    if (!context.mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => EpubReaderScreen(

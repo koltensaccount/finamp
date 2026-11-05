@@ -1024,12 +1024,18 @@ class FinampApp extends ConsumerWidget {
         MusicScreen.routeName: (context) => const MusicScreen(),
         BooksScreen.routeName: (context) => const BooksScreen(),
         BookDetailScreen.routeName: (context) => BookDetailScreen(
-          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ?? 'work-the-great-gatsby-f-scott-fitzgerald',
+          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ??
+              const String.fromEnvironment('INITIAL_BOOK_ID', defaultValue: 'work-the-time-machine-h-g-wells'),
         ),
         EpubReaderScreen.routeName: (context) => EpubReaderScreen(
-          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ?? 'work-the-great-gatsby-f-scott-fitzgerald',
-          title: 'The Great Gatsby',
-          author: 'F. Scott Fitzgerald',
+          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ??
+              const String.fromEnvironment('INITIAL_BOOK_ID', defaultValue: 'work-the-time-machine-h-g-wells'),
+          title: const String.fromEnvironment('INITIAL_BOOK_TITLE', defaultValue: 'The Time Machine'),
+          author: const String.fromEnvironment('INITIAL_BOOK_AUTHOR', defaultValue: 'H. G. Wells'),
+          initialCfi: const String.fromEnvironment('INITIAL_CFI', defaultValue: '').isNotEmpty
+              ? const String.fromEnvironment('INITIAL_CFI')
+              : null,
+          hasPairedAudio: true,
         ),
         CatalogSearchScreen.routeName: (context) => const CatalogSearchScreen(),
         CatalogAlbumScreen.routeName: (context) => const CatalogAlbumScreen(),
@@ -1073,7 +1079,7 @@ class FinampApp extends ConsumerWidget {
         QuickSettingsScreen.routeName: (context) => const QuickSettingsScreen(),
         //ShowAllScreen.routeName: (context) => const ShowAllScreen(),
       },
-      initialRoute: SplashScreen.routeName,
+      initialRoute: const String.fromEnvironment('INITIAL_ROUTE', defaultValue: SplashScreen.routeName),
       navigatorObservers: [SplitScreenNavigatorObserver(), KeepScreenOnObserver()],
       builder: buildPlayerSplitScreenScaffold,
       theme: ThemeData(

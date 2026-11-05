@@ -378,7 +378,7 @@ class MetadataIngestionEngine:
         published_paths = []
         for idx, src in enumerate(sorted(source_track_paths), 1):
             ext = os.path.splitext(src)[1]
-            dest_name = f"{idx:02d} - {safe_title}{ext}"
+            dest_name = f"{idx:02d} - Chapter {idx}{ext}"
             dest_file = os.path.join(dest_dir, dest_name)
             tmp_dest = dest_file + f".tmp-{os.getpid()}"
             shutil.copy2(src, tmp_dest)

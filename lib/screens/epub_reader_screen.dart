@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
+import '../models/book_models.dart';
 import '../services/books_api_client.dart';
 import '../services/books_download_service.dart';
 import '../services/epub_reader_service.dart';
+import 'audiobook_player_screen.dart';
 
 enum ReadingTheme { dark, light, sepia }
 
@@ -46,6 +48,9 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
   bool _showControls = true;
   bool _isBookmarked = false;
+  bool _readAlongEnabled = true;
+  String? _activeHighlightCfi;
+  int _highlightedParagraphIndex = -1;
 
   @override
   void initState() {
@@ -85,6 +90,8 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
         final (chIdx, pIdx) = parsed.parseCfi(widget.initialCfi);
         targetChapter = chIdx;
         targetParagraph = pIdx;
+        _activeHighlightCfi = widget.initialCfi;
+        _highlightedParagraphIndex = pIdx;
       }
 
       if (mounted) {
@@ -371,6 +378,60 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
     );
   }
 
+  Future<void> _handleListenFromHere(BuildContext context) async {
+    if (_bookData == null) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    final progressRatio = maxScroll > 0 ? (currentScroll / maxScroll).clamp(0.0, 1.0) : 0.0;
+    final totalParas = _bookData!.chapters[_currentChapterIndex].paragraphs.length;
+    final paraIdx = totalParas > 0 ? (progressRatio * totalParas).floor() : 0;
+    final cfi = _bookData!.makeCfi(_currentChapterIndex, paraIdx);
+
+    int mappedTrack = _currentChapterIndex + 1;
+    double mappedSec = 0.0;
+
+    try {
+      final aud = await _apiClient.mapReadingLocationToAudio(widget.workId, cfi: cfi);
+      if (aud != null && aud['audio_track'] != null) {
+        mappedTrack = (aud['audio_track'] as num).toInt();
+        mappedSec = (aud['audio_timestamp_seconds'] as num?)?.toDouble() ?? 0.0;
+      }
+    } catch (_) {}
+
+    BookDetail? book;
+    if (GetIt.instance.isRegistered<BooksDownloadService>()) {
+      final ds = GetIt.instance<BooksDownloadService>();
+      book = await ds.getLocalBookDetail(widget.workId);
+    }
+    if (book == null) {
+      try {
+        book = await _apiClient.getBook(widget.workId);
+      } catch (_) {}
+    }
+
+    if (book == null || book.audioEdition == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Audiobook edition not available')),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => AudiobookPlayerScreen(
+          book: book!,
+          audioEdition: book.audioEdition!,
+          initialTrack: mappedTrack,
+          initialPosition: Duration(seconds: mappedSec.toInt()),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -380,7 +441,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
       );
     }
 
-    if (_errorMessage != null || _bookData == null) {
+    if (_errorMessage != null || _bookData == null || _bookData!.chapters.isEmpty) {
       return Scaffold(
         backgroundColor: _backgroundColor,
         appBar: AppBar(backgroundColor: Colors.transparent),
@@ -431,11 +492,35 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    ...currentChapter.paragraphs.map(
-                      (p) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(p, style: _bodyTextStyle),
-                      ),
+                    ...currentChapter.paragraphs.asMap().entries.map(
+                      (entry) {
+                        final pIdx = entry.key;
+                        final pText = entry.value;
+                        final isHighlighted = _readAlongEnabled &&
+                            (_highlightedParagraphIndex == pIdx ||
+                                (_activeHighlightCfi != null &&
+                                    _bookData!.makeCfi(_currentChapterIndex, pIdx) == _activeHighlightCfi));
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            decoration: isHighlighted
+                                ? BoxDecoration(
+                                    color: const Color(0xFFFA2D48).withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFFA2D48).withValues(alpha: 0.35),
+                                    ),
+                                  )
+                                : null,
+                            padding: isHighlighted
+                                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
+                                : EdgeInsets.zero,
+                            child: Text(pText, style: _bodyTextStyle),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 48),
                     // Chapter navigation controls
@@ -508,17 +593,22 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                           ],
                         ),
                       ),
-                      if (widget.hasPairedAudio)
+                      if (widget.hasPairedAudio) ...[
+                        IconButton(
+                          tooltip: _readAlongEnabled ? 'Disable Read-Along Highlight' : 'Enable Read-Along Highlight',
+                          icon: Icon(
+                            _readAlongEnabled ? Icons.auto_awesome : Icons.auto_awesome_outlined,
+                            color: _readAlongEnabled ? const Color(0xFFFA2D48) : _textColor,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => _readAlongEnabled = !_readAlongEnabled),
+                        ),
                         IconButton(
                           tooltip: 'Listen From Here',
                           icon: const Icon(Icons.headphones_rounded, color: Color(0xFFFA2D48), size: 20),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Switched to Audiobook at current reading position')),
-                            );
-                            Navigator.of(context).pop();
-                          },
+                          onPressed: () => _handleListenFromHere(context),
                         ),
+                      ],
                       IconButton(
                         icon: Icon(
                           _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
