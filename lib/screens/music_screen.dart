@@ -20,6 +20,7 @@ import 'package:finamp/services/music_providers.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:finamp/screens/books_screen.dart';
 import 'package:finamp/components/navigation/apple_floating_bottom_bar.dart';
+import 'package:finamp/components/navigation/apple_sidebar_navigation.dart';
 import 'package:finamp/screens/library_screen_content.dart';
 import 'package:finamp/screens/settings_screen.dart';
 import 'package:flutter/gestures.dart';
@@ -248,6 +249,10 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
     if (widget.singleTabConfig == null) {
       refreshMap[ContentType.home] ??= MusicRefreshCallback();
       final isDark = Theme.of(context).brightness == Brightness.dark;
+      final size = MediaQuery.sizeOf(context);
+      final useWideNavigation =
+          (Platform.isMacOS && size.width >= 760) ||
+          (Platform.isIOS && size.shortestSide >= 600 && size.width >= 900);
       return PopScope(
         canPop: false,
         child: Scaffold(
@@ -308,33 +313,47 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                     ),
                   ],
                 ),
-          body: IndexedStack(
-            index: _rootTabIndex,
+          body: Row(
             children: [
-              PrimaryScrollController.none(
-                child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
-              ),
-              const PrimaryScrollController.none(
-                child: LibraryScreenContent(),
-              ),
-              const PrimaryScrollController.none(
-                child: BooksScreen(),
-              ),
-              const PrimaryScrollController.none(
-                child: CatalogSearchScreen(isTab: true),
+              if (useWideNavigation)
+                AppleSidebarNavigation(
+                  selectedIndex: _rootTabIndex,
+                  onDestinationSelected: MusicScreen.switchTab,
+                  onSettingsTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
+                ),
+              Expanded(
+                child: IndexedStack(
+                  index: _rootTabIndex,
+                  children: [
+                    PrimaryScrollController.none(
+                      child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: LibraryScreenContent(),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: BooksScreen(),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: CatalogSearchScreen(isTab: true),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          bottomNavigationBar: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const NowPlayingBar(includeBottomSafeArea: false),
-              AppleFloatingBottomBar(
-                selectedIndex: _rootTabIndex,
-                onDestinationSelected: (index) => MusicScreen.switchTab(index),
-              ),
-            ],
-          ),
+          bottomNavigationBar: useWideNavigation
+              ? const NowPlayingBar(includeBottomSafeArea: false)
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const NowPlayingBar(includeBottomSafeArea: false),
+                    AppleFloatingBottomBar(
+                      selectedIndex: _rootTabIndex,
+                      onDestinationSelected: (index) => MusicScreen.switchTab(index),
+                    ),
+                  ],
+                ),
         ),
       );
     }
