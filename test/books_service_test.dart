@@ -166,6 +166,41 @@ void main() {
       expect(downloadService.isDownloaded('work-2'), isFalse);
     });
   });
+
+  group('Books Credentials & Configuration Tests', () {
+    test('BooksApiClient throws BooksNotConfiguredException when credentials are missing', () async {
+      final emptyCreds = EmptyCredentials();
+      final client = BooksApiClient(credentials: emptyCreds);
+      expect(
+        () => client.getBooks(),
+        throwsA(isA<BooksNotConfiguredException>()),
+      );
+    });
+
+    test('BooksApiClient resolves localhost and relative URLs against endpoint', () async {
+      final sampleBooks = [
+        {
+          'id': 'work-1',
+          'title': 'Test Book',
+          'author': 'Author',
+          'cover_url': 'http://127.0.0.1:8765/v1/books/work-1/cover?ticket=abc',
+          'available_formats': ['epub'],
+          'is_paired': false,
+        }
+      ];
+
+      final client = BooksApiClient(
+        credentials: FakeCustomCredentials(endpoint: Uri.parse('http://100.73.94.105:8765'), token: 'token-123'),
+        client: FakeHttpClient((req) async {
+          return http.Response(jsonEncode({'books': sampleBooks}), 200, headers: {'content-type': 'application/json'});
+        }),
+      );
+
+      final books = await client.getBooks();
+      expect(books.length, 1);
+      expect(books.first.coverUrl, 'http://100.73.94.105:8765/v1/books/work-1/cover?ticket=abc');
+    });
+  });
 }
 
 class FakeCredentials implements CatalogCredentialStore {
@@ -175,4 +210,41 @@ class FakeCredentials implements CatalogCredentialStore {
   Future<CatalogCredentials?> read() async => CatalogCredentials(endpoint: Uri.parse('http://localhost:8765'), token: 'test-token');
   @override
   Future<void> save(CatalogCredentials credentials) async {}
+}
+
+class EmptyCredentials implements CatalogCredentialStore {
+  @override
+  Future<void> clear() async {}
+  @override
+  Future<CatalogCredentials?> read() async => null;
+  @override
+  Future<void> save(CatalogCredentials credentials) async {}
+}
+
+class FakeCustomCredentials implements CatalogCredentialStore {
+  FakeCustomCredentials({required this.endpoint, required this.token});
+  final Uri endpoint;
+  final String token;
+
+  @override
+  Future<void> clear() async {}
+  @override
+  Future<CatalogCredentials?> read() async => CatalogCredentials(endpoint: endpoint, token: token);
+  @override
+  Future<void> save(CatalogCredentials credentials) async {}
+}
+
+class FakeHttpClient extends http.BaseClient {
+  FakeHttpClient(this._handler);
+  final Future<http.Response> Function(http.BaseRequest request) _handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final resp = await _handler(request);
+    return http.StreamedResponse(
+      Stream.value(resp.bodyBytes),
+      resp.statusCode,
+      headers: resp.headers,
+    );
+  }
 }

@@ -10,6 +10,7 @@ import 'package:http/testing.dart';
 import 'package:finamp/models/book_models.dart';
 import 'package:finamp/screens/book_detail_screen.dart';
 import 'package:finamp/screens/books_screen.dart';
+import 'package:finamp/screens/catalog_settings_screen.dart';
 import 'package:finamp/screens/epub_reader_screen.dart';
 import 'package:finamp/services/books_api_client.dart';
 import 'package:finamp/services/books_download_service.dart';
@@ -260,7 +261,49 @@ void main() {
       expect(find.text('J.R.R. Tolkien'), findsWidgets);
       expect(find.text('Offline Library'), findsOneWidget);
     });
+
+    testWidgets('BooksScreen displays setup action when credentials are not configured', (tester) async {
+      final unconfiguredClient = BooksApiClient(credentials: _EmptyCredStore());
+      getIt.registerSingleton<BooksApiClient>(unconfiguredClient);
+      final downloadService = _MockOfflineDownloadService([], apiClient: unconfiguredClient);
+      getIt.registerSingleton<BooksDownloadService>(downloadService);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          routes: {
+            CatalogSettingsScreen.routeName: (context) => const Scaffold(body: Text('Settings Screen Content')),
+          },
+          home: const Scaffold(
+            body: BooksScreen(),
+          ),
+        ),
+      );
+
+      // Pump microtasks and frames for _loadBooks Future to complete
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('Connect Books & Catalog'), findsOneWidget);
+      expect(find.text('Configure Connection'), findsOneWidget);
+      expect(find.text('Unable to load books'), findsNothing);
+
+      // Tap configure connection to verify it navigates to CatalogSettingsScreen
+      await tester.tap(find.text('Configure Connection'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Settings Screen Content'), findsOneWidget);
+    });
   });
+}
+
+class _EmptyCredStore implements CatalogCredentialStore {
+  @override
+  Future<void> clear() async {}
+  @override
+  Future<CatalogCredentials?> read() async => null;
+  @override
+  Future<void> save(CatalogCredentials credentials) async {}
 }
 
 class _MockOfflineDownloadService extends BooksDownloadService {

@@ -167,8 +167,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(TablerIcons.world_search),
-            title: const Text('Catalog Discovery'),
-            subtitle: const Text('MusicBrainz & server discovery connection'),
+            title: const Text('Catalog & Books Discovery'),
+            subtitle: const Text('Server connection and authentication for catalog & books'),
             onTap: () => Navigator.of(context).pushNamed(CatalogSettingsScreen.routeName),
           ),
           ListTile(

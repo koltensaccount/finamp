@@ -5,6 +5,7 @@ import '../models/book_models.dart';
 import '../services/books_api_client.dart';
 import '../services/books_download_service.dart';
 import 'book_detail_screen.dart';
+import 'catalog_settings_screen.dart';
 
 class BooksScreen extends StatefulWidget {
   const BooksScreen({super.key});
@@ -94,6 +95,11 @@ class _BooksScreenState extends State<BooksScreen> {
     }
   }
 
+  bool _isCredentialsMissingError(String msg) {
+    return msg.contains('not configured or disabled') ||
+        msg.contains('BooksNotConfiguredException');
+  }
+
   Future<void> _performWorldwideSearch(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -157,13 +163,25 @@ class _BooksScreenState extends State<BooksScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Books',
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.8,
-                          fontSize: 34,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Books',
+                            style: theme.textTheme.headlineLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.8,
+                              fontSize: 34,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined),
+                            tooltip: 'Catalog & Books Connection',
+                            onPressed: () => Navigator.of(context)
+                                .pushNamed(CatalogSettingsScreen.routeName)
+                                .then((_) => _loadBooks()),
+                          ),
+                        ],
                       ),
                       if (_isOffline) ...[
                         const SizedBox(height: 6),
@@ -386,28 +404,91 @@ class _BooksScreenState extends State<BooksScreen> {
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Unable to load books',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13),
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton.tonal(
-                            onPressed: _loadBooks,
-                            child: const Text('Try Again'),
-                          ),
-                        ],
-                      ),
+                      child: _isCredentialsMissingError(_errorMessage!)
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.auto_stories_rounded,
+                                    size: 48,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Connect Books & Catalog',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 320),
+                                  child: Text(
+                                    'Connect your personal library server to browse, read, and listen to books.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: theme.textTheme.bodySmall?.color,
+                                      fontSize: 14,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                FilledButton.icon(
+                                  icon: const Icon(Icons.settings_ethernet_rounded, size: 18),
+                                  label: const Text('Configure Connection'),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  onPressed: () => Navigator.of(context)
+                                      .pushNamed(CatalogSettingsScreen.routeName)
+                                      .then((_) => _loadBooks()),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Unable to load books',
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 13),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FilledButton.tonal(
+                                      onPressed: _loadBooks,
+                                      child: const Text('Try Again'),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    OutlinedButton(
+                                      onPressed: () => Navigator.of(context)
+                                          .pushNamed(CatalogSettingsScreen.routeName)
+                                          .then((_) => _loadBooks()),
+                                      child: const Text('Settings'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                 )

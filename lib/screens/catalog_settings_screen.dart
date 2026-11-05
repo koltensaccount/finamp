@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
+import 'package:get_it/get_it.dart';
 
 import '../components/finamp_app_bar_back_button.dart';
+import '../services/books_api_client.dart';
 import '../services/catalog_api_client.dart';
 import '../services/catalog_credential_store.dart';
+import '../services/finamp_user_helper.dart';
 
 class CatalogSettingsScreen extends StatefulWidget {
   const CatalogSettingsScreen({super.key});
@@ -35,6 +38,19 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
     if (credentials != null) {
       _endpointController.text = credentials.endpoint.toString();
       _tokenController.text = credentials.token;
+    } else {
+      try {
+        if (GetIt.instance.isRegistered<FinampUserHelper>()) {
+          final user = GetIt.instance<FinampUserHelper>().currentUser;
+          final base = user?.baseURL;
+          if (base != null && base.isNotEmpty) {
+            final parsed = Uri.tryParse(base);
+            if (parsed != null && parsed.host.isNotEmpty && parsed.host != '127.0.0.1' && parsed.host != 'localhost') {
+              _endpointController.text = 'http://${parsed.host}:8765';
+            }
+          }
+        }
+      } catch (_) {}
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -73,11 +89,13 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
 
     try {
       final tempStore = _StaticCredentialStore(CatalogCredentials(endpoint: uri, token: token));
-      final testClient = CatalogApiClient(credentials: tempStore);
-      final res = await testClient.search('test');
+      final testCatalog = CatalogApiClient(credentials: tempStore);
+      final testBooks = BooksApiClient(credentials: tempStore);
+      final catalogRes = await testCatalog.search('test');
+      final booksRes = await testBooks.getBooks();
       setState(() {
         _statusSuccess = true;
-        _statusMessage = 'Connection successful! (Cached hits: ${res.results.length})';
+        _statusMessage = 'Connection successful! (Catalog & Books active: ${booksRes.length} books found)';
       });
     } catch (e) {
       setState(() {
@@ -126,7 +144,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
         _statusSuccess = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Catalog credentials cleared.')),
+        const SnackBar(content: Text('Catalog & Books credentials cleared.')),
       );
     }
   }
@@ -136,7 +154,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
     if (_loading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Catalog Discovery'),
+          title: const Text('Catalog & Books Connection'),
           leading: const FinampAppBarBackButton(),
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -145,15 +163,15 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catalog Discovery'),
+        title: const Text('Catalog & Books Connection'),
         leading: const FinampAppBarBackButton(),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'Connect to your server-side music discovery catalog. '
-            'This enables unified search across MusicBrainz and your self-hosted Jellyfin server.',
+            'Connect to your server-side music discovery catalog and books library. '
+            'This enables music acquisition, worldwide discovery, and e-book / audiobook reading & streaming.',
             style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 24),

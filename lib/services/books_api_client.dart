@@ -6,6 +6,14 @@ import 'package:http/http.dart' as http;
 import '../models/book_models.dart';
 import 'catalog_credential_store.dart';
 
+class BooksNotConfiguredException implements Exception {
+  const BooksNotConfiguredException([this.message = 'Books backend credentials not configured or disabled']);
+  final String message;
+
+  @override
+  String toString() => 'Exception: $message';
+}
+
 class BooksApiClient {
   BooksApiClient({required CatalogCredentialStore credentials, http.Client? client})
       : _credentials = credentials,
@@ -14,10 +22,20 @@ class BooksApiClient {
   final CatalogCredentialStore _credentials;
   final http.Client _client;
 
+  String? _resolveUrl(String? rawUrl, Uri endpoint) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    final parsed = Uri.tryParse(rawUrl);
+    if (parsed == null) return rawUrl;
+    if (!parsed.hasScheme || parsed.host == '127.0.0.1' || parsed.host == 'localhost') {
+      return endpoint.resolve(parsed.path + (parsed.hasQuery ? '?${parsed.query}' : '')).toString();
+    }
+    return rawUrl;
+  }
+
   Future<Uri> _buildUri(String path, [Map<String, String>? queryParams]) async {
     final creds = await _credentials.read();
     if (creds == null) {
-      throw Exception('Books backend credentials not configured or disabled');
+      throw const BooksNotConfiguredException();
     }
     return creds.endpoint.replace(path: path, queryParameters: queryParams);
   }
@@ -52,7 +70,13 @@ class BooksApiClient {
 
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     final list = data['books'] as List? ?? [];
-    return list.map((e) => BookSummary.fromJson(e as Map<String, dynamic>)).toList();
+    return list.map((e) {
+      final map = Map<String, dynamic>.from(e as Map<String, dynamic>);
+      if (map['cover_url'] is String) {
+        map['cover_url'] = _resolveUrl(map['cover_url'] as String, uri);
+      }
+      return BookSummary.fromJson(map);
+    }).toList();
   }
 
   Future<BookDetail> getBook(String workId) async {
@@ -63,7 +87,34 @@ class BooksApiClient {
       throw Exception('Failed to load book $workId: ${resp.statusCode}');
     }
 
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(jsonDecode(resp.body) as Map<String, dynamic>);
+    if (data['cover_url'] is String) {
+      data['cover_url'] = _resolveUrl(data['cover_url'] as String, uri);
+    }
+    if (data['editions'] is List) {
+      data['editions'] = (data['editions'] as List).map((ed) {
+        final edMap = Map<String, dynamic>.from(ed as Map<String, dynamic>);
+        if (edMap['cover_url'] is String) {
+          edMap['cover_url'] = _resolveUrl(edMap['cover_url'] as String, uri);
+        }
+        if (edMap['download_url'] is String) {
+          edMap['download_url'] = _resolveUrl(edMap['download_url'] as String, uri);
+        }
+        if (edMap['stream_url'] is String) {
+          edMap['stream_url'] = _resolveUrl(edMap['stream_url'] as String, uri);
+        }
+        if (edMap['tracks'] is List) {
+          edMap['tracks'] = (edMap['tracks'] as List).map((tr) {
+            final trMap = Map<String, dynamic>.from(tr as Map<String, dynamic>);
+            if (trMap['stream_url'] is String) {
+              trMap['stream_url'] = _resolveUrl(trMap['stream_url'] as String, uri);
+            }
+            return trMap;
+          }).toList();
+        }
+        return edMap;
+      }).toList();
+    }
     return BookDetail.fromJson(data);
   }
 
@@ -242,7 +293,13 @@ class BooksApiClient {
     }
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     final list = data['results'] as List<dynamic>? ?? [];
-    return list.map((e) => WorldwideBookResult.fromJson(e as Map<String, dynamic>)).toList();
+    return list.map((e) {
+      final map = Map<String, dynamic>.from(e as Map<String, dynamic>);
+      if (map['cover_url'] is String) {
+        map['cover_url'] = _resolveUrl(map['cover_url'] as String, uri);
+      }
+      return WorldwideBookResult.fromJson(map);
+    }).toList();
   }
 
   Future<BookRequestItem> submitBookRequest({
