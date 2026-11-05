@@ -159,6 +159,7 @@ dependencies:
       ref: 017ce2e
   diacritic: ^0.1.6
   mini_music_visualizer: ^1.1.4
+  auto_updater: ^1.0.0
 
 dev_dependencies:
   flutter_test:

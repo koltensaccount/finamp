@@ -15,8 +15,8 @@ class BugReporterOverlay extends StatelessWidget {
         children: [
           child,
           Positioned(
-            top: MediaQuery.paddingOf(context).top + 4,
-            right: 8,
+            bottom: MediaQuery.paddingOf(context).bottom + 10,
+            left: 12,
             child: const BugReporterButton(),
           ),
         ],
@@ -161,45 +161,37 @@ class _BugReporterButtonState extends ConsumerState<BugReporterButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: Colors.transparent,
       child: Tooltip(
         message: 'Report an issue',
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           onTap: () => _openBugReportDialog(context),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(14),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.03),
+              shape: BoxShape.circle,
               border: Border.all(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.08),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.06),
                 width: 0.5,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.bug_report_outlined,
-                  size: 14,
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.black54,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Bug',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.black54,
-                  ),
-                ),
-              ],
+            child: Center(
+              child: Icon(
+                Icons.bug_report_outlined,
+                size: 14,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : Colors.black.withValues(alpha: 0.25),
+              ),
             ),
           ),
         ),

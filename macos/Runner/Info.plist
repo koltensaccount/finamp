@@ -43,6 +43,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/koltensaccount/finamp/antigravity/catalog-client/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>ivAshrR4gRrKUZyE+kh7AsZPpCGnKdE3wA9QPm/Rrug=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

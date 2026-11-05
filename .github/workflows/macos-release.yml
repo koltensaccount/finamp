@@ -1,0 +1,66 @@
+name: macOS Release and Auto-Update
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - 'main'
+      - 'antigravity/catalog-client'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          channel: 'stable'
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+
+      - name: Install CocoaPods Dependencies
+        run: |
+          cd macos
+          pod install
+
+      - name: Build Flutter macOS App
+        run: |
+          flutter build macos --release
+
+      - name: Package Release DMG
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/KB Music.app"
+          STAGE_DIR=$(mktemp -d)
+          cp -R "$APP_PATH" "$STAGE_DIR/"
+          ln -s /Applications "$STAGE_DIR/Applications"
+          hdiutil create -volname "KB Music" -srcfolder "$STAGE_DIR" -ov -format UDZO "KB-Music.dmg"
+          rm -rf "$STAGE_DIR"
+
+      - name: Sign Update with Sparkle Ed25519
+        if: env.SPARKLE_PRIVATE_KEY != ''
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_priv.key
+          SIGNATURE_OUTPUT=$(macos/Pods/Sparkle/bin/sign_update -f /tmp/sparkle_priv.key "KB-Music.dmg")
+          echo "SPARKLE_SIGNATURE=$SIGNATURE_OUTPUT" >> $GITHUB_ENV
+          rm -f /tmp/sparkle_priv.key
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KB-Music-macOS-DMG
+          path: KB-Music.dmg

@@ -14,7 +14,10 @@ class FinampIcon extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final icon = Image.asset("images/finamp_cropped.png", width: width, height: height, fit: BoxFit.contain);
-    final useMonochromeIcon = ref.watch(finampSettingsProvider.useMonochromeIcon);
+    bool useMonochromeIcon = false;
+    try {
+      useMonochromeIcon = ref.watch(finampSettingsProvider.useMonochromeIcon);
+    } catch (_) {}
     if (!useMonochromeIcon && overrideColor == null) return icon;
 
     final color = overrideColor ?? Theme.of(context).colorScheme.primary;

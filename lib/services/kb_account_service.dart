@@ -14,6 +14,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _logger = Logger('KBAccountService');
 
@@ -42,12 +43,85 @@ class KBAccountSession {
 }
 
 class KBAccountService extends ChangeNotifier {
+  static const _defaultStorage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    mOptions: MacOsOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+      usesDataProtectionKeychain: false,
+    ),
+  );
+
   KBAccountService({FlutterSecureStorage? storage, http.Client? client})
-      : _storage = storage ?? const FlutterSecureStorage(),
+      : _storage = storage ?? _defaultStorage,
         _client = client ?? http.Client();
 
   final FlutterSecureStorage _storage;
   final http.Client _client;
+
+  Future<void> _storeWrite(String key, String value) async {
+    bool secureOk = false;
+    try {
+      await _storage.write(key: key, value: value);
+      secureOk = true;
+    } catch (e) {
+      _logger.warning('SecureStorage write failed for $key, using SharedPreferences fallback: $e');
+    }
+    if (!secureOk) {
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+        await prefs.setString('kb_sec_$key', value);
+      } catch (e) {
+        _logger.warning('SharedPreferences write fallback failed for $key: $e');
+      }
+    }
+  }
+
+  Future<String?> _storeRead(String key) async {
+    try {
+      final val = await _storage.read(key: key);
+      return val;
+    } catch (e) {
+      _logger.warning('SecureStorage read failed for $key, checking SharedPreferences fallback: $e');
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+        return prefs.getString('kb_sec_$key');
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  Future<void> _storeDelete(String key) async {
+    try {
+      await _storage.delete(key: key);
+    } catch (_) {}
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+      await prefs.remove('kb_sec_$key');
+    } catch (_) {}
+  }
+
+  Future<void> _storeDeleteAll() async {
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+      for (final k in [
+        _keyEndpoint,
+        _keyToken,
+        _keyRefreshToken,
+        _keyAccountId,
+        _keyUsername,
+        _keyDisplayName,
+        _keyDeviceId,
+        _keyDeviceName,
+        _keyExpiresAt,
+      ]) {
+        await prefs.remove('kb_sec_$k');
+      }
+    } catch (_) {}
+  }
 
   static const _defaultEndpoint = 'http://100.73.94.105:8765';
   static const _fallbackEndpoint = 'http://koltensserver.tailfa2fff.ts.net:8765';
@@ -70,7 +144,7 @@ class KBAccountService extends ChangeNotifier {
 
   Future<String> get endpoint async {
     if (_cachedEndpoint != null) return _cachedEndpoint!;
-    final stored = await _storage.read(key: _keyEndpoint);
+    final stored = await _storeRead(_keyEndpoint);
     if (stored != null && stored.isNotEmpty) {
       _cachedEndpoint = stored;
       return stored;
@@ -80,7 +154,7 @@ class KBAccountService extends ChangeNotifier {
 
   Future<void> setEndpoint(String newEndpoint) async {
     _cachedEndpoint = newEndpoint.replaceAll(RegExp(r'/+$'), '');
-    await _storage.write(key: _keyEndpoint, value: _cachedEndpoint!);
+    await _storeWrite(_keyEndpoint, _cachedEndpoint!);
     notifyListeners();
   }
 
@@ -108,14 +182,14 @@ class KBAccountService extends ChangeNotifier {
   /// Initialize and load saved session
   Future<bool> init() async {
     try {
-      final token = await _storage.read(key: _keyToken);
-      final refreshToken = await _storage.read(key: _keyRefreshToken);
-      final accountId = await _storage.read(key: _keyAccountId);
-      final username = await _storage.read(key: _keyUsername);
-      final displayName = await _storage.read(key: _keyDisplayName);
-      final deviceId = await _storage.read(key: _keyDeviceId);
-      final deviceName = await _storage.read(key: _keyDeviceName);
-      final expiresStr = await _storage.read(key: _keyExpiresAt);
+      final token = await _storeRead(_keyToken);
+      final refreshToken = await _storeRead(_keyRefreshToken);
+      final accountId = await _storeRead(_keyAccountId);
+      final username = await _storeRead(_keyUsername);
+      final displayName = await _storeRead(_keyDisplayName);
+      final deviceId = await _storeRead(_keyDeviceId);
+      final deviceName = await _storeRead(_keyDeviceName);
+      final expiresStr = await _storeRead(_keyExpiresAt);
 
       if (token != null && accountId != null && username != null) {
         final expiresAt = expiresStr != null ? int.tryParse(expiresStr) ?? 0 : 0;
@@ -161,8 +235,25 @@ class KBAccountService extends ChangeNotifier {
     return {'enrolled': false, 'error': 'Server unreachable'};
   }
 
-  /// Enroll owner account
-  Future<Map<String, dynamic>> enrollOwner({
+  /// Check username availability (returns true if available, false if taken)
+  Future<Map<String, dynamic>> checkUsernameAvailability(String username) async {
+    final ep = await endpoint;
+    try {
+      final uri = Uri.parse('$ep/v1/account/check-username').replace(queryParameters: {'username': username.trim()});
+      final resp = await _client.get(uri).timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      } else {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return {'available': false, 'error': data['error'] ?? 'Username already taken'};
+      }
+    } catch (e) {
+      return {'available': true}; // Allow trying on submit if check network fails
+    }
+  }
+
+  /// Create / Register Account (handles both owner enrollment and new user account creation)
+  Future<Map<String, dynamic>> createAccount({
     required String username,
     required String password,
     required String displayName,
@@ -171,29 +262,65 @@ class KBAccountService extends ChangeNotifier {
     final ep = await endpoint;
     final dName = deviceName ?? await resolveDeviceName();
     final body = jsonEncode({
-      'username': username,
+      'username': username.trim(),
       'password': password,
-      'display_name': displayName,
+      'display_name': displayName.trim().isNotEmpty ? displayName.trim() : username.trim(),
       'device_name': dName,
       'platform': Platform.operatingSystem,
       'client_version': '1.0.0',
     });
 
-    final resp = await _client
-        .post(
-          Uri.parse('$ep/v1/account/enroll'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        )
-        .timeout(const Duration(seconds: 10));
+    // Try /v1/account/register first; fallback to /v1/account/enroll
+    http.Response resp;
+    try {
+      resp = await _client
+          .post(
+            Uri.parse('$ep/v1/account/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 404) {
+        resp = await _client
+            .post(
+              Uri.parse('$ep/v1/account/enroll'),
+              headers: {'Content-Type': 'application/json'},
+              body: body,
+            )
+            .timeout(const Duration(seconds: 10));
+      }
+    } catch (_) {
+      resp = await _client
+          .post(
+            Uri.parse('$ep/v1/account/enroll'),
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
+    }
 
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     if (resp.statusCode == 200 || resp.statusCode == 201) {
       await applyConfigAndSignIn(data);
       return data;
     } else {
-      throw Exception(data['error'] ?? 'Enrollment failed with status ${resp.statusCode}');
+      throw Exception(data['error'] ?? 'Account creation failed with status ${resp.statusCode}');
     }
+  }
+
+  /// Enroll owner account
+  Future<Map<String, dynamic>> enrollOwner({
+    required String username,
+    required String password,
+    required String displayName,
+    String? deviceName,
+  }) async {
+    return createAccount(
+      username: username,
+      password: password,
+      displayName: displayName,
+      deviceName: deviceName,
+    );
   }
 
   /// Sign in with username and password
@@ -437,15 +564,15 @@ class KBAccountService extends ChangeNotifier {
     final deviceId = device['id'] as String? ?? '';
     final deviceName = device['name'] as String? ?? 'Device';
 
-    // 1. Store session securely
-    await _storage.write(key: _keyToken, value: token);
-    await _storage.write(key: _keyRefreshToken, value: refreshToken);
-    await _storage.write(key: _keyAccountId, value: accountId);
-    await _storage.write(key: _keyUsername, value: username);
-    await _storage.write(key: _keyDisplayName, value: displayName);
-    await _storage.write(key: _keyDeviceId, value: deviceId);
-    await _storage.write(key: _keyDeviceName, value: deviceName);
-    await _storage.write(key: _keyExpiresAt, value: expiresAt.toString());
+    // 1. Store session securely with automatic SharedPreferences fallback
+    await _storeWrite(_keyToken, token);
+    await _storeWrite(_keyRefreshToken, refreshToken);
+    await _storeWrite(_keyAccountId, accountId);
+    await _storeWrite(_keyUsername, username);
+    await _storeWrite(_keyDisplayName, displayName);
+    await _storeWrite(_keyDeviceId, deviceId);
+    await _storeWrite(_keyDeviceName, deviceName);
+    await _storeWrite(_keyExpiresAt, expiresAt.toString());
 
     _currentSession = KBAccountSession(
       accountId: accountId,
@@ -536,14 +663,14 @@ class KBAccountService extends ChangeNotifier {
       } catch (_) {}
     }
 
-    await _storage.delete(key: _keyToken);
-    await _storage.delete(key: _keyRefreshToken);
-    await _storage.delete(key: _keyAccountId);
-    await _storage.delete(key: _keyUsername);
-    await _storage.delete(key: _keyDisplayName);
-    await _storage.delete(key: _keyDeviceId);
-    await _storage.delete(key: _keyDeviceName);
-    await _storage.delete(key: _keyExpiresAt);
+    await _storeDelete(_keyToken);
+    await _storeDelete(_keyRefreshToken);
+    await _storeDelete(_keyAccountId);
+    await _storeDelete(_keyUsername);
+    await _storeDelete(_keyDisplayName);
+    await _storeDelete(_keyDeviceId);
+    await _storeDelete(_keyDeviceName);
+    await _storeDelete(_keyExpiresAt);
 
     _currentSession = null;
     notifyListeners();

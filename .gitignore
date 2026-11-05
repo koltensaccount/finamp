@@ -145,3 +145,5 @@ integration_test/testing
 .simulator-build
 build
 .serena/
+*.key
+*.dmg

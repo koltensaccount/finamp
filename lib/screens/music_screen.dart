@@ -256,9 +256,10 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
       final size = MediaQuery.sizeOf(context);
       final useWideNavigation =
           (Platform.isMacOS && size.width >= 760) || (Platform.isIOS && size.shortestSide >= 600 && size.width >= 900);
-      return PopScope(
-        canPop: false,
-        child: Scaffold(
+      return BugReporterOverlay(
+        child: PopScope(
+          canPop: false,
+          child: Scaffold(
           extendBody: true,
           appBar: (useWideNavigation || _rootTabIndex >= 2)
               ? null
@@ -279,8 +280,6 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                     ),
                   ),
                   actions: [
-                    const BugReporterButton(),
-                    const SizedBox(width: 8),
                     Padding(padding: const EdgeInsets.only(right: 16), child: _buildUserAvatar(context)),
                   ],
                 ),
@@ -312,13 +311,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                                   color: isDark ? Colors.white : Colors.black,
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  const BugReporterButton(),
-                                  const SizedBox(width: 12),
-                                  _buildUserAvatar(context),
-                                ],
-                              ),
+                              _buildUserAvatar(context),
                             ],
                           ),
                         ),
@@ -352,8 +345,9 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                   ],
                 ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
     return PopScope(
       canPop: !isSearching,
