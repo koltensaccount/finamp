@@ -323,21 +323,21 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                 ),
               Expanded(
                 child: IndexedStack(
-            index: _rootTabIndex,
-            children: [
-              PrimaryScrollController.none(
-                child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
-              ),
-              const PrimaryScrollController.none(
-                child: LibraryScreenContent(),
-              ),
-              const PrimaryScrollController.none(
-                child: BooksScreen(),
-              ),
-              const PrimaryScrollController.none(
-                child: CatalogSearchScreen(isTab: true),
-              ),
-            ],
+                  index: _rootTabIndex,
+                  children: [
+                    PrimaryScrollController.none(
+                      child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: LibraryScreenContent(),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: BooksScreen(),
+                    ),
+                    const PrimaryScrollController.none(
+                      child: CatalogSearchScreen(isTab: true),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -345,15 +345,15 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
           bottomNavigationBar: useWideNavigation
               ? const NowPlayingBar(includeBottomSafeArea: false)
               : Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const NowPlayingBar(includeBottomSafeArea: false),
-              AppleFloatingBottomBar(
-                selectedIndex: _rootTabIndex,
-                onDestinationSelected: (index) => MusicScreen.switchTab(index),
-              ),
-            ],
-          ),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const NowPlayingBar(includeBottomSafeArea: false),
+                    AppleFloatingBottomBar(
+                      selectedIndex: _rootTabIndex,
+                      onDestinationSelected: (index) => MusicScreen.switchTab(index),
+                    ),
+                  ],
+                ),
         ),
       );
     }
