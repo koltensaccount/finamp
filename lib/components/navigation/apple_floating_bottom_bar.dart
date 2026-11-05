@@ -22,7 +22,7 @@ class AppleFloatingBottomBar extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: isTablet ? 460 : double.infinity),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 2, 16, isTablet ? 14 : 8),
+            padding: EdgeInsets.fromLTRB(isTablet ? 16 : 48, 2, 16, isTablet ? 14 : 8),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(26),
               child: BackdropFilter(
