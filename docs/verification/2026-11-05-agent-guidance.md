@@ -24,7 +24,8 @@
 | Acquisition test isolation | pass | `python3 -m unittest discover -s backend/tests -p 'test_book_discovery_and_acquisition.py' -v`: 3 tests, exit 0. Injected fixture coordinator, generated EPUB, temporary output roots, stubbed metadata/provider/scan calls and asserted zero urlopen calls. No real media acquisition. |
 | Full backend suite | blocked | Other tests can still contact metadata providers; not represented as an audited offline suite. Narrow suites above were run. |
 | PWA source/deployment audit | pass | Existing server workspace found; original AGENTS contains only generated Next.js block. Container uses local KB image with no Compose project labels. Adjacent Compose/update script targets Aubrey, recorded in WEB_WORKSPACE. Source/image equality is unverified. |
-| Web snapshot export/install | blocked | Pending committed policy export, manifest validation and reversible guidance-only installation. Update after installation. |
+| Web snapshot export/install | pass | Exported and installed canonical `66595d135c6db57245caea5dc643c47db2ad2880`; all 17 SHA-256 entries verified locally and on server. Root VISION links to snapshot; GEMINI/CLAUDE/Copilot route through preserved root AGENTS. Original Next.js block retained. Original AGENTS backup: `.kb-guidance-backups/20261105T225320Z/AGENTS.md`. Dockerfile, Compose and update-script hashes unchanged. |
+| Exporter drift detection | pass | Modified VISION in a temporary exported copy; `--verify` exited nonzero with `Guidance drift: VISION.md`. |
 | Assistant discovery | blocked | Filename/scope conventions checked against official and installed Antigravity docs. Codex CLI 0.162.1 present; other CLIs unavailable on PATH. No fresh interactive assistant adherence test performed. See RESEARCH for smoke checks. |
 | iPhone / iPad / macOS / web screenshots | not_applicable | This change does not alter UI. Existing product parity and real-device behavior remain unverified, not passed. Future UI changes require the full matrix. |
 | Real two-client playback handoff | not_applicable | No sync implementation changed; account registration is explicitly distinguished from handoff. |
@@ -37,6 +38,10 @@ Structural checks cannot certify model obedience or screenshot quality. Branch
 protection/repository settings are unchanged, so the new CI job is not claimed
 as a required merge check. Existing historical CURRENT_STATE claims are retained
 and clearly labeled; this change does not recertify them.
+
+The base branch advanced to `202eb017` during this work; the three-dot PR diff
+was inspected against it and contains only the 23 intended files, with no
+reversion or inclusion of those two independent native/update commits.
 
 The account service and PWA are server-only source, outside this fork's Git
 history. PWA deployment artifacts contain inherited Aubrey configuration; no
