@@ -17,68 +17,75 @@ class AppleFloatingBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isTablet = screenWidth >= 600;
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0x73141416)
-                    : const Color(0x99FFFFFF),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.18)
-                      : Colors.black.withValues(alpha: 0.08),
-                  width: 0.5,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isTablet ? 460 : double.infinity),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 2, 16, isTablet ? 14 : 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+                child: Container(
+                  height: isTablet ? 52 : 48,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0x8C141416)
+                        : const Color(0xB8FFFFFF),
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : Colors.black.withValues(alpha: 0.08),
+                      width: 0.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.1),
+                        blurRadius: 22,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _buildTabItem(
+                        index: 0,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: 'Home',
+                        isDark: isDark,
+                      ),
+                      _buildTabItem(
+                        index: 1,
+                        icon: Icons.library_music_outlined,
+                        activeIcon: Icons.library_music_rounded,
+                        label: 'Library',
+                        isDark: isDark,
+                      ),
+                      _buildTabItem(
+                        index: 2,
+                        icon: Icons.auto_stories_outlined,
+                        activeIcon: Icons.auto_stories_rounded,
+                        label: 'Books',
+                        isDark: isDark,
+                      ),
+                      _buildTabItem(
+                        index: 3,
+                        icon: Icons.search_rounded,
+                        activeIcon: Icons.search_rounded,
+                        label: 'Search',
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _buildTabItem(
-                    index: 0,
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home_rounded,
-                    label: 'Home',
-                    isDark: isDark,
-                  ),
-                  _buildTabItem(
-                    index: 1,
-                    icon: Icons.library_music_outlined,
-                    activeIcon: Icons.library_music_rounded,
-                    label: 'Library',
-                    isDark: isDark,
-                  ),
-                  _buildTabItem(
-                    index: 2,
-                    icon: Icons.auto_stories_outlined,
-                    activeIcon: Icons.auto_stories_rounded,
-                    label: 'Books',
-                    isDark: isDark,
-                  ),
-                  _buildTabItem(
-                    index: 3,
-                    icon: Icons.search_rounded,
-                    activeIcon: Icons.search_rounded,
-                    label: 'Search',
-                    isDark: isDark,
-                  ),
-                ],
               ),
             ),
           ),

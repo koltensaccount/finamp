@@ -137,6 +137,9 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
   }
 
   Widget _buildTopPicksSection(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isTablet = screenWidth >= 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -156,9 +159,13 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              _buildLikedSongsCard(context),
+              _buildLikedSongsCard(context, isTablet: isTablet),
               const SizedBox(width: 14),
-              _buildEssentialsCard(context),
+              _buildEssentialsCard(context, isTablet: isTablet),
+              const SizedBox(width: 14),
+              _buildBooksCard(context, isTablet: isTablet),
+              const SizedBox(width: 14),
+              _buildDiscoveryCard(context, isTablet: isTablet),
             ],
           ),
         ),
@@ -167,7 +174,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     );
   }
 
-  Widget _buildLikedSongsCard(BuildContext context) {
+  Widget _buildLikedSongsCard(BuildContext context, {bool isTablet = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final likedSongs = ref.watch(likedSongsProvider);
     final count = likedSongs.count;
@@ -178,7 +185,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
       child: Container(
-        width: 224,
+        width: isTablet ? 260 : 224,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -253,13 +260,13 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     );
   }
 
-  Widget _buildEssentialsCard(BuildContext context) {
+  Widget _buildEssentialsCard(BuildContext context, {bool isTablet = false}) {
     return GestureDetector(
       onTap: () {
         GetIt.instance<AudioServiceHelper>().playRandomItem();
       },
       child: Container(
-        width: 236,
+        width: isTablet ? 260 : 236,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: const LinearGradient(
@@ -310,6 +317,152 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 const SizedBox(height: 4),
                 Text(
                   'Instant mix from your music library',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBooksCard(BuildContext context, {bool isTablet = false}) {
+    return GestureDetector(
+      onTap: () {
+        MusicScreen.switchTab(2);
+      },
+      child: Container(
+        width: isTablet ? 260 : 236,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E1B4B),
+              Color(0xFF4C1D95),
+              Color(0xFFBE185D),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4C1D95).withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Icon(Icons.auto_stories_rounded, size: 44, color: Colors.white),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Reading & Listening',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Books & Audiobooks',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Synchronized reading and narration ecosystem',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryCard(BuildContext context, {bool isTablet = false}) {
+    return GestureDetector(
+      onTap: () {
+        MusicScreen.switchTab(3);
+      },
+      child: Container(
+        width: isTablet ? 260 : 236,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF0369A1),
+              Color(0xFF0D9488),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0369A1).withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Icon(Icons.travel_explore_rounded, size: 44, color: Colors.white),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Worldwide Catalog',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Music Discovery',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Explore artist discographies and global music',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

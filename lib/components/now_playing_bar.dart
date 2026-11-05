@@ -366,19 +366,28 @@ class NowPlayingBar extends ConsumerWidget {
                 stream: queueService.getQueueStream(),
                 initialData: queueService.getQueue(),
                 builder: (context, snapshot) {
+                  Widget content;
                   if (snapshot.hasData &&
                       snapshot.data!.saveState == SavedQueueState.loading &&
                       !usingPlayerSplitScreen) {
-                    return buildLoadingQueueBar(ref, null);
+                    content = buildLoadingQueueBar(ref, null);
                   } else if (snapshot.hasData &&
                       snapshot.data!.saveState == SavedQueueState.failed &&
                       !usingPlayerSplitScreen) {
-                    return buildLoadingQueueBar(ref, queueService.retryQueueLoad);
+                    content = buildLoadingQueueBar(ref, queueService.retryQueueLoad);
                   } else if (snapshot.hasData && snapshot.data!.currentTrack != null && !usingPlayerSplitScreen) {
-                    return buildNowPlayingBar(ref, snapshot.data!.currentTrack!);
+                    content = buildNowPlayingBar(ref, snapshot.data!.currentTrack!);
                   } else {
                     return const SizedBox.shrink();
                   }
+
+                  final isTablet = MediaQuery.sizeOf(context).width >= 600;
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isTablet ? 560 : double.infinity),
+                      child: content,
+                    ),
+                  );
                 },
               );
             },

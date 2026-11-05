@@ -217,11 +217,15 @@ class HomeScreenQueueTile extends ConsumerWidget {
   }
 }
 
-/// This might calculate the width base on the device width in the future, or something similar
+/// Calculates the item card width adaptively based on device size and orientation
 (double, double) calculateItemCollectionCardWidth(WidgetRef ref, {bool forHomeScreen = false}) {
-  final target = ref
+  final baseTarget = ref
       .watch(forHomeScreen ? finampSettingsProvider.homeScreenImageSize : finampSettingsProvider.gridImageSize)
       .toDouble();
+  final screenWidth = MediaQuery.sizeOf(ref.context).width;
+  final isTablet = screenWidth >= 600;
+  final scale = isTablet ? (screenWidth / 500.0).clamp(1.25, 1.6) : 1.0;
+  final target = forHomeScreen ? (baseTarget * scale) : baseTarget;
   final padding = ((target - 30) / 17.0).clamp(1.0, 10.0);
   return (target - padding, padding);
 }

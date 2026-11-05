@@ -357,8 +357,8 @@ class _BooksScreenState extends State<BooksScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: (MediaQuery.of(context).size.width / 180).clamp(2, 6).toInt(),
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 20,
                         childAspectRatio: 0.58,
@@ -493,8 +493,8 @@ class _BooksScreenState extends State<BooksScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: (MediaQuery.of(context).size.width / 180).clamp(2, 6).toInt(),
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 20,
                       childAspectRatio: 0.58,

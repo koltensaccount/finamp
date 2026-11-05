@@ -41,6 +41,11 @@ class MusicScreen extends ConsumerStatefulWidget {
   final bool Function(ItemFilter)? allowFilters;
 
   static const routeName = "/music";
+  static final ValueNotifier<int> rootTabNotifier = ValueNotifier<int>(const int.fromEnvironment('DEFAULT_TAB', defaultValue: 0));
+
+  static void switchTab(int index) {
+    rootTabNotifier.value = index;
+  }
 
   // Optional parameters for genre and tab filtering
   final HomeScreenSectionConfiguration? singleTabConfig;
@@ -52,7 +57,7 @@ class MusicScreen extends ConsumerStatefulWidget {
 }
 
 class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderStateMixin {
-  int _rootTabIndex = const int.fromEnvironment('DEFAULT_TAB', defaultValue: 0);
+  int _rootTabIndex = MusicScreen.rootTabNotifier.value;
   bool isSearching = false;
   TextEditingController textEditingController = TextEditingController();
   String? searchQuery;
@@ -113,13 +118,21 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
     _tabController!.addListener(_tabIndexCallback);
   }
 
+  void _onRootTabChanged() {
+    if (mounted && _rootTabIndex != MusicScreen.rootTabNotifier.value) {
+      setState(() => _rootTabIndex = MusicScreen.rootTabNotifier.value);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    MusicScreen.rootTabNotifier.addListener(_onRootTabChanged);
   }
 
   @override
   void dispose() {
+    MusicScreen.rootTabNotifier.removeListener(_onRootTabChanged);
     _tabController?.dispose();
     textEditingController.dispose();
     super.dispose();
@@ -318,7 +331,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
               const NowPlayingBar(includeBottomSafeArea: false),
               AppleFloatingBottomBar(
                 selectedIndex: _rootTabIndex,
-                onDestinationSelected: (index) => setState(() => _rootTabIndex = index),
+                onDestinationSelected: (index) => MusicScreen.switchTab(index),
               ),
             ],
           ),
