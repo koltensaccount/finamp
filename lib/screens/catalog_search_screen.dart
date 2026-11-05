@@ -15,6 +15,7 @@ import 'catalog_artist_screen.dart';
 import '../services/artist_image_service.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
+
 enum CatalogSearchScope { musicSearch, library }
 
 class CatalogSearchScreen extends StatefulWidget {
@@ -37,6 +38,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
   final List<CatalogRecentItem> _recentSearches = [];
+  int _historyLoadGeneration = 0;
+  bool _hasClearedHistory = false;
 
   @override
   void initState() {
@@ -60,16 +63,28 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   }
 
   Future<void> _loadRecentHistory() async {
+    final gen = ++_historyLoadGeneration;
     try {
       final history = await CatalogRecentHistory.load();
-      if (!mounted || _recentSearches.isNotEmpty) return;
-      setState(() => _recentSearches.addAll(history));
+      if (!mounted || gen != _historyLoadGeneration || _hasClearedHistory) return;
+      setState(() {
+        final existingKeys = _recentSearches.map((e) => '${e.kind}:${e.id}').toSet();
+        for (final item in history) {
+          if (!existingKeys.contains('${item.kind}:${item.id}')) {
+            _recentSearches.add(item);
+          }
+        }
+        if (_recentSearches.length > CatalogRecentHistory.maxItems) {
+          _recentSearches.removeRange(CatalogRecentHistory.maxItems, _recentSearches.length);
+        }
+      });
     } catch (_) {
       // A storage problem should not prevent searching.
     }
   }
 
   void _addRecentSearch(CatalogRecentItem item) {
+    _hasClearedHistory = false;
     setState(() {
       _recentSearches.removeWhere((x) => x.id == item.id && x.kind == item.kind);
       _recentSearches.insert(0, item);
@@ -79,6 +94,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   }
 
   void _clearRecentHistory() {
+    _hasClearedHistory = true;
+    _historyLoadGeneration++;
     setState(() => _recentSearches.clear());
     unawaited(CatalogRecentHistory.clear());
   }
@@ -154,28 +171,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.search_rounded,
-                      size: 20,
-                      color: isDark ? Colors.white54 : Colors.black54,
-                    ),
+                    Icon(Icons.search_rounded, size: 20, color: isDark ? Colors.white54 : Colors.black54),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: _controller,
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _search(),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
+                        style: TextStyle(fontSize: 15, color: isDark ? Colors.white : Colors.black87),
                         decoration: InputDecoration(
                           isDense: true,
                           hintText: 'Artists, Songs, Lyrics & More',
-                          hintStyle: TextStyle(
-                            fontSize: 14.5,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                          ),
+                          hintStyle: TextStyle(fontSize: 14.5, color: isDark ? Colors.white38 : Colors.black38),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -187,11 +194,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                           _controller.clear();
                           setState(() => _response = null);
                         },
-                        child: Icon(
-                          Icons.cancel_rounded,
-                          size: 18,
-                          color: isDark ? Colors.white54 : Colors.black54,
-                        ),
+                        child: Icon(Icons.cancel_rounded, size: 18, color: isDark ? Colors.white54 : Colors.black54),
                       ),
                   ],
                 ),
@@ -237,14 +240,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               ),
             ),
             if (_loading)
-              const LinearProgressIndicator(
-                minHeight: 2,
-                backgroundColor: Colors.transparent,
-                color: appleAccentColor,
-              ),
-            Expanded(
-              child: _buildBodyContent(isDark),
-            ),
+              const LinearProgressIndicator(minHeight: 2, backgroundColor: Colors.transparent, color: appleAccentColor),
+            Expanded(child: _buildBodyContent(isDark)),
           ],
         ),
       ),
@@ -258,9 +255,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
     final allResults = _response?.results ?? const [];
     final results = _scope == CatalogSearchScope.library
-        ? allResults
-            .where((r) => r.isFullyOwned || r.isPartiallyOwned || (r.availability?.canPlay ?? false))
-            .toList()
+        ? allResults.where((r) => r.isFullyOwned || r.isPartiallyOwned || (r.availability?.canPlay ?? false)).toList()
         : allResults;
 
     if (results.isEmpty && !_loading) {
@@ -299,11 +294,11 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       CatalogSearchCategory.albums => _buildCategoryList(albums, 'Albums', isDark),
       CatalogSearchCategory.songs => _buildCategoryList(tracks, 'Songs', isDark),
       CatalogSearchCategory.all => _buildAllResultsView(
-          artists: artists,
-          albums: albums,
-          tracks: tracks,
-          isDark: isDark,
-        ),
+        artists: artists,
+        albums: albums,
+        tracks: tracks,
+        isDark: isDark,
+      ),
     };
   }
 
@@ -322,10 +317,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                 onPressed: () => setState(() => _category = CatalogSearchCategory.all),
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -333,11 +325,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
           child: ListView.separated(
             padding: const EdgeInsets.only(bottom: 120),
             itemCount: items.length,
-            separatorBuilder: (_, _) => Divider(
-              height: 1,
-              indent: 72,
-              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-            ),
+            separatorBuilder: (_, _) =>
+                Divider(height: 1, indent: 72, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
             itemBuilder: (context, index) => _tile(items[index], isDark),
           ),
         ),
@@ -348,10 +337,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
   Widget _buildRecentlySearchedView(bool isDark) {
     if (_recentSearches.isEmpty) {
       return Center(
-        child: Text(
-          'Artists, Songs, Lyrics & More',
-          style: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-        ),
+        child: Text('Artists, Songs, Lyrics & More', style: TextStyle(color: isDark ? Colors.white38 : Colors.black38)),
       );
     }
 
@@ -361,10 +347,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Recently Viewed',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Recently Viewed', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             TextButton(
               onPressed: _clearRecentHistory,
               child: const Text(
@@ -376,7 +359,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         ),
         const SizedBox(height: 4),
         ..._recentSearches.map((item) {
-          final artistImg = item.imageUrl ??
+          final artistImg =
+              item.imageUrl ??
               ArtistImageService.getKnownArtistImageUrl(item.title) ??
               ArtistImageService.getKnownArtistImageUrl(item.id);
           return ListTile(
@@ -403,21 +387,45 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
                   )
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
-                      child: const Icon(Icons.album_rounded, size: 24),
-                    ),
+                    child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            item.imageUrl!,
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              width: 44,
+                              height: 44,
+                              color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                              child: const Icon(Icons.album_rounded, size: 24),
+                            ),
+                          )
+                        : Container(
+                            width: 44,
+                            height: 44,
+                            color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                            child: const Icon(Icons.album_rounded, size: 24),
+                          ),
                   ),
             title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
             subtitle: Text(item.subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
             onTap: () {
+              _addRecentSearch(item);
               if (item.kind == 'artist') {
                 Navigator.of(context).pushNamed(
                   CatalogArtistScreen.routeName,
                   arguments: CatalogArtistScreenArguments(artistMbid: item.id, initialName: item.title),
+                );
+              } else if (item.kind == 'album') {
+                Navigator.of(context).pushNamed(
+                  CatalogAlbumScreen.routeName,
+                  arguments: CatalogAlbumScreenArguments(
+                    releaseGroupMbid: item.id,
+                    initialTitle: item.title,
+                    initialArtist: item.subtitle,
+                    initialImageUrl: item.imageUrl,
+                  ),
                 );
               } else {
                 _controller.text = item.title;
@@ -440,10 +448,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     final queryLower = _controller.text.trim().toLowerCase();
 
     if (artists.isNotEmpty) {
-      topResult = artists.firstWhere(
-        (a) => a.title.toLowerCase() == queryLower,
-        orElse: () => artists.first,
-      );
+      topResult = artists.firstWhere((a) => a.title.toLowerCase() == queryLower, orElse: () => artists.first);
     } else if (albums.isNotEmpty) {
       topResult = albums.first;
     } else if (tracks.isNotEmpty) {
@@ -495,7 +500,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _buildTopResultCard(CatalogSearchResult result, bool isDark) {
     if (result.kind == 'artist') {
-      final artistImg = result.imageUrl ??
+      final artistImg =
+          result.imageUrl ??
           ArtistImageService.getKnownArtistImageUrl(result.title) ??
           ArtistImageService.getKnownArtistImageUrl(result.id);
       return Container(
@@ -506,13 +512,15 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            _addRecentSearch(CatalogRecentItem(
-              id: result.id,
-              title: result.title,
-              subtitle: 'Artist',
-              kind: 'artist',
-              imageUrl: artistImg,
-            ));
+            _addRecentSearch(
+              CatalogRecentItem(
+                id: result.id,
+                title: result.title,
+                subtitle: 'Artist',
+                kind: 'artist',
+                imageUrl: artistImg,
+              ),
+            );
             Navigator.of(context).pushNamed(
               CatalogArtistScreen.routeName,
               arguments: CatalogArtistScreenArguments(artistMbid: result.id, initialName: result.title),
@@ -580,16 +588,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          _addRecentSearch(CatalogRecentItem(
-            id: result.id,
-            title: result.title,
-            subtitle: result.displayArtist ?? 'Album',
-            kind: 'album',
-          ));
-          Navigator.of(context).pushNamed(
-            CatalogAlbumScreen.routeName,
-            arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
+          _addRecentSearch(
+            CatalogRecentItem(
+              id: result.id,
+              title: result.title,
+              subtitle: result.displayArtist ?? 'Album',
+              kind: 'album',
+              imageUrl: result.imageUrl,
+            ),
           );
+          Navigator.of(
+            context,
+          ).pushNamed(CatalogAlbumScreen.routeName, arguments: CatalogAlbumScreenArguments.fromSearchResult(result));
         },
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -655,20 +665,13 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
+          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           if (onSeeAll != null)
             GestureDetector(
               onTap: onSeeAll,
               child: const Text(
                 'See All',
-                style: TextStyle(
-                  color: appleAccentColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: appleAccentColor, fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ),
         ],
@@ -678,7 +681,8 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   Widget _tile(CatalogSearchResult result, bool isDark) {
     if (result.kind == 'artist') {
-      final artistImg = result.imageUrl ??
+      final artistImg =
+          result.imageUrl ??
           ArtistImageService.getKnownArtistImageUrl(result.title) ??
           ArtistImageService.getKnownArtistImageUrl(result.id);
       return ListTile(
@@ -706,17 +710,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         subtitle: const Text('Artist', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
         trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
-          _addRecentSearch(CatalogRecentItem(
-            id: result.id,
-            title: result.title,
-            subtitle: 'Artist',
-            kind: 'artist',
-            imageUrl: artistImg,
-          ));
-          Navigator.of(context).pushNamed(
-            CatalogArtistScreen.routeName,
-            arguments: CatalogArtistScreenArguments.fromSearchResult(result),
+          _addRecentSearch(
+            CatalogRecentItem(
+              id: result.id,
+              title: result.title,
+              subtitle: 'Artist',
+              kind: 'artist',
+              imageUrl: artistImg,
+            ),
           );
+          Navigator.of(
+            context,
+          ).pushNamed(CatalogArtistScreen.routeName, arguments: CatalogArtistScreenArguments.fromSearchResult(result));
         },
       );
     }
@@ -759,16 +764,18 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         subtitle: Text(info, style: const TextStyle(color: Colors.grey, fontSize: 12.5)),
         trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
-          _addRecentSearch(CatalogRecentItem(
-            id: result.id,
-            title: result.title,
-            subtitle: result.displayArtist ?? 'Album',
-            kind: 'album',
-          ));
-          Navigator.of(context).pushNamed(
-            CatalogAlbumScreen.routeName,
-            arguments: CatalogAlbumScreenArguments.fromSearchResult(result),
+          _addRecentSearch(
+            CatalogRecentItem(
+              id: result.id,
+              title: result.title,
+              subtitle: result.displayArtist ?? 'Album',
+              kind: 'album',
+              imageUrl: result.imageUrl,
+            ),
           );
+          Navigator.of(
+            context,
+          ).pushNamed(CatalogAlbumScreen.routeName, arguments: CatalogAlbumScreenArguments.fromSearchResult(result));
         },
       );
     }
@@ -803,16 +810,10 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
               ),
       ),
       title: Text(result.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-      subtitle: Text(
-        subtitleParts.join(' • '),
-        style: const TextStyle(color: Colors.grey, fontSize: 12.5),
-      ),
+      subtitle: Text(subtitleParts.join(' • '), style: const TextStyle(color: Colors.grey, fontSize: 12.5)),
       trailing: const Icon(Icons.more_horiz, size: 20, color: Colors.grey),
-      onTap: () => CatalogPlaybackHelper.handleTrackTap(
-        context,
-        title: result.title,
-        availability: result.availability,
-      ),
+      onTap: () =>
+          CatalogPlaybackHelper.handleTrackTap(context, title: result.title, availability: result.availability),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 /// Wide-screen navigation for macOS and iPad landscape.
@@ -23,49 +25,37 @@ class AppleSidebarNavigation extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final foreground = isDark ? Colors.white : const Color(0xFF17171A);
     final muted = isDark ? Colors.white54 : Colors.black45;
+    final topPadding = Platform.isMacOS
+        ? 36.0
+        : (MediaQuery.paddingOf(context).top > 0 ? MediaQuery.paddingOf(context).top + 6 : 22.0);
 
     return Container(
-      width: 228,
+      width: 236,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161618) : const Color(0xFFF5F5F7),
-        border: Border(
-          right: BorderSide(
-            color: isDark ? Colors.white12 : Colors.black12,
-            width: 0.5,
-          ),
-        ),
+        border: Border(right: BorderSide(color: isDark ? Colors.white12 : Colors.black12, width: 0.5)),
       ),
-      padding: const EdgeInsets.fromLTRB(14, 22, 14, 14),
+      padding: EdgeInsets.fromLTRB(14, topPadding, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 0, 24),
+            padding: const EdgeInsets.fromLTRB(12, 0, 0, 22),
             child: Text(
               'Music',
-              style: TextStyle(
-                color: foreground,
-                fontSize: 27,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.7,
-              ),
+              style: TextStyle(color: foreground, fontSize: 27, fontWeight: FontWeight.w800, letterSpacing: -0.7),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 0, 10),
             child: Text(
               'EXPLORE',
-              style: TextStyle(
-                color: muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
+              style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
             ),
           ),
           _SidebarDestination(
             label: 'Home',
-            icon: Icons.home_outlined,
+            icon: Icons.home_rounded,
             selected: selectedIndex == 0,
             accent: _accent,
             foreground: foreground,
@@ -73,7 +63,7 @@ class AppleSidebarNavigation extends StatelessWidget {
           ),
           _SidebarDestination(
             label: 'Library',
-            icon: Icons.library_music_outlined,
+            icon: Icons.library_music_rounded,
             selected: selectedIndex == 1,
             accent: _accent,
             foreground: foreground,
@@ -81,7 +71,7 @@ class AppleSidebarNavigation extends StatelessWidget {
           ),
           _SidebarDestination(
             label: 'Books',
-            icon: Icons.auto_stories_outlined,
+            icon: Icons.auto_stories_rounded,
             selected: selectedIndex == 2,
             accent: _accent,
             foreground: foreground,
@@ -96,13 +86,16 @@ class AppleSidebarNavigation extends StatelessWidget {
             onTap: () => onDestinationSelected(3),
           ),
           const Spacer(),
-          _SidebarDestination(
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            selected: false,
-            accent: _accent,
-            foreground: foreground,
-            onTap: onSettingsTap,
+          SafeArea(
+            top: false,
+            child: _SidebarDestination(
+              label: 'Settings',
+              icon: Icons.settings_outlined,
+              selected: false,
+              accent: _accent,
+              foreground: foreground,
+              onTap: onSettingsTap,
+            ),
           ),
         ],
       ),
@@ -138,25 +131,26 @@ class _SidebarDestination extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: Material(
-          color: selected
-              ? accent.withValues(alpha: isDark ? 0.18 : 0.10)
-              : Colors.transparent,
+          color: selected ? accent.withValues(alpha: isDark ? 0.18 : 0.10) : Colors.transparent,
           borderRadius: BorderRadius.circular(11),
           child: InkWell(
             borderRadius: BorderRadius.circular(11),
+            mouseCursor: SystemMouseCursors.click,
+            hoverColor: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               child: Row(
                 children: [
-                  Icon(icon, size: 19, color: color),
+                  Icon(icon, size: 20, color: color),
                   const SizedBox(width: 13),
                   Text(
                     label,
                     style: TextStyle(
                       color: color,
-                      fontSize: 14,
+                      fontSize: 14.5,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],

@@ -42,7 +42,9 @@ class MusicScreen extends ConsumerStatefulWidget {
   final bool Function(ItemFilter)? allowFilters;
 
   static const routeName = "/music";
-  static final ValueNotifier<int> rootTabNotifier = ValueNotifier<int>(const int.fromEnvironment('DEFAULT_TAB', defaultValue: 0));
+  static final ValueNotifier<int> rootTabNotifier = ValueNotifier<int>(
+    const int.fromEnvironment('DEFAULT_TAB', defaultValue: 0),
+  );
 
   static void switchTab(int index) {
     rootTabNotifier.value = index;
@@ -251,13 +253,12 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final size = MediaQuery.sizeOf(context);
       final useWideNavigation =
-          (Platform.isMacOS && size.width >= 760) ||
-          (Platform.isIOS && size.shortestSide >= 600 && size.width >= 900);
+          (Platform.isMacOS && size.width >= 760) || (Platform.isIOS && size.shortestSide >= 600 && size.width >= 900);
       return PopScope(
         canPop: false,
         child: Scaffold(
           extendBody: true,
-          appBar: _rootTabIndex >= 2
+          appBar: (useWideNavigation || _rootTabIndex >= 2)
               ? null
               : AppBar(
                   automaticallyImplyLeading: false,
@@ -275,43 +276,7 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                  actions: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final userInfo = ref.watch(UserInfoProviders.currentUserInfoProvider);
-                            final user = userInfo.value?.jellyfinUser;
-                            if (user?.primaryImageTag != null &&
-                                GetIt.instance.isRegistered<FinampUserHelper>() &&
-                                GetIt.instance<FinampUserHelper>().currentUser != null) {
-                              return ClipOval(
-                                child: Image.network(
-                                  GetIt.instance<JellyfinApiHelper>().getUserImageUrl(
-                                    baseUrl: Uri.parse(GetIt.instance<FinampUserHelper>().currentUser!.baseURL),
-                                    user: user!,
-                                  ).toString(),
-                                  width: 34,
-                                  height: 34,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const CircleAvatar(
-                                    radius: 17,
-                                    child: Icon(Icons.person, size: 20),
-                                  ),
-                                ),
-                              );
-                            }
-                            return const CircleAvatar(
-                              radius: 17,
-                              child: Icon(Icons.person, size: 20),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                  actions: [Padding(padding: const EdgeInsets.only(right: 16), child: _buildUserAvatar(context))],
                 ),
           body: Row(
             children: [
@@ -322,20 +287,40 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                   onSettingsTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
                 ),
               Expanded(
-                child: IndexedStack(
-                  index: _rootTabIndex,
+                child: Column(
                   children: [
-                    PrimaryScrollController.none(
-                      child: HomeScreenContent(refresh: refreshMap[ContentType.home]),
-                    ),
-                    const PrimaryScrollController.none(
-                      child: LibraryScreenContent(),
-                    ),
-                    const PrimaryScrollController.none(
-                      child: BooksScreen(),
-                    ),
-                    const PrimaryScrollController.none(
-                      child: CatalogSearchScreen(isTab: true),
+                    if (useWideNavigation && _rootTabIndex < 2)
+                      SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 20, 24, 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _rootTabIndex == 0 ? 'Home' : 'Library',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.6,
+                                  color: isDark ? Colors.white : Colors.black,
+                                ),
+                              ),
+                              _buildUserAvatar(context),
+                            ],
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _rootTabIndex,
+                        children: [
+                          PrimaryScrollController.none(child: HomeScreenContent(refresh: refreshMap[ContentType.home])),
+                          const PrimaryScrollController.none(child: LibraryScreenContent()),
+                          const PrimaryScrollController.none(child: BooksScreen()),
+                          const PrimaryScrollController.none(child: CatalogSearchScreen(isTab: true)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -512,6 +497,37 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
             return child;
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushNamed(SettingsScreen.routeName),
+      child: Consumer(
+        builder: (context, ref, _) {
+          final userInfo = ref.watch(UserInfoProviders.currentUserInfoProvider);
+          final user = userInfo.value?.jellyfinUser;
+          if (user?.primaryImageTag != null &&
+              GetIt.instance.isRegistered<FinampUserHelper>() &&
+              GetIt.instance<FinampUserHelper>().currentUser != null) {
+            return ClipOval(
+              child: Image.network(
+                GetIt.instance<JellyfinApiHelper>()
+                    .getUserImageUrl(
+                      baseUrl: Uri.parse(GetIt.instance<FinampUserHelper>().currentUser!.baseURL),
+                      user: user!,
+                    )
+                    .toString(),
+                width: 34,
+                height: 34,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const CircleAvatar(radius: 17, child: Icon(Icons.person, size: 20)),
+              ),
+            );
+          }
+          return const CircleAvatar(radius: 17, child: Icon(Icons.person, size: 20));
+        },
       ),
     );
   }

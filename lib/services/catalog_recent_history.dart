@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// A real recently-viewed catalog item. Keeping the catalog ID (rather than
@@ -19,12 +20,12 @@ class CatalogRecentItem {
   final String kind;
   final String? imageUrl;
 
-  Map<String, String> toJson() => {
+  Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'subtitle': subtitle,
     'kind': kind,
-    if (imageUrl != null) 'imageUrl': imageUrl!,
+    if (imageUrl != null) 'imageUrl': imageUrl,
   };
 
   static CatalogRecentItem? fromJson(Object? value) {
@@ -33,9 +34,12 @@ class CatalogRecentItem {
     final title = value['title'];
     final subtitle = value['subtitle'];
     final kind = value['kind'];
-    if (id is! String || id.trim().isEmpty ||
-        title is! String || title.trim().isEmpty ||
-        subtitle is! String || kind is! String) {
+    if (id is! String ||
+        id.trim().isEmpty ||
+        title is! String ||
+        title.trim().isEmpty ||
+        subtitle is! String ||
+        kind is! String) {
       return null;
     }
     if (kind != 'artist' && kind != 'album' && kind != 'track') return null;
@@ -53,6 +57,12 @@ class CatalogRecentItem {
 class CatalogRecentHistory {
   static const _key = 'catalog_recent_items_v1';
   static const maxItems = 12;
+  static int _operationGeneration = 0;
+
+  @visibleForTesting
+  static void resetGenerationForTesting() {
+    _operationGeneration = 0;
+  }
 
   static Future<List<CatalogRecentItem>> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -60,7 +70,8 @@ class CatalogRecentHistory {
     final result = <CatalogRecentItem>[];
     for (final raw in stored) {
       try {
-        final item = CatalogRecentItem.fromJson(jsonDecode(raw));
+        final decoded = jsonDecode(raw);
+        final item = CatalogRecentItem.fromJson(decoded);
         if (item != null) result.add(item);
       } catch (_) {
         // A corrupt legacy entry should not break the search screen.
@@ -70,15 +81,24 @@ class CatalogRecentHistory {
   }
 
   static Future<void> save(List<CatalogRecentItem> items) async {
+    final gen = ++_operationGeneration;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _key,
-      items.take(maxItems).map((item) => jsonEncode(item.toJson())).toList(),
-    );
+    if (gen != _operationGeneration) return;
+    await prefs.setStringList(_key, items.take(maxItems).map((item) => jsonEncode(item.toJson())).toList());
   }
 
   static Future<void> clear() async {
+    final gen = ++_operationGeneration;
     final prefs = await SharedPreferences.getInstance();
+    if (gen != _operationGeneration) return;
     await prefs.remove(_key);
+  }
+
+  /// Convenience helper to record any viewed catalog entity across screens.
+  static Future<void> record(CatalogRecentItem item) async {
+    final items = await load();
+    items.removeWhere((x) => x.id == item.id && x.kind == item.kind);
+    items.insert(0, item);
+    await save(items);
   }
 }
