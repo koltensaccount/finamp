@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check the guidance graph and require reviewable evidence for behavior diffs."""
 import argparse
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -15,6 +16,7 @@ DOCS = (
     'docs/CURRENT_STATE.md', 'docs/NEXT_TASK.md', 'docs/agents/RESEARCH.md',
     'docs/agents/QUALITY_GATES.md', 'docs/agents/WEB_WORKSPACE.md',
     'docs/verification/TEMPLATE.md', '.github/PULL_REQUEST_TEMPLATE.md',
+    'docs/WORKFLOWS.md', 'docs/agents/workflow-parity.json',
 )
 
 
@@ -67,6 +69,28 @@ def check(root=ROOT, changed=None):
     for path in root.rglob('AGENTS.override.md'):
         if '.git' not in path.parts:
             errors.append(f'Unexpected policy-shadowing override: {path.relative_to(root)}')
+    inventory = root / 'docs/agents/workflow-parity.json'
+    if inventory.exists():
+        try:
+            data = json.loads(inventory.read_text())
+            workflows = data['workflows']
+            ids = [item['id'] for item in workflows]
+            if not ids or len(set(ids)) != len(ids):
+                errors.append('Workflow IDs must be non-empty and unique')
+            if any(not item.get('shared_acceptance', '').strip() for item in workflows):
+                errors.append('Every workflow needs observable shared acceptance criteria')
+            listed = {item['path'] for item in data['native_surfaces']}
+            actual = set()
+            for pattern in ('lib/screens/*.dart', 'lib/menus/**/*.dart', 'lib/components/*SettingsScreen/**/*.dart'):
+                actual.update(str(path.relative_to(root)) for path in root.glob(pattern))
+            for path in sorted(actual - listed):
+                errors.append(f'Unmapped native workflow surface: {path}')
+            # A small documentation-only fixture may omit all application source.
+            if actual:
+                for path in sorted(listed - actual):
+                    errors.append(f'Stale native workflow surface: {path}')
+        except (KeyError, TypeError, ValueError) as error:
+            errors.append(f'Invalid workflow inventory: {error}')
     if changed is not None and evidence_required(changed):
         reports = [p for p in changed if p.startswith('docs/verification/')
                    and p.endswith('.md') and p != 'docs/verification/TEMPLATE.md'

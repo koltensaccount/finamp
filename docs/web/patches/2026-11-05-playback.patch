@@ -1,0 +1,496 @@
+--- a/src/context/player-context.tsx
++++ b/src/context/player-context.tsx
+@@ -16,6 +16,20 @@
+   bookId?: string;
+   chapterIndex?: number;
+   chapterTitle?: string;
++}
++
++// Fisher-Yates with an anti-repeat guard when distinct tracks permit a new order.
++export function shuffleTracks(tracks: Track[], previousIds: string[] = tracks.map((t) => t.id), random = Math.random): Track[] {
++  const result = [...tracks];
++  for (let i = result.length - 1; i > 0; i--) {
++    const j = Math.floor(random() * (i + 1));
++    [result[i], result[j]] = [result[j], result[i]];
++  }
++  if (result.length > 1 && result.every((track, i) => track.id === previousIds[i])) {
++    const different = result.findIndex((track) => track.id !== result[0].id);
++    if (different > 0) [result[0], result[different]] = [result[different], result[0]];
++  }
++  return result;
+ }
+ 
+ interface PlayerContextType {
+@@ -33,6 +47,7 @@
+   sleepTimer: number | null; // minutes remaining
+   playTrack: (track: Track, newQueue?: Track[]) => void;
+   playBook: (book: { id: string; title: string; author: string; coverUrl?: string; duration?: number }) => void;
++  shuffleAndPlay: (tracks: Track[]) => void;
+   togglePlay: () => void;
+   seek: (seconds: number) => void;
+   setVolume: (vol: number) => void;
+@@ -65,6 +80,7 @@
+   sleepTimer: null,
+   playTrack: () => {},
+   playBook: () => {},
++  shuffleAndPlay: () => {},
+   togglePlay: () => {},
+   seek: () => {},
+   setVolume: () => {},
+@@ -85,6 +101,9 @@
+ export function PlayerProvider({ children }: { children: React.ReactNode }) {
+   const { updatePresence } = useAuth();
+   const audioRef = useRef<HTMLAudioElement | null>(null);
++  const linearQueueRef = useRef<Track[]>([]);
++  const lastShuffleRef = useRef<string[]>([]);
++  const sleepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+ 
+   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+@@ -110,105 +129,36 @@
+     const onDurationChange = () => setDuration(audio.duration || 0);
+     const onPlay = () => setIsPlaying(true);
+     const onPause = () => setIsPlaying(false);
+-    const onEnded = () => handleTrackEnded();
+ 
+     audio.addEventListener("timeupdate", onTimeUpdate);
+     audio.addEventListener("durationchange", onDurationChange);
+     audio.addEventListener("play", onPlay);
+     audio.addEventListener("pause", onPause);
+-    audio.addEventListener("ended", onEnded);
+ 
+     return () => {
+       audio.removeEventListener("timeupdate", onTimeUpdate);
+       audio.removeEventListener("durationchange", onDurationChange);
+       audio.removeEventListener("play", onPlay);
+       audio.removeEventListener("pause", onPause);
+-      audio.removeEventListener("ended", onEnded);
+       audio.pause();
++      if (sleepTimeoutRef.current !== null) clearTimeout(sleepTimeoutRef.current);
+     };
+   }, []);
+ 
+-  // Update MediaSession
+-  useEffect(() => {
+-    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+-
+-    if (currentTrack) {
+-      navigator.mediaSession.metadata = new MediaMetadata({
+-        title: currentTrack.title,
+-        artist: currentTrack.artist,
+-        album: currentTrack.album,
+-        artwork: [
+-          { src: currentTrack.coverUrl, sizes: "512x512", type: "image/jpeg" },
+-        ],
+-      });
+-
+-      navigator.mediaSession.setActionHandler("play", () => {
+-        audioRef.current?.play().catch(() => {});
+-      });
+-      navigator.mediaSession.setActionHandler("pause", () => {
+-        audioRef.current?.pause();
+-      });
+-      navigator.mediaSession.setActionHandler("previoustrack", () => {
+-        previousTrack();
+-      });
+-      navigator.mediaSession.setActionHandler("nexttrack", () => {
+-        nextTrack();
+-      });
+-      navigator.mediaSession.setActionHandler("seekto", (details) => {
+-        if (details.seekTime !== undefined && audioRef.current) {
+-          audioRef.current.currentTime = details.seekTime;
+-          setCurrentTime(details.seekTime);
+-        }
+-      });
+-      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+-        const skip = details.seekOffset || 15;
+-        seek(Math.max(0, currentTime - skip));
+-      });
+-      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+-        const skip = details.seekOffset || 30;
+-        seek(Math.min(duration, currentTime + skip));
+-      });
+-
+-      // Update presence
+-      updatePresence(`${currentTrack.title} — ${currentTrack.artist}`);
++  const playTrack = useCallback((track: Track, newQueue?: Track[]) => {
++    if (!audioRef.current) return;
++
++    if (newQueue && newQueue.length > 0) {
++      linearQueueRef.current = [...newQueue];
++      setIsShuffle(false);
++    }
++    const targetQueue = newQueue && newQueue.length > 0 ? newQueue : queue;
++    const index = targetQueue.findIndex((item) => item === track);
++    const matchingIndex = index >= 0 ? index : targetQueue.findIndex((item) => item.id === track.id);
++    if (matchingIndex >= 0) {
++      if (newQueue) setQueue(targetQueue);
++      setQueueIndex(matchingIndex);
+     } else {
+-      navigator.mediaSession.metadata = null;
+-      updatePresence("");
+-    }
+-  }, [currentTrack]);
+-
+-  // Sync position state to MediaSession
+-  useEffect(() => {
+-    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+-    if (duration > 0 && "setPositionState" in navigator.mediaSession) {
+-      try {
+-        navigator.mediaSession.setPositionState({
+-          duration: Math.max(0, duration),
+-          playbackRate: playbackRate,
+-          position: Math.min(Math.max(0, currentTime), duration),
+-        });
+-      } catch (_) {}
+-    }
+-  }, [currentTime, duration, playbackRate]);
+-
+-  // Handle track end
+-  const handleTrackEnded = () => {
+-    if (repeatMode === "one" && audioRef.current) {
+-      audioRef.current.currentTime = 0;
+-      audioRef.current.play().catch(() => {});
+-      return;
+-    }
+-    nextTrack();
+-  };
+-
+-  const playTrack = (track: Track, newQueue?: Track[]) => {
+-    if (!audioRef.current) return;
+-
+-    if (newQueue && newQueue.length > 0) {
+-      setQueue(newQueue);
+-      const idx = newQueue.findIndex((t) => t.id === track.id);
+-      setQueueIndex(idx >= 0 ? idx : 0);
+-    } else if (queue.length === 0) {
+       setQueue([track]);
+       setQueueIndex(0);
+     }
+@@ -219,7 +169,16 @@
+     audioRef.current.play().catch((err) => {
+       console.warn("Audio autoplay blocked, requires user click", err);
+     });
+-  };
++  }, [queue, playbackRate]);
++
++  const shuffleAndPlay = useCallback((tracks: Track[]) => {
++    if (!tracks.length) return;
++    const shuffled = shuffleTracks(tracks, lastShuffleRef.current.length ? lastShuffleRef.current : tracks.map((track) => track.id));
++    lastShuffleRef.current = shuffled.map((track) => track.id);
++    playTrack(shuffled[0], shuffled);
++    linearQueueRef.current = [...tracks];
++    setIsShuffle(true);
++  }, [playTrack]);
+ 
+   const playBook = (book: { id: string; title: string; author: string; coverUrl?: string; duration?: number }) => {
+     const bookTrack: Track = {
+@@ -245,11 +204,11 @@
+     }
+   };
+ 
+-  const seek = (seconds: number) => {
++  const seek = useCallback((seconds: number) => {
+     if (!audioRef.current) return;
+     audioRef.current.currentTime = seconds;
+     setCurrentTime(seconds);
+-  };
++  }, []);
+ 
+   const setVolume = (vol: number) => {
+     setVolumeState(vol);
+@@ -265,7 +224,7 @@
+     }
+   };
+ 
+-  const nextTrack = () => {
++  const nextTrack = useCallback(() => {
+     if (queue.length === 0) return;
+     let nextIdx = queueIndex + 1;
+     if (nextIdx >= queue.length) {
+@@ -278,12 +237,12 @@
+     }
+     setQueueIndex(nextIdx);
+     playTrack(queue[nextIdx]);
+-  };
+-
+-  const previousTrack = () => {
++  }, [queue, queueIndex, repeatMode, playTrack]);
++
++  const previousTrack = useCallback(() => {
+     if (!audioRef.current) return;
+     // If more than 3 seconds in, restart track
+-    if (currentTime > 3) {
++    if (audioRef.current.currentTime > 3) {
+       seek(0);
+       return;
+     }
+@@ -294,7 +253,25 @@
+     }
+     setQueueIndex(prevIdx);
+     playTrack(queue[prevIdx]);
+-  };
++  }, [queue, queueIndex, repeatMode, playTrack, seek]);
++
++  // Handle track end
++  const handleTrackEnded = useCallback(() => {
++    if (repeatMode === "one" && audioRef.current) {
++      audioRef.current.currentTime = 0;
++      audioRef.current.play().catch(() => {});
++      return;
++    }
++    nextTrack();
++  }, [repeatMode, nextTrack]);
++
++  useEffect(() => {
++    const audio = audioRef.current;
++    if (!audio) return;
++    audio.addEventListener("ended", handleTrackEnded);
++    return () => audio.removeEventListener("ended", handleTrackEnded);
++  }, [handleTrackEnded]);
++
+ 
+   const addToQueue = (track: Track) => {
+     setQueue((prev) => [...prev, track]);
+@@ -326,18 +303,35 @@
+   };
+ 
+   const toggleShuffle = () => {
+-    setIsShuffle((s) => !s);
++    const historyAndCurrent = queue.slice(0, queueIndex + 1);
++    const upcoming = queue.slice(queueIndex + 1);
++    const reordered = isShuffle
++      ? [...upcoming].sort((a, b) => {
++          const rank = (track: Track) => {
++            const index = linearQueueRef.current.indexOf(track);
++            return index < 0 ? Number.MAX_SAFE_INTEGER : index;
++          };
++          return rank(a) - rank(b);
++        })
++      : shuffleTracks(upcoming);
++    setQueue([...historyAndCurrent, ...reordered]);
++    setIsShuffle(!isShuffle);
+   };
+ 
+   const setSleepTimerDuration = (minutes: number | null) => {
++    if (sleepTimeoutRef.current !== null) {
++      clearTimeout(sleepTimeoutRef.current);
++      sleepTimeoutRef.current = null;
++    }
+     setSleepTimer(minutes);
+     if (!minutes) return;
+ 
+-    setTimeout(() => {
++    sleepTimeoutRef.current = setTimeout(() => {
+       if (audioRef.current) {
+         audioRef.current.pause();
+       }
+       setSleepTimer(null);
++      sleepTimeoutRef.current = null;
+     }, minutes * 60 * 1000);
+   };
+ 
+@@ -350,6 +344,80 @@
+       prev.map((t) => (t.id === trackId ? { ...t, isLiked: !t.isLiked } : t))
+     );
+   };
++
++  // Update MediaSession
++  useEffect(() => {
++    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
++
++    if (currentTrack) {
++      navigator.mediaSession.metadata = new MediaMetadata({
++        title: currentTrack.title,
++        artist: currentTrack.artist,
++        album: currentTrack.album,
++        artwork: [
++          { src: currentTrack.coverUrl, sizes: "512x512", type: "image/jpeg" },
++        ],
++      });
++
++      navigator.mediaSession.setActionHandler("play", () => {
++        audioRef.current?.play().catch(() => {});
++      });
++      navigator.mediaSession.setActionHandler("pause", () => {
++        audioRef.current?.pause();
++      });
++      navigator.mediaSession.setActionHandler("previoustrack", () => {
++        previousTrack();
++      });
++      navigator.mediaSession.setActionHandler("nexttrack", () => {
++        nextTrack();
++      });
++      navigator.mediaSession.setActionHandler("seekto", (details) => {
++        if (details.seekTime !== undefined && audioRef.current) {
++          audioRef.current.currentTime = details.seekTime;
++          setCurrentTime(details.seekTime);
++        }
++      });
++      navigator.mediaSession.setActionHandler("seekbackward", currentTrack.isAudiobook ? (details) => {
++        const skip = details.seekOffset || 15;
++        seek(Math.max(0, (audioRef.current?.currentTime || 0) - skip));
++      } : null);
++      navigator.mediaSession.setActionHandler("seekforward", currentTrack.isAudiobook ? (details) => {
++        const skip = details.seekOffset || 30;
++        const audio = audioRef.current;
++        if (audio) seek(Math.min(audio.duration || 0, audio.currentTime + skip));
++      } : null);
++
++    } else {
++      navigator.mediaSession.metadata = null;
++    }
++  }, [currentTrack, nextTrack, previousTrack, seek]);
++
++  useEffect(() => {
++    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
++      navigator.mediaSession.playbackState = currentTrack ? (isPlaying ? "playing" : "paused") : "none";
++    }
++  }, [currentTrack, isPlaying]);
++
++  // Sync position state to MediaSession
++  useEffect(() => {
++    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
++    if (duration > 0 && "setPositionState" in navigator.mediaSession) {
++      try {
++        navigator.mediaSession.setPositionState({
++          duration: Math.max(0, duration),
++          playbackRate: playbackRate,
++          position: Math.min(Math.max(0, currentTime), duration),
++        });
++      } catch {}
++    }
++  }, [currentTime, duration, playbackRate]);
++
++  useEffect(() => {
++    updatePresence(
++      currentTrack ? `${currentTrack.title} — ${currentTrack.artist}` : "",
++      currentTrack ? (isPlaying ? "playing" : "paused") : "idle"
++    );
++  }, [currentTrack, isPlaying, updatePresence]);
+ 
+   return (
+     <PlayerContext.Provider
+@@ -374,6 +442,7 @@
+         setPlaybackRate,
+         setRepeatMode,
+         toggleShuffle,
++        shuffleAndPlay,
+         nextTrack,
+         previousTrack,
+         addToQueue,
+--- a/src/context/auth-context.tsx
++++ b/src/context/auth-context.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
++import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+ 
+ export interface KBSession {
+   token: string;
+@@ -34,7 +34,7 @@
+   pairWithCode: (code: string) => Promise<boolean>;
+   generatePairCode: () => Promise<string | null>;
+   logout: () => Promise<void>;
+-  updatePresence: (nowPlayingTitle?: string) => Promise<void>;
++  updatePresence: (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => Promise<void>;
+ }
+ 
+ const AuthContext = createContext<AuthContextType>({
+@@ -49,6 +49,7 @@
+ });
+ 
+ export function AuthProvider({ children }: { children: React.ReactNode }) {
++  const presenceRef = useRef({ title: "", state: "idle" });
+   const [session, setSession] = useState<KBSession | null>(null);
+   const [isLoading, setIsLoading] = useState(true);
+ 
+@@ -174,7 +175,10 @@
+     localStorage.removeItem("kb_account_token");
+   };
+ 
+-  const updatePresence = useCallback(async (nowPlayingTitle?: string) => {
++  const updatePresence = useCallback(async (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => {
++    if (nowPlayingTitle !== undefined) {
++      presenceRef.current = { title: nowPlayingTitle, state: state || (nowPlayingTitle ? "playing" : "idle") };
++    }
+     if (!session?.token) return;
+     try {
+       await fetch("/api/account/presence", {
+@@ -185,8 +189,8 @@
+         },
+         body: JSON.stringify({
+           device_name: "Web PWA (" + (window.innerWidth < 768 ? "iPhone" : window.innerWidth <= 1024 ? "iPad" : "Mac") + ")",
+-          now_playing: nowPlayingTitle || "",
+-          state: nowPlayingTitle ? "playing" : "idle",
++          now_playing: presenceRef.current.title,
++          state: presenceRef.current.state,
+         }),
+       });
+     } catch (_) {}
+--- a/src/components/player/mini-player.tsx
++++ b/src/components/player/mini-player.tsx
+@@ -1,12 +1,12 @@
+ "use client";
+ 
+ import React from "react";
+-import { Play, Pause, SkipForward, BookOpen } from "lucide-react";
++import { Play, Pause, SkipBack, SkipForward, BookOpen } from "lucide-react";
+ import { usePlayer } from "@/context/player-context";
+ import { CoverArt } from "@/components/ui/cover-art";
+ 
+ export function MiniPlayer() {
+-  const { currentTrack, isPlaying, togglePlay, nextTrack, setIsExpanded } =
++  const { currentTrack, isPlaying, togglePlay, previousTrack, nextTrack, setIsExpanded } =
+     usePlayer();
+ 
+   if (!currentTrack) return null;
+@@ -48,8 +48,16 @@
+       >
+         <button
+           type="button"
++          onClick={previousTrack}
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
++          aria-label="Previous track"
++        >
++          <SkipBack className="w-5 h-5 fill-current" />
++        </button>
++        <button
++          type="button"
+           onClick={togglePlay}
+-          className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
+           aria-label={isPlaying ? "Pause" : "Play"}
+         >
+           {isPlaying ? (
+@@ -61,7 +69,7 @@
+         <button
+           type="button"
+           onClick={nextTrack}
+-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
+           aria-label="Next track"
+         >
+           <SkipForward className="w-5 h-5 fill-current" />
+--- a/src/components/views/album-detail-view.tsx
++++ b/src/components/views/album-detail-view.tsx
+@@ -45,7 +45,7 @@
+   onBack: () => void;
+   onSelectArtist: (artist: ArtistTarget) => void;
+ }) {
+-  const { playTrack, currentTrack, isPlaying, togglePlay } = usePlayer();
++  const { playTrack, shuffleAndPlay, currentTrack, isPlaying, togglePlay } = usePlayer();
+   const { session } = useAuth();
+ 
+   const [tracks, setTracks] = useState<AlbumTrackItem[]>([]);
+@@ -294,8 +294,7 @@
+   const handleShuffleAll = () => {
+     const queue = buildQueue();
+     if (queue.length > 0) {
+-      const shuffled = [...queue].sort(() => Math.random() - 0.5);
+-      playTrack(shuffled[0], shuffled);
++      shuffleAndPlay(queue);
+     }
+   };
+ 

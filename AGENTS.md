@@ -28,7 +28,8 @@ area being changed. Establish acceptance criteria and evidence before coding.
 
 - Preserve MPL-2.0 notices and Finamp playback, queue, offline, lyrics,
   normalization, background controls, reporting, and iOS behavior.
-- Album taps navigate without changing playback. Web must visually match native.
+- Album taps navigate without changing playback. Both clients follow the [shared workflow contract](docs/WORKFLOWS.md);
+  neither client is the automatic standard for behavior or design.
   Device registration is not cross-device playback. Never claim untested features.
 - Preserve user changes; use a separate work branch/worktree. Check concurrent
   work rather than assuming permanent ownership by an agent or branch name.

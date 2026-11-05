@@ -9,12 +9,16 @@ list of shipped capabilities**. Evidence belongs in [CURRENT_STATE](docs/CURRENT
 ## One beautiful product, everywhere
 
 Build a gorgeous, seamless, native-quality experience on iPhone, iPad, macOS,
-and the web PWA. Web must visually match native: the same product identity,
+and the web PWA. Both clients must converge on the same product identity,
 design tokens, typography hierarchy, artwork treatment, navigation concepts,
 mini-player, and interaction semantics. Adapt layout to touch, pointer, keyboard,
 screen size, accessibility, safe areas, and platform conventions without creating
 an unrelated website. Shared tokens and reference screenshots are contracts;
 independent implementations must demonstrate parity rather than assume it.
+Choose the simplest, most effective workflow for the task, then align both
+clients to that contract. Neither native nor web is the automatic standard;
+preserve useful platform capabilities while removing needless friction.
+See [shared workflows](docs/WORKFLOWS.md) for observable acceptance criteria.
 
 Album cover/title taps open album details. They never shuffle, start playback,
 replace the queue, or interrupt the current track. Play and Shuffle are explicit,

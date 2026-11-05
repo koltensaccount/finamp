@@ -1,0 +1,2853 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-05",
+  "principle": "Choose the simplest effective task workflow; neither native nor web is the automatic standard. Align both to a shared contract.",
+  "native_revision": "202eb017",
+  "scope_note": "Complete file-level inventory of native screens, menu files and settings-control files, and web UI/state/API source. Dynamic branches, OS-owned menus and physical-device behavior still require execution.",
+  "workflows": [
+    {
+      "id": "KB-001",
+      "area": "Account and onboarding",
+      "workflow": "Sign in and bootstrap",
+      "shared_acceptance": "Use one account; connect services without exposing provider/admin keys",
+      "native_evidence": "source-present",
+      "web_evidence": "live-pass",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-002",
+      "area": "Account and onboarding",
+      "workflow": "Pair another device",
+      "shared_acceptance": "Generate/approve/poll a short-lived code; establish the target session",
+      "native_evidence": "source-present",
+      "web_evidence": "contract-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-003",
+      "area": "Account and onboarding",
+      "workflow": "Restore/refresh session",
+      "shared_acceptance": "Restore valid sessions; refresh expiry; reject revoked sessions",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-004",
+      "area": "Account and onboarding",
+      "workflow": "List, rename, revoke devices",
+      "shared_acceptance": "Identify real devices and persist management actions",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-005",
+      "area": "Account and onboarding",
+      "workflow": "Sign out / account isolation",
+      "shared_acceptance": "Remove session and private client state; reject all protected API calls",
+      "native_evidence": "source-present",
+      "web_evidence": "live-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-006",
+      "area": "Account and onboarding",
+      "workflow": "Advanced server connection",
+      "shared_acceptance": "Offer advanced server setup without burdening normal onboarding",
+      "native_evidence": "source-present",
+      "web_evidence": "not-exposed",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-007",
+      "area": "Browse and discovery",
+      "workflow": "Home and recommendations",
+      "shared_acceptance": "Real, explainable library-driven sections; no fabricated personalization",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-008",
+      "area": "Browse and discovery",
+      "workflow": "Library categories",
+      "shared_acceptance": "Browse albums/artists/tracks/playlists and preserve position/back stack",
+      "native_evidence": "source-present",
+      "web_evidence": "source-present",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-009",
+      "area": "Browse and discovery",
+      "workflow": "Open album from every entry",
+      "shared_acceptance": "Album/title opens details; queue and playback remain unchanged",
+      "native_evidence": "source-present",
+      "web_evidence": "live-pass-home",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-010",
+      "area": "Browse and discovery",
+      "workflow": "Open artist",
+      "shared_acceptance": "Resolve actual identity; do not use name search as ownership evidence",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-011",
+      "area": "Browse and discovery",
+      "workflow": "Album editions/discography",
+      "shared_acceptance": "Explicit edition choice and chronology; album-concept differs from owned edition",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-012",
+      "area": "Browse and discovery",
+      "workflow": "Unified search",
+      "shared_acceptance": "One search experience across public catalog and owned media with honest availability",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-013",
+      "area": "Browse and discovery",
+      "workflow": "Search history",
+      "shared_acceptance": "Real viewed/search activity, persist/clear without seeded recents",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-014",
+      "area": "Browse and discovery",
+      "workflow": "Genres and browsing filters",
+      "shared_acceptance": "Task-focused filtering/sort; consistent semantics across clients",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-015",
+      "area": "Browse and discovery",
+      "workflow": "Back / refresh / deep links",
+      "shared_acceptance": "Back restores prior route; reload/deep link reconstructs intended screen",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-016",
+      "area": "Music playback and system controls",
+      "workflow": "Play album / selected track",
+      "shared_acceptance": "Explicit Play starts ordered playable tracks at the selected position",
+      "native_evidence": "source-present",
+      "web_evidence": "live-pass",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-017",
+      "area": "Music playback and system controls",
+      "workflow": "Pause / resume / seek",
+      "shared_acceptance": "Controls match the actual audio state; seek preserves chosen track",
+      "native_evidence": "source-present",
+      "web_evidence": "live-pass",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-018",
+      "area": "Music playback and system controls",
+      "workflow": "Previous / next inside app",
+      "shared_acceptance": "Previous restarts after threshold or moves back; Next advances one track",
+      "native_evidence": "source-present",
+      "web_evidence": "partial-mini",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-019",
+      "area": "Music playback and system controls",
+      "workflow": "Automatic next at track end",
+      "shared_acceptance": "Advance to next queued item, including while backgrounded; stop only at queue end",
+      "native_evidence": "source-present",
+      "web_evidence": "live-and-test-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-020",
+      "area": "Music playback and system controls",
+      "workflow": "Repeat off / one / all",
+      "shared_acceptance": "One repeats current; all wraps; off stops at queue end",
+      "native_evidence": "source-present",
+      "web_evidence": "test-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-021",
+      "area": "Music playback and system controls",
+      "workflow": "Shuffle",
+      "shared_acceptance": "Toggle reshuffles only upcoming tracks, preserving current/history; off restores remaining linear order. Explicit Shuffle starts a fresh permutation, avoids the immediately prior order when distinct tracks permit, and never loses/duplicates entries.",
+      "native_evidence": "source-present",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks",
+      "user_observation": "User reports the same queue each time. Initial web toggle only changed a flag; corrected source is covered by permutation/anti-repeat tests. Native source requests a fresh shuffle; physical parity remains unverified."
+    },
+    {
+      "id": "KB-022",
+      "area": "Music playback and system controls",
+      "workflow": "Queue row selection",
+      "shared_acceptance": "Selecting a row updates active cursor; Next/Previous continue from it",
+      "native_evidence": "source-present",
+      "web_evidence": "test-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-023",
+      "area": "Music playback and system controls",
+      "workflow": "Queue add / next / remove / clear",
+      "shared_acceptance": "Maintain current identity/cursor and predictable subsequent playback",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-024",
+      "area": "Music playback and system controls",
+      "workflow": "Queue restore after reload",
+      "shared_acceptance": "Restore queue, item, position and modes per account; avoid unwanted autoplay",
+      "native_evidence": "source-present",
+      "web_evidence": "live-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-025",
+      "area": "Music playback and system controls",
+      "workflow": "Sleep timer replace / cancel",
+      "shared_acceptance": "Only the current timer may pause; canceled/replaced timers cannot fire",
+      "native_evidence": "source-present",
+      "web_evidence": "test-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-026",
+      "area": "Music playback and system controls",
+      "workflow": "Playback speed",
+      "shared_acceptance": "Correct rate and clear indication, respecting music/book context",
+      "native_evidence": "source-present",
+      "web_evidence": "source-present",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-027",
+      "area": "Music playback and system controls",
+      "workflow": "Music lock-screen / headset",
+      "shared_acceptance": "Music exposes previous/next track, seek and actual playback state",
+      "native_evidence": "source-present",
+      "web_evidence": "user-iphone-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-028",
+      "area": "Music playback and system controls",
+      "workflow": "Audio interruption / background",
+      "shared_acceptance": "Calls/headphones/network interruptions preserve state and recover predictably",
+      "native_evidence": "source-present",
+      "web_evidence": "physical-test-needed",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-029",
+      "area": "Music playback and system controls",
+      "workflow": "Lyrics and credits",
+      "shared_acceptance": "Real synchronized lyrics and attributable full ordered credits",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-030",
+      "area": "Music playback and system controls",
+      "workflow": "Volume / output / normalization",
+      "shared_acceptance": "Accessible volume and honest output/quality; platform-specific audio options explicit",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-031",
+      "area": "Music playback and system controls",
+      "workflow": "Playback history / reporting",
+      "shared_acceptance": "Record actual listening once; preserve offline reporting and prevent duplicates",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-032",
+      "area": "Collection actions and menus",
+      "workflow": "Favorite / unfavorite",
+      "shared_acceptance": "Persist to account/library and show failures; reloading/other clients agree",
+      "native_evidence": "source-present",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-033",
+      "area": "Collection actions and menus",
+      "workflow": "Playlist create / edit / add / remove",
+      "shared_acceptance": "Same durable playlist operations; navigation never starts playback",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-034",
+      "area": "Collection actions and menus",
+      "workflow": "Mix / radio",
+      "shared_acceptance": "Explicit actions from track/album/artist with real resulting queue",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-035",
+      "area": "Collection actions and menus",
+      "workflow": "Track / album / artist context menu",
+      "shared_acceptance": "Expose task-relevant navigation, queue, collection and download actions consistently",
+      "native_evidence": "source-present",
+      "web_evidence": "not-equivalent",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-036",
+      "area": "Collection actions and menus",
+      "workflow": "Sharing and exports",
+      "shared_acceptance": "Portable deep links/state exports without exposing credentials",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-037",
+      "area": "Collection actions and menus",
+      "workflow": "Deletion actions",
+      "shared_acceptance": "Only explicit scoped deletion; safe confirmation/recovery, never automatic matching cleanup",
+      "native_evidence": "source-present",
+      "web_evidence": "decision-needed",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-038",
+      "area": "Offline and acquisition",
+      "workflow": "Download music / monitor / lock / remove",
+      "shared_acceptance": "Retain native offline; PWA browser limits explicit; safe progress and removal",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-039",
+      "area": "Offline and acquisition",
+      "workflow": "Connection loss and retry",
+      "shared_acceptance": "Show outage honestly; preserve cached/local data and avoid silent empty-success",
+      "native_evidence": "source-present",
+      "web_evidence": "source-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-040",
+      "area": "Offline and acquisition",
+      "workflow": "Request album / status",
+      "shared_acceptance": "Confirm server acceptance; show real state and disabled dispatch; failure must not say requested",
+      "native_evidence": "source-present",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-041",
+      "area": "Offline and acquisition",
+      "workflow": "Identity and availability",
+      "shared_acceptance": "Do not infer ownership from title; distinguish ambiguous/no candidate/partial/full",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-042",
+      "area": "Offline and acquisition",
+      "workflow": "Metadata and media safety",
+      "shared_acceptance": "Staging/backups/audio integrity/atomic logical rollout/rollback before publishing",
+      "native_evidence": "backend-required",
+      "web_evidence": "backend-source-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-043",
+      "area": "Offline and acquisition",
+      "workflow": "Spotify reconciliation",
+      "shared_acceptance": "Reviewable identity/version mappings; retain unmatched items; no invented sources",
+      "native_evidence": "not-established",
+      "web_evidence": "not-established",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-044",
+      "area": "Books and audiobooks",
+      "workflow": "Browse work / edition / formats",
+      "shared_acceptance": "Trustworthy title/author/narrator/cover and exact availability",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-045",
+      "area": "Books and audiobooks",
+      "workflow": "Read actual EPUB",
+      "shared_acceptance": "Render the selected EPUB chapters; never unrelated placeholder prose",
+      "native_evidence": "source-present",
+      "web_evidence": "live-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-046",
+      "area": "Books and audiobooks",
+      "workflow": "Reading controls and contents",
+      "shared_acceptance": "Chapter navigation, font/theme, contents and meaningful reading position",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-047",
+      "area": "Books and audiobooks",
+      "workflow": "Listen selected chapter",
+      "shared_acceptance": "Chapter selection changes audio position/track instead of restarting the whole book",
+      "native_evidence": "source-present",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-048",
+      "area": "Books and audiobooks",
+      "workflow": "Reading/listening progress",
+      "shared_acceptance": "Persist actual position per account; define offline/reconnect conflict rules",
+      "native_evidence": "source-present",
+      "web_evidence": "source-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-049",
+      "area": "Books and audiobooks",
+      "workflow": "Read here / listen here",
+      "shared_acceptance": "Use evidenced edition alignment, expose uncertainty; never advertise an unimplemented handoff",
+      "native_evidence": "source-present",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-050",
+      "area": "Books and audiobooks",
+      "workflow": "Bookmarks / annotations",
+      "shared_acceptance": "Persist and recover actual locations; expose supported operations",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-051",
+      "area": "Books and audiobooks",
+      "workflow": "Book offline downloads",
+      "shared_acceptance": "Actual asset storage, integrity and offline continuation; browser limits explicit",
+      "native_evidence": "source-present",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-052",
+      "area": "Books and audiobooks",
+      "workflow": "Request book and status",
+      "shared_acceptance": "Request correct format with validated response and real lifecycle",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-053",
+      "area": "Device continuity",
+      "workflow": "Truthful device awareness",
+      "shared_acceptance": "Current state, stale-device handling, account isolation and accurate paused/playing",
+      "native_evidence": "not-established",
+      "web_evidence": "source-fail",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-054",
+      "area": "Device continuity",
+      "workflow": "Remote controls / queue handoff",
+      "shared_acceptance": "Transfer queue/item/position/modes with acknowledgement, source stop and failure recovery",
+      "native_evidence": "not-established",
+      "web_evidence": "not-found",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-055",
+      "area": "Device continuity",
+      "workflow": "Preference sync",
+      "shared_acceptance": "Shared preferences round-trip through account; platform-only preferences remain scoped",
+      "native_evidence": "not-established",
+      "web_evidence": "local-only",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-056",
+      "area": "Quality, settings and operations",
+      "workflow": "Shared visual language",
+      "shared_acceptance": "Same shared tokens/interaction semantics; platform-adaptive layouts, not forced identical geometry",
+      "native_evidence": "source-present",
+      "web_evidence": "no-shared-contract",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-057",
+      "area": "Quality, settings and operations",
+      "workflow": "Accessibility / keyboard / text size",
+      "shared_acceptance": "Named controls, keyboard entry/focus, readable scaling and screen-reader routes",
+      "native_evidence": "source-present",
+      "web_evidence": "source-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-058",
+      "area": "Quality, settings and operations",
+      "workflow": "Settings groups",
+      "shared_acceptance": "Expose useful user tasks consistently; hide implementation plumbing; platform-only options documented",
+      "native_evidence": "source-present",
+      "web_evidence": "not-equivalent",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-059",
+      "area": "Quality, settings and operations",
+      "workflow": "Error / loading / empty / artwork states",
+      "shared_acceptance": "Each state distinct, useful and recoverable with truthful data",
+      "native_evidence": "source-present",
+      "web_evidence": "partial",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-060",
+      "area": "Quality, settings and operations",
+      "workflow": "Logs / bug report",
+      "shared_acceptance": "Real diagnostic submission with privacy filtering and visible failures",
+      "native_evidence": "source-present",
+      "web_evidence": "source-present",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    },
+    {
+      "id": "KB-061",
+      "area": "Quality, settings and operations",
+      "workflow": "Release / deploy / rollback",
+      "shared_acceptance": "Versioned sources, reproducible builds, tested updates and safe rollback",
+      "native_evidence": "source-present",
+      "web_evidence": "unversioned-source-gap",
+      "required_platforms": [
+        "iPhone native",
+        "iPad native",
+        "macOS native",
+        "iPhone Safari PWA",
+        "tablet web",
+        "desktop web"
+      ],
+      "physical_validation": "required for audio/system controls; otherwise fixture plus browser/native checks"
+    }
+  ],
+  "native_surfaces": [
+    {
+      "path": "lib/components/AudioServiceSettingsScreen/buffer_duration_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "8d38f4ac8e8efec7c4deff5ebe48a3e0cc1e7b16461896f268164f2b4eefa4be"
+    },
+    {
+      "path": "lib/components/AudioServiceSettingsScreen/loadQueueOnStartup_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "fcc462001d9657e9ef9c17ec82de8b392d1ce50452408eaa8bcfcf914e5eb50a"
+    },
+    {
+      "path": "lib/components/AudioServiceSettingsScreen/stop_foreground_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "6de2faaef71cffda82ea53713015e2f1f0fdba714e3769348657dedd72bcb89d"
+    },
+    {
+      "path": "lib/components/AudioServiceSettingsScreen/track_shuffle_item_count_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "9cdcfa4e916a9207c327d067ca79a817a1ff591664f2114f4af47eb4d4111f8f"
+    },
+    {
+      "path": "lib/components/DownloadLocationSettingsScreen/download_location_delete_dialog.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "bacf768833bda1e0debb5fa6fee4eebfef7d4756132d3cb8cc53a8af98fe644b"
+    },
+    {
+      "path": "lib/components/DownloadLocationSettingsScreen/download_location_list.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "c2b5a6b8b98ee93e55335a0ff43dfc15d0eeb153eb655248a1b743b8678c90eb"
+    },
+    {
+      "path": "lib/components/DownloadLocationSettingsScreen/download_location_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "ab43d31f90fab78b400da7da8892e2d7d308f809933ab7edc70e4f7eacf4696a"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/FastScrollSelector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "da30845fd771f3981e55119d31f2e5815e674861421f49ad6a77aa0107e7c168"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/auto_expand_player_screen.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "16d395fb41f980d742352e19cd8d46bbe94895c1ccf27adb6f0b67c60f9727cd"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/item_swipe_action_dropdown_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "780977f34feb10f3d67e3a706dc85798fcb5113f54ac763e4b79521e7f45d7d9"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/keep_screen_on_dropdown_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "fb38258c21d2f1e1e8607e3f0b2325a02fd031cc000a8b7e4d7af7f3a9e7ab69"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/keep_screen_on_while_charging_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "af3233976ddf4ae1a986ef4b8b0cf46d81446eacd2ac0d34053826572efcdc61"
+    },
+    {
+      "path": "lib/components/InteractionSettingsScreen/previous_tracks_persistence_mode_dropdown_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "3adbbf8b6ca0773eb93d06d94762e4a153f0114a6fcc5a77ab25cb241dbdbddc"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/CustomizationSettingsScreen/playback_speed_control_visibility_dropdown_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "8804f852a18545e1280de0e9426dccb62c85fb4c46351f08a98df31d89f5798b"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/CustomizationSettingsScreen/tile_additional_info_type_dropdown_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "052df78009042498348b33c00109ce6fcbc8d7da987c841b91cf3eaed55cc58a"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/TabsSettingsScreen/hide_tab_toggle.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "3cf4e3d66b6e70030218f0f3884532d3d62f6445fb2218b085839844d861634c"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/accent_color_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "ae4980f592d27fc5cf5def6dc893074a9d4c4159a428253ba955bad9062db359"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/amoled_theme.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "980b60e659bea01dcf2b7a8d232e8278d78aa35388ee3158af9d85f96ce03356"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/automatic_accent_color_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "74e9c2edb1b3133a432ec46b48b8bd8c152cb5cf8f7f9662bafea7c1c71ee675"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/player_screen_minimum_cover_padding_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "44fa8fe7d5b49ba670d88791a6838516612cf012ba57d6549d21fcea8b7abb2b"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/show_artist_chip_image_toggle.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "1807cda1c58f8492464416e04d416b538cd540c649f261414161312d037e9e20"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/show_text_on_grid_view_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "5ebe2c4b2776b676b3b79525e02e401002484c42070a8e855f7dd71879303e12"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/theme_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "b924809a72d380defc2b8ca3a5c656c671f9f73955255c56a0a230260e53de4a"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/use_cover_as_background_toggle.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "813fc9dc409730077e47cc4618429815d5607a22e2e2fb24ca62ac74f86a26db"
+    },
+    {
+      "path": "lib/components/LayoutSettingsScreen/use_monochrome_icon.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "18131e61b2de55e0ed7c4c5884965a72e3e91ed517e8f08ed04784fcb65873fd"
+    },
+    {
+      "path": "lib/components/NetworkSettingsScreen/active_network_display.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "9cfea62adda23a0153777b03751c92715e568c35092662bae09c53aa3e2b325c"
+    },
+    {
+      "path": "lib/components/NetworkSettingsScreen/auto_offline_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "770d24468f6a0f0deb6fc6fd665914c16d8e85eac0b3bea24ab28d51d3cc2654"
+    },
+    {
+      "path": "lib/components/NetworkSettingsScreen/prefer_local_network_address_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "a4db467d54449ebd08562422b9bc6ed7adaf1d208223faf0affc6a72a42ab52c"
+    },
+    {
+      "path": "lib/components/NetworkSettingsScreen/prefer_local_network_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "2efb9d74582d55d36cf2c7ca292949bdee1e71d9b457f68748c94d2163149733"
+    },
+    {
+      "path": "lib/components/NetworkSettingsScreen/public_address_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "ff8bd17df6fb017f8100541a94e07e36cab6394b616296abc3dfca6712707838"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/discord_rpc_icon_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "480d1b5bdcce98e67246116dc3963708b390e81e2e0f49a8fdadd3c53b8cd697"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/enable_playon_toggle.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "f9f05140e6a9e5d73aa7e001a70a5cbc8f62a5c57dce2bcf8115f614f4fa717e"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/enabled_discord_rpc.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "a0aea6883079abe9be3055f92d51995326d04910932a6c58f7c171d7812b3cda"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/periodic_playback_session_update_frequency_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "0055e043467f2169bed5af956df15b241b4cf93749f7b0438d3bac98b2abcbd0"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/play_on_reconnection_delay_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "047a7d813c3f94a5883660d3f743e42c47d26b526bd684429daa0378cb61d26f"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/play_on_stale_delay_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "6e01debee6707c822f02560da6fe665f5e5dbe70a0d76778d170a81258193040"
+    },
+    {
+      "path": "lib/components/PlaybackReportingSettingsScreen/report_queue_to_server_toggle.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "0a0edaf2b4ed43e27608ce33712c4ab41f982286342b5eaba0cf4ee18b597534"
+    },
+    {
+      "path": "lib/components/SettingsScreen/finamp_settings_dropdown.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "0b98919713d84f31c44a7675aea72b439ca953485c8d71bbff70161445eaba19"
+    },
+    {
+      "path": "lib/components/SettingsScreen/logout_list_tile.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "824c0821435d0b5e1a25b186bbd2aedd796ecf0a25cb1a570c0d95bd3735434b"
+    },
+    {
+      "path": "lib/components/SettingsScreen/subtitle_with_more_info_dialog.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "43737f57a72682fd3dab2d0120eccef7894ef4cbbfb9df243a8d9f46b4aa6cbf"
+    },
+    {
+      "path": "lib/components/TranscodingSettingsScreen/bitrate_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "b4199b8f16430b4ec05d45c8a806adc7b6941875ac8584caf5847ff4a677775b"
+    },
+    {
+      "path": "lib/components/TranscodingSettingsScreen/transcode_switch.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "e7bb37fd57f9470beeea1fc0a44476c976582633e74456892d0283e22a622d84"
+    },
+    {
+      "path": "lib/components/VolumeNormalizationSettingsScreen/volume_normalization_ios_base_gain_editor.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "1f883c30d0c4730f98d928ff7143b6bb06557c1d576057d94702aa5bd82a339e"
+    },
+    {
+      "path": "lib/components/VolumeNormalizationSettingsScreen/volume_normalization_mode_selector.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "79f818f505f919ed4648418d905dbff51d6bd9aa3ce57f7184233130f9902f19"
+    },
+    {
+      "path": "lib/components/VolumeNormalizationSettingsScreen/volume_normalization_switch.dart",
+      "kind": "settings control",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "c10107642b03a55619c86387bb19e7d55655c0cdf338fd668a605b02ec8566b6"
+    },
+    {
+      "path": "lib/menus/album_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/album-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "MixBuilderMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry",
+        "DeleteFromServerMenuEntry"
+      ],
+      "sha256": "5cc370a20cb2dcc89e81e55ff62fbffd48aca98c5d0a57230ea1f695c3acf42d"
+    },
+    {
+      "path": "lib/menus/artist_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/artist-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "MixBuilderMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry"
+      ],
+      "sha256": "48c65a55a7788806a04f9b8ceee88c38426901c4c8e64e89aff063262ac8b407"
+    },
+    {
+      "path": "lib/menus/choice_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "e4d1de323ef48309dcfdaf51f7098c52d547a549cb337814cfb398592a785b91"
+    },
+    {
+      "path": "lib/menus/client_certificate_authentication_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/client-certificate-authentication-menu"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "9747b14f7c78027f01960d9ba91c6d43cd5d3337abe030c3cb27ff20f01d2371"
+    },
+    {
+      "path": "lib/menus/collection_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/collection-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "MixBuilderMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry"
+      ],
+      "sha256": "142b9f4870c26520a87ab52709553d531ed136b0259d65a1e39ece1c6a6d45de"
+    },
+    {
+      "path": "lib/menus/components/icon_button_with_semantics.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "5561916aaf7095b7d091902a8a930c54a7d91364a9896eef604c851672c310ec"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/adaptive_download_lock_delete_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "DownloadMenuEntry",
+        "DeleteFromDeviceMenuEntry",
+        "LockDownloadMenuEntry"
+      ],
+      "sha256": "6a3515b82a6c43b1ca3be9b3691a0945be129258eef4c422476d76db040f0706"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/add_to_playlist_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "AddToPlaylistMenuEntry"
+      ],
+      "sha256": "5882540a39d4d41f75282eb8050c0908589d52facaa81ec5101a79c02837bc9a"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/clear_queue_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "ClearQueueMenuEntry"
+      ],
+      "sha256": "d296b673884d4dc423a7b434f532f3fe03b28689f66fb6fee298780c92fca5cb"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/create_playlist_from_current_queue.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "CreatePlaylistFromCurrentQueueMenuEntry"
+      ],
+      "sha256": "32c2d14f1df81175e4ce01e597c626ef6f75824e4e39cdff947c86ff5381ebf1"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/delete_from_device_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "DeleteFromDeviceMenuEntry"
+      ],
+      "sha256": "0aee1fb3e91739724a4ad5bcd00aaa81632da396a46f3a20669163b60ab453c3"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/delete_from_server_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "DeleteFromServerMenuEntry"
+      ],
+      "sha256": "f7c261d5c0e316fd6795498ce1e1229a1ce8bffccbaa8110bc9d89131fd7d0c4"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/dismiss_all_snackbars_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "DismissAllSnackbarsMenuEntry"
+      ],
+      "sha256": "e2b270d55785cdc3495442c2ee4f1dda83dd8a7cfb0ce53955475e0bf7c6cd04"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/download_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "DownloadMenuEntry"
+      ],
+      "sha256": "101d7ebfbeab0c57a2b709bf44394b7deade6b9894dba8dbbb3bf888245c4cbc"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/edit_home_section_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "EditHomeSectionMenuEntry"
+      ],
+      "sha256": "f60e2e344ff2cae2a6b8a41257ad95a0b7aff95409a46ebbb876abb18deb4f5b"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/edit_item_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "EditItemMenuEntry"
+      ],
+      "sha256": "c43ca0cffa5a2b380792b5474d05f3ff59f6f13477d7730f8fd63b3b652e1bcd"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/go_to_album_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "GoToAlbumMenuEntry"
+      ],
+      "sha256": "696cdc002d27054d3a31c5458383fe3b38384450ac0cc06f712e954f4c17088c"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/go_to_artist_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "GoToArtistMenuEntry"
+      ],
+      "sha256": "8e2dff2cfdaecf856f7610a8473bf408fdc6c5e66e562a7acb8c7bf0d915a3c0"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/go_to_genre_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "GoToGenreMenuEntry"
+      ],
+      "sha256": "53bbe3cf32e882b6a970dd3fca679114c94d4abe5857cead51ccae86975b45ff"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/instant_mix_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "InstantMixMenuEntry"
+      ],
+      "sha256": "5c1cd746bfca84342db5c116750d6d1a5a88694c319ccd827d04e64e0730dd45"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/lock_download_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "LockDownloadMenuEntry"
+      ],
+      "sha256": "136402a7c71daca4d6fd021002bc2f74b5700214fbb09ec30e09354699b5d651"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "c60a720f7ed993239242db656f47c5b2967df0e30d2e71f77bc11935a23395ed"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/mix_builder_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "MixBuilderMenuEntry"
+      ],
+      "sha256": "c02730d7718d1efcbd2ff46c80d9858c4bcaa38a64bfa08641e022ab37e36c15"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/remove_from_current_playlist_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "RemoveFromCurrentPlaylistMenuEntry"
+      ],
+      "sha256": "1a6eaaf91eabf355cdfce2ad2e74d352eba48ffa11167f1c227aae2a6af73b82"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/remove_from_queue_menbu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "RemoveFromQueueMenuEntry"
+      ],
+      "sha256": "fcef9e0691324ec802b66e9c0cb92fb16f2b00e6378773ef28600fbba90496e7"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/restore_queue_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry"
+      ],
+      "sha256": "f8485260f49e73fd1a320a985aa3006b18569dfdff67a8bbe74342dc3d0db826"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/start_radio_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "StartRadioMenuEntry"
+      ],
+      "sha256": "8ba26d37618bf4139778af847d386ad97627972eaf02475a4a4e52905ea3ab66"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/toggle_favorite_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "ToggleFavoriteMenuEntry"
+      ],
+      "sha256": "2fd5ec8d12356120e77678431222698f7bcbdb3875a013f335defcaf91593056"
+    },
+    {
+      "path": "lib/menus/components/menuEntries/view_logs_menu_entry.dart",
+      "kind": "menu entry",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [
+        "ViewLogsMenuEntry"
+      ],
+      "sha256": "343180f40a363c00b261711625e65fd8e4a9ee550a29c805b874f3731648581c"
+    },
+    {
+      "path": "lib/menus/components/menu_item_info_header.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "438786eabeb5f13efc780be6538b1b34dc75f3f1173983761d50eef3180da1c3"
+    },
+    {
+      "path": "lib/menus/components/overflow_menu_button.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "76cdd96cdc598b3f0606e5d940c73ee6e55b4f2a1df28212e242a645c0c55949"
+    },
+    {
+      "path": "lib/menus/components/playbackActions/playback_action.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "4085486e7d413929c4b22fbe345d8dd07faf25543f4aa5a4e42669f4bfe54259"
+    },
+    {
+      "path": "lib/menus/components/playbackActions/playback_action_page_indicator.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "3c8bdd7103fc2f56d6d3fdf4bc82bf7ad44cdad47d9aae3c0080ff0868725c66"
+    },
+    {
+      "path": "lib/menus/components/playbackActions/playback_action_row.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "433dce78dad5c71fc2498c1cd61072d00567c1674c0c352f27b69a3a418ae0a6"
+    },
+    {
+      "path": "lib/menus/components/playbackActions/playback_actions.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "d9851a6cf592889fec395d8ec4da29089bd28310707e7d17ee7bf380b28d91ee"
+    },
+    {
+      "path": "lib/menus/components/radio_mode_menu.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "282b565c1fe1abe9f5a7314e2e1d361e9a986f1612368230438264b3c17a7a6c"
+    },
+    {
+      "path": "lib/menus/components/speed_menu.dart",
+      "kind": "menu support component",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "0c8c9b0dc70bad9bfe792e95579e796b4803b2f123fc62fe71fb22a42e700fcd"
+    },
+    {
+      "path": "lib/menus/genre_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/genre-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "MixBuilderMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry"
+      ],
+      "sha256": "f90517dcf04de542d4c719b18d1d8629059bfffa9f6e32c3fe92149334797e51"
+    },
+    {
+      "path": "lib/menus/home_section_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/album-menu"
+      ],
+      "composed_menu_entries": [
+        "EditHomeSectionMenuEntry",
+        "DownloadMenuEntry",
+        "LockDownloadMenuEntry"
+      ],
+      "sha256": "09b433b337210b12724cfa341015599d005e773854fe3e0a445b5559b0ed5670"
+    },
+    {
+      "path": "lib/menus/music_screen_drawer.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "34be79e4ad301ce1061a68185d99436dc5cd1d1219e181fa6f58be101f737251"
+    },
+    {
+      "path": "lib/menus/output_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/output-menu"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "f0f661d589fb02a2b1304855228b0c9eff9d99b8a6a0cefb7b761b75fb985adf"
+    },
+    {
+      "path": "lib/menus/playlist_actions_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/playlist-actions-menu"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "56558f2185701d202a367c7b87c7647bd0a8d9384546cca09392e41fed87f314"
+    },
+    {
+      "path": "lib/menus/playlist_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/playlist-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "MixBuilderMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry",
+        "EditItemMenuEntry",
+        "DeleteFromServerMenuEntry"
+      ],
+      "sha256": "cc8f92dc87c50e666822efda5e2d46be310b0b5751132b3ba60dc75ce85671eb"
+    },
+    {
+      "path": "lib/menus/queue_restore_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/album-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry"
+      ],
+      "sha256": "9a1df913295af6882291069514a22fb6e43313401d65e34ee483c15ada80cd14"
+    },
+    {
+      "path": "lib/menus/quick_connect_authorization_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/quick-connect-authorization-menu"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "25e41e7db59fea68b8fa25a5edbd60e28816e890e0da61cbdfbeaa451ce7b1e0"
+    },
+    {
+      "path": "lib/menus/server_sharing_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/server-sharing-panel"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "42a6bf5897a5f3f349e3912459c7a1b3f302f275516d87235adb026d4cc62ae7"
+    },
+    {
+      "path": "lib/menus/sleep_timer_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "1df26409e9c0b6627674c8074e73c1cad8e2835f301c2c54948869647535bef7"
+    },
+    {
+      "path": "lib/menus/track_menu.dart",
+      "kind": "menu",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/track-menu"
+      ],
+      "composed_menu_entries": [
+        "RestoreQueueMenuEntry",
+        "GoToArtistMenuEntry",
+        "GoToAlbumMenuEntry",
+        "AddToPlaylistMenuEntry",
+        "RemoveFromCurrentPlaylistMenuEntry",
+        "InstantMixMenuEntry",
+        "StartRadioMenuEntry",
+        "AdaptiveDownloadLockDeleteMenuEntry",
+        "ToggleFavoriteMenuEntry",
+        "CreatePlaylistFromCurrentQueueMenuEntry",
+        "ClearQueueMenuEntry",
+        "DeleteFromServerMenuEntry",
+        "RemoveFromQueueMenuEntry"
+      ],
+      "sha256": "257f9249f61509e71c8536d1facf0ee605997d73e313ff71cc0c2a11eef1d958"
+    },
+    {
+      "path": "lib/screens/accessibility_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/accessibility"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "def1c0dceb15540959b73b891967e7f7ec7a1add098912eb5afe824c844f2522"
+    },
+    {
+      "path": "lib/screens/account_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/settings-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/account"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "e38fb67e39f2c778c4ec8d5ee806a89dff75792d0373291bafb36173c7fb25e2"
+    },
+    {
+      "path": "lib/screens/active_downloads_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/downloads/errors"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "ac93429305fd1baf8f25a02b4abec5441c8c300bc1fef787dae15539b89f5280"
+    },
+    {
+      "path": "lib/screens/add_download_location_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/downloadlocations/add"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "349fa09c38522c0f7cc1ac3a9cd74e32c789b1ed59ce8d4df10b404452c83c54"
+    },
+    {
+      "path": "lib/screens/advanced_login_options_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/login/advanced"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "85bd1e2b0f0658629a80a89acd2f975c27da98ecdf14640ed065909c6ead9113"
+    },
+    {
+      "path": "lib/screens/album_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/album-detail-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/music/album"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "5996c2c75f34f6547bccef1ef6a5c6a80ecdde8b5690b477f6dd88d41f66b0b8"
+    },
+    {
+      "path": "lib/screens/album_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/layout/album"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "c23b8f4baa6df417d6e075ddf8f4cc3e4eebc70868524422321b23a61a5ae999"
+    },
+    {
+      "path": "lib/screens/artist_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/artist-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/music/artist"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "3b761d8481fe6c1709953630061e003145c78a76066bcc5669185c53823736a8"
+    },
+    {
+      "path": "lib/screens/artist_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/artist"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "67ea0c663219bba4a34f3b4881cdd0b977957720ac5029666e624aa41af58087"
+    },
+    {
+      "path": "lib/screens/audio_service_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/audioservice"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "2016f1c453488b41e7e5f9acfa66ec394759d55c8e2090adaa4295c4596ed200"
+    },
+    {
+      "path": "lib/screens/audiobook_player_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/player/full-player-sheet.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/audiobook_player"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "4b6a86715be29302243c505799f4220cde62b3a0c836a540e736ea777bb90eb2"
+    },
+    {
+      "path": "lib/screens/blurred_player_screen_background.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "8f8eaca88be46a3417b400713cf8fa883b83b3805acb8972fff18fc96c387de9"
+    },
+    {
+      "path": "lib/screens/book_detail_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/book-detail-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/book_detail"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "6915ad87f70d6180f4c52f3f98cf6e988d148e8cebd545d77554d49600fd41c7"
+    },
+    {
+      "path": "lib/screens/books_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/books-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/books"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "754a24c3a9522a7ee54ac831fe42541de102aaa3f240ec48893766553b5b8da5"
+    },
+    {
+      "path": "lib/screens/catalog_album_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/album-detail-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/catalog-album"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "45ebd55315f6012a67db9b87e65537beb4cb9467b12391bc56840597df5c546b"
+    },
+    {
+      "path": "lib/screens/catalog_artist_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/artist-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/catalog/artist"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "5aeba9d164a95f716b2648a3aa05a02daef98db3e6f043cd5f14846014c8343b"
+    },
+    {
+      "path": "lib/screens/catalog_discography_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/artist-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/catalog/discography"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "bb3a2e6163616d2ed8ed9409f4fcaa36ec4d947b9576dc1de2ee633b9254a14d"
+    },
+    {
+      "path": "lib/screens/catalog_search_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/search-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/catalog-search"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "15c6e21ebed190596f8f011ef5ff70f1bb1e38e7d3cdeb59d8287733d277040f"
+    },
+    {
+      "path": "lib/screens/catalog_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/catalog"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "f5d7774a17ba7fc6e9a6670c5850ef12029ac6df61703a8c37588c7b9d7b45fd"
+    },
+    {
+      "path": "lib/screens/content_view_type_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/content-view-type"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "2eefb279de93db5bd282dccf722fd1eb1076a6333cfcad57fc59b791a4e9c84c"
+    },
+    {
+      "path": "lib/screens/customization_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/customization"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "c708993e436ca8c0e7b3d6a104001b555a252fa847e15803d71615de769c8126"
+    },
+    {
+      "path": "lib/screens/downloads_location_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/downloadlocations"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "d5540995c4eeb285706f1e6d62319cbb3a2becdd57e557875d72123c650895d9"
+    },
+    {
+      "path": "lib/screens/downloads_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/downloads"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "42764b1527b1a5809d845710f7f29e014203c2095ded1ab15a14298d08458f50"
+    },
+    {
+      "path": "lib/screens/downloads_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/downloads"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "abbae5748372df4affea175556b39ec84f3573a023186e377768ef24f940384b"
+    },
+    {
+      "path": "lib/screens/epub_reader_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/book-detail-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/epub_reader"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "3f45ba2752220e7adff362eb334dc1b06a095291e730e9e3e300bf457067db2f"
+    },
+    {
+      "path": "lib/screens/genre_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/music/genre"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "6b661d724c4f7a97371c4464149338dfe919efd1552bf29f0326538eb47372e7"
+    },
+    {
+      "path": "lib/screens/genre_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/genre"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "ce1b1c4fd64dc84a043d512e7a8d9cfa94209ce2733e696686215a8213cf4772"
+    },
+    {
+      "path": "lib/screens/home_screen_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/home-screen"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "51ebbebe8e532fa530d719f71404e94c45e24a95ae562971eee588a8d04fea4e"
+    },
+    {
+      "path": "lib/screens/interaction_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/interactions"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "bf4f33128784b3f99c726d4a8ba8fafb99bb7a2e4adccfe9b5d3d60d3cc25e7b"
+    },
+    {
+      "path": "lib/screens/language_selection_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/language"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "840e91f41ad6b5c3d366d2b839589cc9e848eda19f72beb722a9aed3f81c4d87"
+    },
+    {
+      "path": "lib/screens/layout_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/settings-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/settings/layout"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "ee986ee00dede95c081c3189130c5abf5f6de14760ce7b34e170ccea7dc056ce"
+    },
+    {
+      "path": "lib/screens/library_screen_content.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [],
+      "composed_menu_entries": [],
+      "sha256": "033faeb944366eceda47abafa9210324730775948d6d1a32f0b30742ecd63cc1"
+    },
+    {
+      "path": "lib/screens/liked_songs_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/album-detail-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/liked-songs"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "dbedfc9c6ad4ce2d32a17bf30ca47469265e1e4dde818ce89177e9486968e1db"
+    },
+    {
+      "path": "lib/screens/login_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/login-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/login"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "4cf4eae5653875ba183ecd78f57268dbd8abc7605d0b51faa37fc27f2f13cd28"
+    },
+    {
+      "path": "lib/screens/logs_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/logs"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "d57c16dde5b21a2ce1049a64685ebcaa2558ce390aa1705a2a350e35cde34b06"
+    },
+    {
+      "path": "lib/screens/lyrics_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/lyrics"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "b8df9169da9277446636c7ef16c39e530bfa6c77fdc0d856388657f13ac773c5"
+    },
+    {
+      "path": "lib/screens/lyrics_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/lyrics"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "e8b5b79536aa8423298f656ea918fa92daf1b0f237f2727cb4bda40e71996676"
+    },
+    {
+      "path": "lib/screens/music_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/app/page.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/music"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "b7f05016cec2c63078a143070d163c865b2f97e63e41a57b8f7f949b4c3ca28d"
+    },
+    {
+      "path": "lib/screens/network_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/network"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "22688e142760f353f4f2b7dfde51106f917f3d7dd26f3c13e4c6b969e82348ed"
+    },
+    {
+      "path": "lib/screens/playback_history_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/playbackhistory"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "b7f17117ae020fc13ba5e5305186d420fc549e7c941b830bf81c4b032ece4df1"
+    },
+    {
+      "path": "lib/screens/playback_reporting_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/playback-reporting"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "654ca99a019ed33252e107a05b911187f0d0adb0b9f3b6eae267d2693c88261f"
+    },
+    {
+      "path": "lib/screens/player_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/player/full-player-sheet.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/nowplaying"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "dc32cc192e72ce61792ccec35d7dc2a9596143187491b58d696aadb286918741"
+    },
+    {
+      "path": "lib/screens/player_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/player"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "f32497e0924b66877f6aa682d3eb1d8f05fdb72dd202abdd1cb4ffb7fa34dbb4"
+    },
+    {
+      "path": "lib/screens/playlist_edit_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/music/playlist/edit"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "7fe7bebd0b699f6838781adb321859dd4e661e0530f69713a5c87c436db1225d"
+    },
+    {
+      "path": "lib/screens/queue_restore_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/queues"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "6a78b03f2dc1ee98f88ee5f727ca65b6c65426a9c03f9bd86251391a7f006cbc"
+    },
+    {
+      "path": "lib/screens/quick_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/quick-settings"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "a46189a0599d1a12de27e1d058ccf13908bcd47e3871f3a9473aaa580f9b6bf6"
+    },
+    {
+      "path": "lib/screens/settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": "src/components/views/settings-view.tsx",
+      "parity": "compare semantics; source presence is not runtime verification",
+      "declared_routes": [
+        "/settings"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "389bbf00ff7bfa74a98ae20e51e87f7647fe76317f3c80720ce74c0a4901333c"
+    },
+    {
+      "path": "lib/screens/splash_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "964f168a7179513ec284bb246d877f1ce84244936ff25487950a2cb447d9c2cc"
+    },
+    {
+      "path": "lib/screens/tabs_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/tabs"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "0bf397dd981fc1af92b61682574b378418d5775b9360c4f320d9c1aac79297a0"
+    },
+    {
+      "path": "lib/screens/transcoding_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/transcoding"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "a411c856621ec20bfa73eb21c5766dc85974606a174dd44e8bdc8c01cbb1fec7"
+    },
+    {
+      "path": "lib/screens/view_selector.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/views"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "7d2ef6478deda6d4b0c93d9235629ca35d1ada8b329dec6a34cb074669a9a13a"
+    },
+    {
+      "path": "lib/screens/volume_normalization_settings_screen.dart",
+      "kind": "screen",
+      "web_candidate": null,
+      "parity": "no dedicated counterpart identified; classify platform necessity before adding UI",
+      "declared_routes": [
+        "/settings/volume-normalization"
+      ],
+      "composed_menu_entries": [],
+      "sha256": "2a84951fa143f096f6caa8a5f31e5baa1b697067e25ac70edc634db8970c771b"
+    }
+  ],
+  "web_surfaces": [
+    {
+      "path": "src/app/api/account/[[...path]]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET",
+        "POST"
+      ],
+      "sha256": "ff490da326f124ee5bc3490ed5e212c50b37a42b85e2518f1f3f90b008c5f7fc"
+    },
+    {
+      "path": "src/app/api/books/[[...path]]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET",
+        "POST"
+      ],
+      "sha256": "9d534d9d2eaa26a3f01c5360468a573ac6a7d3bb7984106f4286f9cbe26736e8"
+    },
+    {
+      "path": "src/app/api/catalog/[[...path]]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET",
+        "POST"
+      ],
+      "sha256": "de267e2433628383b5777e52a7226ab5eec406d3245b32b11e1f1238742b21bc"
+    },
+    {
+      "path": "src/app/api/image/jellyfin/[id]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET"
+      ],
+      "sha256": "48b6623756011dda03ab9bfe2336bd5cbd9db5a2ba6ab94cb202b3fb8a0209b8"
+    },
+    {
+      "path": "src/app/api/jellyfin/[[...path]]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET",
+        "POST"
+      ],
+      "sha256": "f0275ff2366bf0327cdd531af7ccae0b742e40a6e83f86a92fb5b40c0553fc03"
+    },
+    {
+      "path": "src/app/api/stream/book/[id]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET"
+      ],
+      "sha256": "b75e1fa54b2e3e442dc732290621a95dd78281b69604cff4a7ed369d10bf89e3"
+    },
+    {
+      "path": "src/app/api/stream/music/[id]/route.ts",
+      "kind": "API",
+      "declared_exports": [
+        "GET"
+      ],
+      "sha256": "f77fd83f9c3d0e983595e619935d9c750aa0c6e3c8c2227c86487ca8ffa3795e"
+    },
+    {
+      "path": "src/app/layout.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "metadata",
+        "viewport"
+      ],
+      "sha256": "0ad4960ab37c90108e1e2237986afbbd16b0e5876d63f811c02c431975f272ea"
+    },
+    {
+      "path": "src/app/page.tsx",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "2d34122f8be1b11d326dfb78c6ee2913549debcd7c181014ebf8c5a4e2fe59be"
+    },
+    {
+      "path": "src/components/bug-reporter-dialog.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "BugReporterDialog"
+      ],
+      "sha256": "8807667f8aef3364f1cd7965de23d12c3495761466ccc32f76436b5ebf7682dd"
+    },
+    {
+      "path": "src/components/desktop-shell.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "DesktopShell"
+      ],
+      "sha256": "10e37c4927b4476ad69788a6caa48d692aa10d065f6f513254f58badb3b30b97"
+    },
+    {
+      "path": "src/components/login-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "LoginView"
+      ],
+      "sha256": "c924724d8c919e437d0d67c0d3c8b0721c28247483ab65e2af261b8555c112e0"
+    },
+    {
+      "path": "src/components/mobile-shell.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "MobileShell"
+      ],
+      "sha256": "5e0a486b62ff9044fe23d900d39a75998ddaeb44cf73dd30fb079b7ac89fcde6"
+    },
+    {
+      "path": "src/components/player/full-player-sheet.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "FullPlayerSheet"
+      ],
+      "sha256": "2cc28b6bd7f7af89a7556412bce70bb365575b71937b82f3b6c54fe2d997ea76"
+    },
+    {
+      "path": "src/components/player/mini-player.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "MiniPlayer"
+      ],
+      "sha256": "8b5cde6f9362b79f99a23c8d214b489bff7fb0723710a8de998e266543e64b57"
+    },
+    {
+      "path": "src/components/providers.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "Providers"
+      ],
+      "sha256": "03a975e6976555ec827506ca733986a43dd7d3b8b22ed167abe5d12fb4743704"
+    },
+    {
+      "path": "src/components/ui/badge.tsx",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "a13154c5486c1574d12eb35484e9b1ec68dafebf9e762862dc7147106c621ead"
+    },
+    {
+      "path": "src/components/ui/button.tsx",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "84377f037feae35a12ce8bc14acd41cb51bd258829ffb17b9571dd4d29271d33"
+    },
+    {
+      "path": "src/components/ui/card.tsx",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "b3db1c98b2cffab207550cb0e713f2a89faa9fa7c4e727ed889a70da14110367"
+    },
+    {
+      "path": "src/components/ui/cover-art.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "CoverArt"
+      ],
+      "sha256": "9da2401e86a9746cd7a22f0f5ec32fa342bb3a062218ef0978f88472edca7fcb"
+    },
+    {
+      "path": "src/components/ui/input.tsx",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "1240eed9a383a93aef45ec5fb2675339462937fe460d9af8db63918aaafd59e7"
+    },
+    {
+      "path": "src/components/views/album-detail-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "AlbumDetailView"
+      ],
+      "sha256": "ef01f338618ed12e02f26b7ac3ef5ae0965c021d891a35518afa80bc0f315e23"
+    },
+    {
+      "path": "src/components/views/artist-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "ArtistView"
+      ],
+      "sha256": "49b49bfcab32469826dd03e8c92242a0b828f962b4cdddc7d1915395d9a89ae5"
+    },
+    {
+      "path": "src/components/views/book-detail-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "BookDetailView"
+      ],
+      "sha256": "2700c24a1668d282380760b5043402dbe9a0f184d5241041d2c98b38ab495b7b"
+    },
+    {
+      "path": "src/components/views/books-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "BooksView"
+      ],
+      "sha256": "79d00b73a1a23b6cd75905aeba9459d9fa1a47741b8d43f2b9246387055601ca"
+    },
+    {
+      "path": "src/components/views/home-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "HomeView"
+      ],
+      "sha256": "2a6f0a9997011e734690752fe2896da4f14b30f9f57d1e28b11d2d0caa68439f"
+    },
+    {
+      "path": "src/components/views/library-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "LibraryView"
+      ],
+      "sha256": "61a9b20a6e62419401f722bee0d28668739e0cd4a970f2afaac99b43a39eaa7d"
+    },
+    {
+      "path": "src/components/views/search-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "SearchView"
+      ],
+      "sha256": "73bde1211c86c02de84bf7da952a307cca64c71a86c70130d5d48bdeb4ce59b9"
+    },
+    {
+      "path": "src/components/views/settings-view.tsx",
+      "kind": "UI",
+      "declared_exports": [
+        "SettingsView"
+      ],
+      "sha256": "faea60e5e54097c32542d55d4e5316916d64b8a0f993ee94925c4d270d7fef0f"
+    },
+    {
+      "path": "src/context/auth-context.tsx",
+      "kind": "state",
+      "declared_exports": [
+        "AuthProvider",
+        "useAuth"
+      ],
+      "sha256": "b3da3e473abec20891ac36b0f682b8bbb932440e79775c891b4835cf850740ac"
+    },
+    {
+      "path": "src/context/device-context.tsx",
+      "kind": "state",
+      "declared_exports": [
+        "DeviceProvider",
+        "useDevice"
+      ],
+      "sha256": "59fe901cdfa10f36e124cfeefbfde1359e30e3afef6a3e0cc46af4d6a66382ac"
+    },
+    {
+      "path": "src/context/player-context.tsx",
+      "kind": "state",
+      "declared_exports": [
+        "PlayerProvider",
+        "usePlayer"
+      ],
+      "sha256": "48d7d0071ae14381c8732f3453b474e7bff050cfc45ce7a92ad73b315c870c4d"
+    },
+    {
+      "path": "src/types/navigation.ts",
+      "kind": "UI",
+      "declared_exports": [],
+      "sha256": "3e40f1b22297e8e31348d5f7f5375afdad7c9db2d6fb36a36132be271c26f7c5"
+    }
+  ],
+  "snapshot_kind": "Pre-fix audit baseline; see audit/verification for applied source changes and outstanding release checks."
+}

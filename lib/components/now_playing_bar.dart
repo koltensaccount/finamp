@@ -26,6 +26,7 @@ import '../services/process_artist.dart';
 import 'PlayerScreen/player_split_screen_scaffold.dart';
 import 'album_image.dart';
 import 'navigation/player_motion.dart';
+import 'compact_playback_controls.dart';
 
 class NowPlayingBar extends ConsumerWidget {
   const NowPlayingBar({super.key, this.includeBottomSafeArea = true});
@@ -43,7 +44,7 @@ class NowPlayingBar extends ConsumerWidget {
       BoxShadow(
         blurRadius: 16.0,
         spreadRadius: 2.0,
-        color: Colors.black.withOpacity(Theme.brightnessOf(context) == Brightness.light ? 0.12 : 0.45),
+        color: Colors.black.withValues(alpha: Theme.brightnessOf(context) == Brightness.light ? 0.12 : 0.45),
         offset: const Offset(0, 4),
       ),
     ],
@@ -55,7 +56,7 @@ class NowPlayingBar extends ConsumerWidget {
 
   Color getProgressBackgroundColor(WidgetRef ref) {
     return Color.alphaBlend(
-      getProgressForegroundColor(ref).withOpacity(0.75),
+      getProgressForegroundColor(ref).withValues(alpha: 0.75),
       // this is an approximation, the actual background has the blurred cover image
       ref.watch(brightnessProvider) == Brightness.dark ? Colors.black : Colors.white,
     );
@@ -260,33 +261,21 @@ class NowPlayingBar extends ConsumerWidget {
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(right: 6.0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: AppLocalizations.of(context)!.togglePlaybackButtonTooltip,
-                                      onPressed: () {
-                                        FeedbackHelper.feedback(FeedbackType.light);
-                                        unawaited(audioHandler.togglePlayback());
-                                      },
-                                      color: primaryTextColor,
-                                      visualDensity: VisualDensity.compact,
-                                      icon: Icon(
-                                        showPauseButton ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Next',
-                                      onPressed: () {
-                                        FeedbackHelper.feedback(FeedbackType.light);
-                                        unawaited(audioHandler.skipToNext());
-                                      },
-                                      color: primaryTextColor,
-                                      visualDensity: VisualDensity.compact,
-                                      icon: const Icon(Icons.fast_forward_rounded, size: 20),
-                                    ),
-                                  ],
+                                child: CompactPlaybackControls(
+                                  isPlaying: showPauseButton,
+                                  color: primaryTextColor,
+                                  onPrevious: () {
+                                    FeedbackHelper.feedback(FeedbackType.light);
+                                    unawaited(audioHandler.skipToPrevious());
+                                  },
+                                  onTogglePlayback: () {
+                                    FeedbackHelper.feedback(FeedbackType.light);
+                                    unawaited(audioHandler.togglePlayback());
+                                  },
+                                  onNext: () {
+                                    FeedbackHelper.feedback(FeedbackType.light);
+                                    unawaited(audioHandler.skipToNext());
+                                  },
                                 ),
                               ),
                             ],

@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11-05 — choose the best common workflow
+
+- Per the user's clarification, choose efficient, effective task workflows first,
+  then align native and web to them. Neither implementation is an unquestioned
+  reference. Track intentional platform differences explicitly.
+- Start with reliable ordered playback and clear previous/play-pause/next controls.
+  Retain Finamp's engine; fix web event/state handling rather than replacing both.
+- The complete discovered surface inventory and 61 task contracts are in
+  [WORKFLOWS](WORKFLOWS.md) and its machine-readable companion. Source presence
+  is not runtime proof; require actual cross-platform checks before parity claims.
+
 ## 2026-11-05 — canonical intent and evidence
 
 - VISION.md owns stable product intent; AGENTS.md owns the common workflow.

@@ -28,6 +28,18 @@ class GuidanceChecks(unittest.TestCase):
     def test_docs_only_does_not_require_runtime_report(self):
         self.assertEqual(guidance.check(changed=['docs/PROJECT_BRIEF.md']), [])
 
+    def test_new_menu_surface_cannot_silently_escape_the_inventory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in guidance.DOCS:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(guidance.ROOT / name, target)
+            new_menu = root / 'lib/menus/new_action_menu.dart'
+            new_menu.parent.mkdir(parents=True, exist_ok=True)
+            new_menu.write_text('// New user-facing menu')
+            self.assertIn('Unmapped native workflow surface: lib/menus/new_action_menu.dart', guidance.check(root))
+
     def test_broken_link_and_adapter_drift_are_detected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

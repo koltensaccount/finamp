@@ -59,8 +59,8 @@ separate from product deployment and media processing.
 
 Read the actual version's Next docs before implementation, retain generated
 agent rules, and apply the shared quality gates. Album/title navigation must
-preserve queue/playback, independent Play/Shuffle controls must work, and web
-must visually match native on corresponding phone/tablet/desktop screens.
+preserve queue/playback, independent Play/Shuffle controls must work, and both clients
+must follow the shared workflow/design contract on corresponding screens.
 Check standalone Safari, MediaSession/background limits, range seeking, session
 revocation and offline behavior with real services. Do not claim native offline
 parity where browser capabilities differ. Do not assume device registration or

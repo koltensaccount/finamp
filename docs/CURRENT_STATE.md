@@ -1,6 +1,7 @@
 # Current state — evidence index
 
-Inspected 2026-11-05 against published `antigravity/catalog-client` at `e4cfe444`.
+Inspected 2026-11-05; native source base now includes published `202eb017`.
+See [shared workflow inventory](WORKFLOWS.md) for the later parity audit.
 This page separates source presence from runtime verification. The old narrative
 below is retained as a historical report, not re-certified evidence.
 
@@ -15,11 +16,22 @@ below is retained as a historical report, not re-certified evidence.
 | Metadata publication | `backend/metadata_engine.py` | Uses file-level replace; backup, collision protection, audio integrity and whole-release rollback are not established. |
 | Acquisition | Music outbox plus separate Books coordinator/worker | Music dispatch reports disabled; Books production code can contact real providers. The worker regression is isolated; full-suite metadata I/O still needs auditing. |
 | Web/PWA | Separate server source; see `agents/WEB_WORKSPACE.md` | Source present; deployed image/source equivalence, offline behavior and native visual parity unverified. |
-| macOS DMG/updates | Two newer local commits (`ab986c83`, `202eb017`) were inspected outside this branch | Not published in this branch base. Workflow/appcast presence does not prove successful release/update. |
+| macOS DMG/updates | Published `202eb017` includes workflow/appcast code | Workflow/appcast presence does not prove successful release/update. |
 
 [Product intent](../VISION.md) is aspirational. [Quality gates](agents/QUALITY_GATES.md)
 define acceptance; [verification reports](verification/) record actual results.
 No media-library writes, acquisition or production rebuilds are part of guidance work.
+
+## Shared workflow audit and first source corrections
+
+See [verification](verification/2026-11-05-shared-workflows.md) for the later
+61-workflow audit, native compact controls and guarded server-source playback
+patch. Tests: 82 Flutter, 14 isolated web-player, five guidance regressions;
+changed-file native analysis and macOS debug build pass. The web webpack build
+compiles but its reused dependency setup is not a certified standalone release.
+Installed native app and deployed image have not been validated with these
+changes. Physical controls, Books reader, authorization, persistent state and
+real device handoff remain open; do not report overall parity as complete.
 
 ## Historical report (pre-guidance; claims require dated supporting evidence)
 
