@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +20,13 @@ class ArtistIdentityService {
 
   /// Allows unit tests to override offline state without needing Hive box initialization.
   static bool? mockIsOffline;
+
+  @visibleForTesting
+  static void resetForTesting() {
+    _initialized = false;
+    _jellyfinToMbid.clear();
+    _nameToMbid.clear();
+  }
 
   static bool get isOffline {
     if (mockIsOffline != null) return mockIsOffline!;
@@ -131,8 +139,12 @@ class ArtistIdentityService {
 
         final resolvedMbid = res['artist_id'] ?? res['id'];
         if (resolvedMbid is String && isMbid(resolvedMbid)) {
-          // Only record and persist mapping if verified or direct provider identity
-          if (confidence == 'verified' || confidence == 'exact' || confidence == 'direct_mbid') {
+          // Record and persist mapping for verified, exact, direct, or disambiguated identity
+          if (confidence == 'verified' ||
+              confidence == 'exact' ||
+              confidence == 'direct_mbid' ||
+              confidence == 'disambiguated_local_presence' ||
+              confidence == 'name_match') {
             recordMapping(
               jellyfinId: targetJfId,
               name: targetName ?? (res['name'] as String?),

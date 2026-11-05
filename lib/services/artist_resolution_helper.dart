@@ -47,6 +47,7 @@ class ArtistResolutionHelper {
         id: genuine.id,
         name: genuine.name ?? fallbackArtistName ?? track.name,
         type: "MusicArtist",
+        providerIds: track.providerIds,
       );
     }
     return null;
