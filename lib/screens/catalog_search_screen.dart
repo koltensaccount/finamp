@@ -9,28 +9,13 @@ import '../components/now_playing_bar.dart';
 import '../models/catalog_models.dart';
 import '../services/catalog_api_client.dart';
 import '../services/catalog_playback_helper.dart';
+import '../services/catalog_recent_history.dart';
 import 'catalog_album_screen.dart';
 import 'catalog_artist_screen.dart';
 import '../services/artist_image_service.dart';
 
 enum CatalogSearchCategory { all, artists, albums, songs }
 enum CatalogSearchScope { musicSearch, library }
-
-class RecentSearchItem {
-  const RecentSearchItem({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.kind,
-    this.imageUrl,
-  });
-
-  final String id;
-  final String title;
-  final String subtitle;
-  final String kind;
-  final String? imageUrl;
-}
 
 class CatalogSearchScreen extends StatefulWidget {
   const CatalogSearchScreen({super.key, this.isTab = false});
@@ -51,26 +36,12 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
 
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
-  final List<RecentSearchItem> _recentSearches = [
-    RecentSearchItem(
-      id: 'e0c97a4d-c392-41a9-a374-57af3e3eeab3',
-      title: 'Geese',
-      subtitle: 'Artist',
-      kind: 'artist',
-      imageUrl: ArtistImageService.getKnownArtistImageUrl('geese'),
-    ),
-    RecentSearchItem(
-      id: 'b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d',
-      title: 'The Beatles',
-      subtitle: 'Artist',
-      kind: 'artist',
-      imageUrl: ArtistImageService.getKnownArtistImageUrl('the beatles'),
-    ),
-  ];
+  final List<CatalogRecentItem> _recentSearches = [];
 
   @override
   void initState() {
     super.initState();
+    unawaited(_loadRecentHistory());
     const initialQuery = String.fromEnvironment('DEBUG_SEARCH_QUERY', defaultValue: '');
     if (initialQuery.isNotEmpty) {
       _controller.text = initialQuery;
@@ -88,10 +59,28 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
     }
   }
 
-  void _addRecentSearch(RecentSearchItem item) {
-    _recentSearches.removeWhere((x) => x.id == item.id || x.title.toLowerCase() == item.title.toLowerCase());
-    _recentSearches.insert(0, item);
-    if (_recentSearches.length > 12) _recentSearches.removeLast();
+  Future<void> _loadRecentHistory() async {
+    try {
+      final history = await CatalogRecentHistory.load();
+      if (!mounted || _recentSearches.isNotEmpty) return;
+      setState(() => _recentSearches.addAll(history));
+    } catch (_) {
+      // A storage problem should not prevent searching.
+    }
+  }
+
+  void _addRecentSearch(CatalogRecentItem item) {
+    setState(() {
+      _recentSearches.removeWhere((x) => x.id == item.id && x.kind == item.kind);
+      _recentSearches.insert(0, item);
+      if (_recentSearches.length > CatalogRecentHistory.maxItems) _recentSearches.removeLast();
+    });
+    unawaited(CatalogRecentHistory.save(List.of(_recentSearches)));
+  }
+
+  void _clearRecentHistory() {
+    setState(() => _recentSearches.clear());
+    unawaited(CatalogRecentHistory.clear());
   }
 
   Future<void> _search({bool refresh = false}) async {
@@ -373,11 +362,11 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Recently Searched',
+              'Recently Viewed',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextButton(
-              onPressed: () => setState(() => _recentSearches.clear()),
+              onPressed: _clearRecentHistory,
               child: const Text(
                 'Clear',
                 style: TextStyle(color: appleAccentColor, fontWeight: FontWeight.w600),
@@ -517,7 +506,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            _addRecentSearch(RecentSearchItem(
+            _addRecentSearch(CatalogRecentItem(
               id: result.id,
               title: result.title,
               subtitle: 'Artist',
@@ -591,7 +580,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          _addRecentSearch(RecentSearchItem(
+          _addRecentSearch(CatalogRecentItem(
             id: result.id,
             title: result.title,
             subtitle: result.displayArtist ?? 'Album',
@@ -717,7 +706,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         subtitle: const Text('Artist', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
         trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
-          _addRecentSearch(RecentSearchItem(
+          _addRecentSearch(CatalogRecentItem(
             id: result.id,
             title: result.title,
             subtitle: 'Artist',
@@ -770,7 +759,7 @@ class _CatalogSearchScreenState extends State<CatalogSearchScreen> {
         subtitle: Text(info, style: const TextStyle(color: Colors.grey, fontSize: 12.5)),
         trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
         onTap: () {
-          _addRecentSearch(RecentSearchItem(
+          _addRecentSearch(CatalogRecentItem(
             id: result.id,
             title: result.title,
             subtitle: result.displayArtist ?? 'Album',
