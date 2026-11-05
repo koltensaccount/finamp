@@ -192,5 +192,61 @@ void main() {
       expect(ok, isTrue);
       expect(revoked, isTrue);
     });
+
+    test('checkUsernameAvailability returns availability from server', () async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/v1/account/check-username') {
+          if (request.url.queryParameters['username'] == 'existinguser') {
+            return http.Response(jsonEncode({'available': false, 'error': "Username 'existinguser' is already taken"}), 409);
+          }
+          return http.Response(jsonEncode({'available': true}), 200);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      FlutterSecureStorage.setMockInitialValues({'kb_account_endpoint': 'http://127.0.0.1:8765'});
+      final service = KBAccountService(client: mockClient);
+
+      final check1 = await service.checkUsernameAvailability('existinguser');
+      expect(check1['available'], isFalse);
+      expect(check1['error'], contains('already taken'));
+
+      final check2 = await service.checkUsernameAvailability('newuser');
+      expect(check2['available'], isTrue);
+    });
+
+    test('createAccount registers user and updates session', () async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/v1/account/register' || request.url.path == '/v1/account/enroll') {
+          return http.Response(
+            jsonEncode({
+              'account': {'id': 'usr_new', 'username': 'kolten2', 'display_name': 'Kolten B'},
+              'device': {'id': 'dev_new', 'name': 'MacBook'},
+              'session': {
+                'token': 'kba_new_token',
+                'refresh_token': 'kbr_new_refresh',
+                'expires_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
+              },
+              'config': {},
+            }),
+            201,
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      FlutterSecureStorage.setMockInitialValues({'kb_account_endpoint': 'http://127.0.0.1:8765'});
+      final service = KBAccountService(client: mockClient);
+
+      final res = await service.createAccount(
+        username: 'kolten2',
+        password: 'Password123!',
+        displayName: 'Kolten B',
+      );
+
+      expect(res['account']['username'], equals('kolten2'));
+      expect(service.isSignedIn, isTrue);
+      expect(service.currentSession?.token, equals('kba_new_token'));
+    });
   });
 }

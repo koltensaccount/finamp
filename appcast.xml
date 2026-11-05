@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>KB Music Changelog</title>
+    <link>https://raw.githubusercontent.com/koltensaccount/finamp/antigravity/catalog-client/appcast.xml</link>
+    <description>Most recent updates to KB Music for macOS</description>
+    <language>en</language>
+    <item>
+      <title>Version 1.0.3</title>
+      <pubDate>Wed, 05 Nov 2026 16:00:00 -0600</pubDate>
+      <sparkle:releaseNotesLink>https://github.com/koltensaccount/finamp/releases/tag/v1.0.3</sparkle:releaseNotesLink>
+      <sparkle:version>1.0.3</sparkle:version>
+      <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/koltensaccount/finamp/releases/download/v1.0.3/KB-Music-1.0.3.dmg"
+        sparkle:edSignature="mhyeeKmHHbhKILrftq/s80fUBdp0D36RYcfef6pOewH+lH5mV1PRjvJFOOWI/vzrAOj/OI83GFbW5kccAcaSCg=="
+        length="50569796"
+        type="application/x-apple-diskimage" />
+    </item>
+  </channel>
+</rss>

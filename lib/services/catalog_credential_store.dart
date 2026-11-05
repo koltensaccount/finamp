@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CatalogCredentials {
   const CatalogCredentials({required this.endpoint, required this.token});
@@ -14,7 +15,15 @@ abstract class CatalogCredentialStore {
 }
 
 class SecureCatalogCredentialStore implements CatalogCredentialStore {
-  SecureCatalogCredentialStore({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  SecureCatalogCredentialStore({FlutterSecureStorage? storage})
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+              mOptions: MacOsOptions(
+                accessibility: KeychainAccessibility.first_unlock,
+                usesDataProtectionKeychain: false,
+              ),
+            );
 
   static const _endpointKey = 'catalog_api_endpoint';
   static const _tokenKey = 'catalog_api_bearer_token';
@@ -23,15 +32,52 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
   static const _envToken = String.fromEnvironment('CATALOG_TOKEN', defaultValue: '');
   final FlutterSecureStorage _storage;
 
+  Future<void> _safeWrite(String key, String value) async {
+    bool secureOk = false;
+    try {
+      await _storage.write(key: key, value: value);
+      secureOk = true;
+    } catch (_) {}
+    if (!secureOk) {
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+        await prefs.setString('kb_sec_$key', value);
+      } catch (_) {}
+    }
+  }
+
+  Future<String?> _safeRead(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      try {
+        final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+        return prefs.getString('kb_sec_$key');
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  Future<void> _safeDelete(String key) async {
+    try {
+      await _storage.delete(key: key);
+    } catch (_) {}
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+      await prefs.remove('kb_sec_$key');
+    } catch (_) {}
+  }
+
   @override
   Future<CatalogCredentials?> read() async {
-    final isDisabled = await _storage.read(key: _disabledKey);
+    final isDisabled = await _safeRead(_disabledKey);
     if (isDisabled == 'true') {
       return null;
     }
 
-    final endpoint = await _storage.read(key: _endpointKey);
-    final token = await _storage.read(key: _tokenKey);
+    final endpoint = await _safeRead(_endpointKey);
+    final token = await _safeRead(_tokenKey);
 
     final effectiveEndpoint = (endpoint != null && endpoint.isNotEmpty)
         ? endpoint
@@ -47,16 +93,22 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
 
   @override
   Future<void> save(CatalogCredentials credentials) async {
-    await _storage.delete(key: _disabledKey);
-    await _storage.write(key: _endpointKey, value: credentials.endpoint.toString());
-    await _storage.write(key: _tokenKey, value: credentials.token);
+    await _safeDelete(_disabledKey);
+    await _safeWrite(_endpointKey, credentials.endpoint.toString());
+    await _safeWrite(_tokenKey, credentials.token);
   }
 
   @override
   Future<void> clear() async {
-    await _storage.deleteAll();
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
+    await _safeDelete(_endpointKey);
+    await _safeDelete(_tokenKey);
     if (_envToken.isNotEmpty) {
-      await _storage.write(key: _disabledKey, value: 'true');
+      await _safeWrite(_disabledKey, 'true');
+    } else {
+      await _safeDelete(_disabledKey);
     }
   }
 }
