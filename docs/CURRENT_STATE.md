@@ -1,4 +1,29 @@
-# Current state
+# Current state — evidence index
+
+Inspected 2026-11-05 against published `antigravity/catalog-client` at `e4cfe444`.
+This page separates source presence from runtime verification. The old narrative
+below is retained as a historical report, not re-certified evidence.
+
+| Capability | Source evidence | Verification boundary |
+| --- | --- | --- |
+| Catalog identity/discovery/availability | `backend/catalog.py`, `backend/server.py`, `lib/services/catalog_api_client.dart` | Code and tests exist; see task verification reports for actual runs. |
+| Native album navigation | `lib/components/MusicScreen/item_wrapper.dart` routes to AlbumScreen | No fresh real-device navigation/queue test in guidance work. |
+| Apple-style native navigation | `lib/components/navigation/`, `test/apple_sidebar_navigation_test.dart` | Cross-platform visual parity remains unverified. |
+| KB Account bootstrap/pairing/device list | `lib/services/kb_account_service.dart`, `test/kb_account_service_test.dart`, `test/account_screen_test.dart` | Mock tests do not establish real pairing or playback sync. Account backend is server-only source. |
+| Preferences/device presence | Methods exist in deployed account source inspected read-only | No evidence here of native client integration or queue handoff. |
+| Books / format continuation | `backend/books_core.py`, `backend/alignment_engine.py`, `lib/services/books_api_client.dart`, Books screens/tests | Mapping fixtures are not proof of real alignment or device transfer. |
+| Metadata publication | `backend/metadata_engine.py` | Uses file-level replace; backup, collision protection, audio integrity and whole-release rollback are not established. |
+| Acquisition | Music outbox plus separate Books coordinator/worker | Music dispatch reports disabled; Books production code can contact real providers. The worker regression is isolated; full-suite metadata I/O still needs auditing. |
+| Web/PWA | Separate server source; see `agents/WEB_WORKSPACE.md` | Source present; deployed image/source equivalence, offline behavior and native visual parity unverified. |
+| macOS DMG/updates | Two newer local commits (`ab986c83`, `202eb017`) were inspected outside this branch | Not published in this branch base. Workflow/appcast presence does not prove successful release/update. |
+
+[Product intent](../VISION.md) is aspirational. [Quality gates](agents/QUALITY_GATES.md)
+define acceptance; [verification reports](verification/) record actual results.
+No media-library writes, acquisition or production rebuilds are part of guidance work.
+
+## Historical report (pre-guidance; claims require dated supporting evidence)
+
+# Earlier current-state report
 
 Owner: Antigravity, branch `antigravity/catalog-client`.
 Upstream baseline: tag 1.0.2. Fork: https://github.com/koltensaccount/finamp ; upstream remote retained.
@@ -110,4 +135,4 @@ Stable Finamp playback, queue, lyrics, normalization, offline download, and lice
 4. **Not Complete / Deferred:**
    - Server-side acquisition dispatcher (connecting SQLite outbox to Lidarr/slskd/Soularr).
    - Physical iPhone data cable connectivity / physical device deployment.
-   - Full Apple Music UI visual redesign (intentionally deferred until core functionality is complete).
+   - Full cross-platform visual parity (not verified in this historical report).

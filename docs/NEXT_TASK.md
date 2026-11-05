@@ -1,23 +1,25 @@
-# Next concrete task — Scoped Acquisition Dispatcher
+# Next task — establish truthful cross-platform acceptance evidence
 
-Branch/worktree: create `backend/acquisition-dispatcher` or continue on `codex/catalog-identity`.
-Ownership: Server-side request outbox processing and acquisition dispatch.
+Suggested follow-up, not authorization for server mutation or acquisition.
+Use a separate branch/worktree and recheck current state before choosing scope.
 
-## Objectives
+1. Reproduce album cover/title navigation on Home, Library, artist discography,
+   and search in the existing native and PWA clients while a queue is playing.
+   Assert correct details route and unchanged queue/order/current item/position
+   (allow normal elapsed playback). Test Play/Shuffle separately. Fix only failures.
+2. Capture equivalent Home, Search, Library, album, artist, Books, Settings, and
+   Now Playing views on iPhone, iPad, macOS, and the PWA. Agree shared token values
+   from the current native UI; map CSS/Flutter values and fix measured divergence.
+3. Verify account/bootstrap with two real clients, then separately test favorites,
+   preferences, progress conflicts, presence staleness, remote controls, and queue
+   handoff. Mark missing mechanisms as missing, not covered by pairing tests.
+4. Before extending acquisition, finish auditing metadata-provider test I/O and prove media safety
+   on fixtures: provider outage, ambiguous match, collision, interruption, rollback,
+   and decoded-audio integrity. Version the existing server-only account source
+   through a reviewed, credential-free change; preserve the current deployed system.
 
-1. **Scoped Acquisition Worker:**
-   - Implement a lightweight background worker or cron job on the server (`koltensserver`) to poll the `requests` table in `catalog.sqlite` where `state = 'queued'`.
-   - Dispatch album requests to Lidarr API or Soularr acquisition workflow in a strictly scoped, rate-limited manner.
-   - Guard against duplicate searches and preserve the current conservative library boundaries.
-
-2. **Acquisition State Machine:**
-   - Transition requests from `queued` -> `dispatched` -> `downloading` -> `imported` -> `available`.
-   - Re-run catalog incremental sync once an album is imported to link newly added tracks to Jellyfin item IDs.
-   - Update request record state in SQLite so the client's `GET /v1/requests/{id}` reflects live status.
-
-3. **Client Notification / Status Refresh:**
-   - Add status polling or refresh on `CatalogAlbumScreen` for albums with existing requests.
-   - When a request becomes `available`, update the album view ownership chip from `Unowned` / `Partially Owned` to `Fully Owned`.
-
-4. **Visual Polish & Redesign (Follow-up):**
-   - Begin Apple Music-style aesthetic redesign of Finamp interface once acquisition dispatching is verified end-to-end.
+For each selected item use [quality gates](agents/QUALITY_GATES.md) and create
+an evidence report. Do not broaden a navigation fix into a server rewrite.
+Music Assistant/Home Assistant evaluation is optional research, not a dependency
+or a substitute for testing KB clients. The prior acquisition-dispatcher task is
+historical, no longer an unconditional next step.
