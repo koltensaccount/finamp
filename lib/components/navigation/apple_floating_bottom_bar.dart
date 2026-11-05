@@ -3,11 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class AppleFloatingBottomBar extends StatelessWidget {
-  const AppleFloatingBottomBar({
-    super.key,
-    required this.selectedIndex,
-    required this.onDestinationSelected,
-  });
+  const AppleFloatingBottomBar({super.key, required this.selectedIndex, required this.onDestinationSelected});
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -34,14 +30,10 @@ class AppleFloatingBottomBar extends StatelessWidget {
                 child: Container(
                   height: isTablet ? 52 : 48,
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0x8C141416)
-                        : const Color(0xB8FFFFFF),
+                    color: isDark ? const Color(0x8C141416) : const Color(0xB8FFFFFF),
                     borderRadius: BorderRadius.circular(26),
                     border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.18)
-                          : Colors.black.withValues(alpha: 0.08),
+                      color: isDark ? Colors.white.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.08),
                       width: 0.5,
                     ),
                     boxShadow: [
@@ -102,9 +94,7 @@ class AppleFloatingBottomBar extends StatelessWidget {
     required bool isDark,
   }) {
     final isSelected = selectedIndex == index;
-    final color = isSelected
-        ? appleAccentColor
-        : (isDark ? Colors.white54 : Colors.black45);
+    final color = isSelected ? appleAccentColor : (isDark ? Colors.white54 : Colors.black45);
 
     return Expanded(
       child: Center(
@@ -115,11 +105,7 @@ class AppleFloatingBottomBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                isSelected ? activeIcon : icon,
-                color: color,
-                size: 22,
-              ),
+              Icon(isSelected ? activeIcon : icon, color: color, size: 22),
               const SizedBox(height: 2),
               Text(
                 label,

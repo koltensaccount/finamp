@@ -131,12 +131,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
     return _topSongArtworkUrls.putIfAbsent(track.id, () {
       final api = GetIt.instance<JellyfinApiHelper>();
       // Defer API calls until after build (Jellyfin enforces this in debug).
-      return Future(() => resolveTopSongArtwork(
-        track,
-        albums: _artist?.albums ?? const [],
-        loadItem: (id) => api.getItemById(BaseItemId(id)),
-        imageUrl: (item) => api.getImageUrl(item: item, maxWidth: 100, maxHeight: 100)?.toString(),
-      ));
+      return Future(
+        () => resolveTopSongArtwork(
+          track,
+          albums: _artist?.albums ?? const [],
+          loadItem: (id) => api.getItemById(BaseItemId(id)),
+          imageUrl: (item) => api.getImageUrl(item: item, maxWidth: 100, maxHeight: 100)?.toString(),
+        ),
+      );
     });
   }
 
@@ -1044,10 +1046,8 @@ class _TopSongArtwork extends StatelessWidget {
       borderRadius: BorderRadius.circular(6),
       child: FutureBuilder<List<String>>(
         future: jellyfinImageUrl,
-        builder: (context, snapshot) => artwork({
-          ...?snapshot.data,
-          if (imageUrl != null && imageUrl!.isNotEmpty) imageUrl!,
-        }.toList(), 0),
+        builder: (context, snapshot) =>
+            artwork({...?snapshot.data, if (imageUrl != null && imageUrl!.isNotEmpty) imageUrl!}.toList(), 0),
       ),
     );
   }

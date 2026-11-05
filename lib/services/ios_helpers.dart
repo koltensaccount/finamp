@@ -38,7 +38,7 @@ class IosPlaybackStateSync {
 
 /// Handles Siri media intent commands from iOS.
 ///
-/// This enables voice commands like "Hey Siri, play [track/artist] on Finamp"
+/// This enables voice commands like "Hey Siri, play [track/artist] on KB Music"
 /// from anywhere on iOS (phone, CarPlay, AirPods, etc.).
 class IosSiriHandler {
   static const _siriIntentChannel = MethodChannel('com.unicornsonlsd.finamp-ios/siri_intent');
@@ -66,7 +66,7 @@ class IosSiriHandler {
     _logger.info("Siri intent handler set up");
   }
 
-  /// Handles Siri "Play X on Finamp" voice commands by delegating to
+  /// Handles Siri "Play X on KB Music" voice commands by delegating to
   /// Android Auto's search engine, which has sophisticated metadata-driven
   /// type detection, multi-type ranking, playlist preference, and artist filtering.
   ///
@@ -166,7 +166,7 @@ class IosSiriHandler {
     await audioServiceHelper.shuffleAll(onlyShowFavorites: false, itemCount: DefaultSettings.quickShuffleItemCount);
   }
 
-  /// Handles Siri "Search for X on Finamp" voice commands
+  /// Handles Siri "Search for X on KB Music" voice commands
   static Future<void> _handleSearchMedia(Map<dynamic, dynamic>? arguments) async {
     if (arguments == null) {
       _logger.warning("Siri searchMedia called with null arguments");

@@ -37,7 +37,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Finamp</string>
+		<string>KB Music</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -45,7 +45,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>finamp</string>
+		<string>KB Music</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -81,13 +81,13 @@
 			<true/>
 		</dict>
 		<key>NSAppleMusicUsageDescription</key>
-		<string>Finamp can use your media library to store downloaded songs. If you don't want this, Finamp can also download songs to the app's internal directory, which doesn't use any permissions.</string>
+		<string>KB Music can use your media library to store downloaded songs. If you don't want this, KB Music can also download songs to the app's internal directory, which doesn't use any permissions.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>I don't know why this permission is being requested, you should probably deny it. If you can, create a GitHub issue with a screenshot of this message.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>I don't know why this permission is being requested, you should probably deny it. If you can, create a GitHub issue with a screenshot of this message.</string>
 		<key>NSSiriUsageDescription</key>
-		<string>Finamp uses Siri to play music via voice commands like "Play [track/artist] on Finamp".</string>
+		<string>KB Music uses Siri to play music via voice commands like "Play [track/artist] on KB Music".</string>
 		<key>INIntentsSupported</key>
 		<array>
 			<string>INPlayMediaIntent</string>

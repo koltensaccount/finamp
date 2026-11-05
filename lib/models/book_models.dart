@@ -161,7 +161,8 @@ class BookEdition {
     description: json['description'] as String?,
     coverUrl: json['cover_url'] as String?,
     assets: (json['assets'] as List?)?.map((e) => BookAsset.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
-    chapters: (json['chapters'] as List?)?.map((e) => BookChapter.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
+    chapters:
+        (json['chapters'] as List?)?.map((e) => BookChapter.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
   );
 
   final String id;
@@ -255,7 +256,8 @@ class BookDetail {
     coverUrl: json['cover_url'] as String?,
     availableFormats: (json['available_formats'] as List?)?.map((e) => e.toString()).toList() ?? const [],
     isPaired: (json['is_paired'] as bool?) ?? false,
-    editions: (json['editions'] as List?)?.map((e) => BookEdition.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
+    editions:
+        (json['editions'] as List?)?.map((e) => BookEdition.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
     progress: BookProgress.fromJson(json['progress'] as Map<String, dynamic>? ?? {}),
     alignment: json['alignment'] as Map<String, dynamic>?,
   );
@@ -320,11 +322,7 @@ class BookAnnotation {
   final double? createdAt;
 }
 
-enum BookDownloadMode {
-  both,
-  epubOnly,
-  audioOnly,
-}
+enum BookDownloadMode { both, epubOnly, audioOnly }
 
 class BookDownloadManifest {
   const BookDownloadManifest({
@@ -436,9 +434,7 @@ class WorldwideBookResult {
   bool get hasEpub => ownedFormats.contains('epub') || acquiredFormats.contains('epub');
   bool get hasAudiobook => ownedFormats.contains('audiobook') || acquiredFormats.contains('audiobook');
   bool get isAcquiring =>
-      requestId != null &&
-      requestState != null &&
-      !const ['available', 'failed', 'imported'].contains(requestState);
+      requestId != null && requestState != null && !const ['available', 'failed', 'imported'].contains(requestState);
 }
 
 class BookRequestItem {

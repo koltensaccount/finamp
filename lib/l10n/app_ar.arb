@@ -22,7 +22,7 @@
     "@startMixNoTracksArtist": {
         "description": "Snackbar message that shows when the user presses the instant mix button with no artists selected"
     },
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "clear": "مسح",
     "shuffleAll": "تشغيل الكل عشوائيًا",
     "startMixNoTracksAlbum": "اضغط مطولاً على ألبوم لإضافته أو إزالته من منشئ المزيج قبل بدء المزيج",

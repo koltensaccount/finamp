@@ -96,8 +96,7 @@ class _BooksScreenState extends State<BooksScreen> {
   }
 
   bool _isCredentialsMissingError(String msg) {
-    return msg.contains('not configured or disabled') ||
-        msg.contains('BooksNotConfiguredException');
+    return msg.contains('not configured or disabled') || msg.contains('BooksNotConfiguredException');
   }
 
   Future<void> _performWorldwideSearch(String query) async {
@@ -177,9 +176,9 @@ class _BooksScreenState extends State<BooksScreen> {
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
                             tooltip: 'Catalog & Books Connection',
-                            onPressed: () => Navigator.of(context)
-                                .pushNamed(CatalogSettingsScreen.routeName)
-                                .then((_) => _loadBooks()),
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).pushNamed(CatalogSettingsScreen.routeName).then((_) => _loadBooks()),
                           ),
                         ],
                       ),
@@ -198,11 +197,7 @@ class _BooksScreenState extends State<BooksScreen> {
                               SizedBox(width: 6),
                               Text(
                                 'Offline Library',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.amber,
-                                ),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.amber),
                               ),
                             ],
                           ),
@@ -242,10 +237,7 @@ class _BooksScreenState extends State<BooksScreen> {
                                   )
                                 : null,
                             hintText: 'Search library & worldwide books',
-                            hintStyle: TextStyle(
-                              fontSize: 15,
-                              color: isDark ? Colors.white38 : Colors.black38,
-                            ),
+                            hintStyle: TextStyle(fontSize: 15, color: isDark ? Colors.white38 : Colors.black38),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           ),
@@ -323,11 +315,7 @@ class _BooksScreenState extends State<BooksScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.travel_explore_rounded,
-                            size: 56,
-                            color: isDark ? Colors.white24 : Colors.black26,
-                          ),
+                          Icon(Icons.travel_explore_rounded, size: 56, color: isDark ? Colors.white24 : Colors.black26),
                           const SizedBox(height: 12),
                           Text(
                             'No Worldwide Books Found',
@@ -381,22 +369,17 @@ class _BooksScreenState extends State<BooksScreen> {
                         mainAxisSpacing: 20,
                         childAspectRatio: 0.58,
                       ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = _searchResults[index];
-                          return _buildWorldwideGridTile(context, item, isDark);
-                        },
-                        childCount: _searchResults.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final item = _searchResults[index];
+                        return _buildWorldwideGridTile(context, item, isDark);
+                      }, childCount: _searchResults.length),
                     ),
                   ),
                 ],
               ] else if (_isLoading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 )
               else if (_errorMessage != null)
                 SliverFillRemaining(
@@ -414,11 +397,7 @@ class _BooksScreenState extends State<BooksScreen> {
                                     color: theme.colorScheme.primary.withValues(alpha: 0.12),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(
-                                    Icons.auto_stories_rounded,
-                                    size: 48,
-                                    color: theme.colorScheme.primary,
-                                  ),
+                                  child: Icon(Icons.auto_stories_rounded, size: 48, color: theme.colorScheme.primary),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -449,9 +428,9 @@ class _BooksScreenState extends State<BooksScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
-                                  onPressed: () => Navigator.of(context)
-                                      .pushNamed(CatalogSettingsScreen.routeName)
-                                      .then((_) => _loadBooks()),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                  ).pushNamed(CatalogSettingsScreen.routeName).then((_) => _loadBooks()),
                                 ),
                               ],
                             )
@@ -474,15 +453,12 @@ class _BooksScreenState extends State<BooksScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    FilledButton.tonal(
-                                      onPressed: _loadBooks,
-                                      child: const Text('Try Again'),
-                                    ),
+                                    FilledButton.tonal(onPressed: _loadBooks, child: const Text('Try Again')),
                                     const SizedBox(width: 12),
                                     OutlinedButton(
-                                      onPressed: () => Navigator.of(context)
-                                          .pushNamed(CatalogSettingsScreen.routeName)
-                                          .then((_) => _loadBooks()),
+                                      onPressed: () => Navigator.of(
+                                        context,
+                                      ).pushNamed(CatalogSettingsScreen.routeName).then((_) => _loadBooks()),
                                       child: const Text('Settings'),
                                     ),
                                   ],
@@ -499,11 +475,7 @@ class _BooksScreenState extends State<BooksScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.menu_book_rounded,
-                          size: 56,
-                          color: isDark ? Colors.white24 : Colors.black26,
-                        ),
+                        Icon(Icons.menu_book_rounded, size: 56, color: isDark ? Colors.white24 : Colors.black26),
                         const SizedBox(height: 12),
                         Text(
                           'No Books Found',
@@ -580,13 +552,10 @@ class _BooksScreenState extends State<BooksScreen> {
                       mainAxisSpacing: 20,
                       childAspectRatio: 0.58,
                     ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final book = _allBooks[index];
-                        return _buildBookGridTile(context, book, isDark);
-                      },
-                      childCount: _allBooks.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final book = _allBooks[index];
+                      return _buildBookGridTile(context, book, isDark);
+                    }, childCount: _allBooks.length),
                   ),
                 ),
               ],
@@ -624,9 +593,7 @@ class _BooksScreenState extends State<BooksScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected
-                ? (isDark ? Colors.black : Colors.white)
-                : (isDark ? Colors.white70 : Colors.black87),
+            color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87),
           ),
         ),
       ),
@@ -635,15 +602,11 @@ class _BooksScreenState extends State<BooksScreen> {
 
   Widget _buildContinueCard(BuildContext context, BookSummary book, bool isDark) {
     final prog = book.progress;
-    final percent = prog.lastActiveFormat == 'listening'
-        ? prog.listeningPercentage
-        : prog.readingPercentage;
+    final percent = prog.lastActiveFormat == 'listening' ? prog.listeningPercentage : prog.readingPercentage;
     final formatLabel = prog.lastActiveFormat == 'listening' ? 'Listening' : 'Reading';
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BookDetailScreen(workId: book.id)),
-      ),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BookDetailScreen(workId: book.id))),
       child: Container(
         width: 280,
         padding: const EdgeInsets.all(12),
@@ -680,9 +643,7 @@ class _BooksScreenState extends State<BooksScreen> {
                   Row(
                     children: [
                       Icon(
-                        prog.lastActiveFormat == 'listening'
-                            ? Icons.headphones_rounded
-                            : Icons.auto_stories_rounded,
+                        prog.lastActiveFormat == 'listening' ? Icons.headphones_rounded : Icons.auto_stories_rounded,
                         size: 13,
                         color: const Color(0xFFFA2D48),
                       ),
@@ -738,9 +699,7 @@ class _BooksScreenState extends State<BooksScreen> {
 
   Widget _buildBookGridTile(BuildContext context, BookSummary book, bool isDark) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BookDetailScreen(workId: book.id)),
-      ),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BookDetailScreen(workId: book.id))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -807,11 +766,7 @@ class _BooksScreenState extends State<BooksScreen> {
                             color: Colors.black.withValues(alpha: 0.75),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.arrow_downward_rounded,
-                            color: Color(0xFFFA2D48),
-                            size: 11,
-                          ),
+                          child: const Icon(Icons.arrow_downward_rounded, color: Color(0xFFFA2D48), size: 11),
                         ),
                       );
                     },
@@ -824,10 +779,11 @@ class _BooksScreenState extends State<BooksScreen> {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
                       child: LinearProgressIndicator(
-                        value: (book.progress.lastActiveFormat == 'listening'
-                                ? book.progress.listeningPercentage
-                                : book.progress.readingPercentage)
-                            .clamp(0.0, 1.0),
+                        value:
+                            (book.progress.lastActiveFormat == 'listening'
+                                    ? book.progress.listeningPercentage
+                                    : book.progress.readingPercentage)
+                                .clamp(0.0, 1.0),
                         minHeight: 4,
                         backgroundColor: Colors.black26,
                         valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFA2D48)),
@@ -849,10 +805,7 @@ class _BooksScreenState extends State<BooksScreen> {
             book.author,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.black54,
-            ),
+            style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
           ),
         ],
       ),
@@ -887,10 +840,7 @@ class _BooksScreenState extends State<BooksScreen> {
       onTap: () async {
         await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => BookDetailScreen(
-              workId: item.localWorkId,
-              worldwideItem: item,
-            ),
+            builder: (_) => BookDetailScreen(workId: item.localWorkId, worldwideItem: item),
           ),
         );
         if (mounted && _searchController.text.trim().isNotEmpty) {
@@ -915,11 +865,7 @@ class _BooksScreenState extends State<BooksScreen> {
                       : _buildWorldwidePlaceholder(item),
                 ),
                 // Status Badge (Top-Left)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: _buildStatusBadge(item),
-                ),
+                Positioned(top: 8, left: 8, child: _buildStatusBadge(item)),
                 // Owned format tags
                 if (item.isLocal && item.ownedFormats.isNotEmpty)
                   Positioned(
@@ -936,7 +882,10 @@ class _BooksScreenState extends State<BooksScreen> {
                               color: Colors.black.withValues(alpha: 0.8),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('EPUB', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'EPUB',
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         if (item.ownedFormats.contains('audiobook'))
                           Container(
@@ -946,7 +895,10 @@ class _BooksScreenState extends State<BooksScreen> {
                               color: const Color(0xFFFA2D48).withValues(alpha: 0.9),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('AUDIO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'AUDIO',
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
                           ),
                       ],
                     ),
@@ -966,10 +918,7 @@ class _BooksScreenState extends State<BooksScreen> {
             item.publishedYear != null ? '${item.author} • ${item.publishedYear}' : item.author,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white60 : Colors.black54,
-            ),
+            style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54),
           ),
         ],
       ),
@@ -1009,10 +958,7 @@ class _BooksScreenState extends State<BooksScreen> {
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: bgColor.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(5),
-        ),
+        decoration: BoxDecoration(color: bgColor.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(5)),
         child: Text(
           label,
           style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3),
@@ -1022,10 +968,7 @@ class _BooksScreenState extends State<BooksScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(5),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.65), borderRadius: BorderRadius.circular(5)),
       child: const Text(
         'WORLDWIDE',
         style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3),

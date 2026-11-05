@@ -464,7 +464,7 @@
     "@resetFiltersButton": {
         "description": "Button to reset filters on a list of items"
     },
-    "finamp": "फ़िनएम्प",
+    "finamp": "KB Music",
     "@finamp": {
         "description": "App name, possibly translated"
     },

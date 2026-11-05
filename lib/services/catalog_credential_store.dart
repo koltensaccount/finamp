@@ -36,9 +36,7 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
     final effectiveEndpoint = (endpoint != null && endpoint.isNotEmpty)
         ? endpoint
         : (_envEndpoint.isNotEmpty ? _envEndpoint : 'http://127.0.0.1:8765');
-    final effectiveToken = (token != null && token.isNotEmpty)
-        ? token
-        : _envToken;
+    final effectiveToken = (token != null && token.isNotEmpty) ? token : _envToken;
 
     final uri = Uri.tryParse(effectiveEndpoint);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty || effectiveToken.isEmpty) {

@@ -9,10 +9,7 @@ import 'finamp_settings_helper.dart';
 class ArtistResolutionHelper {
   /// Resolves the first genuine artist with a valid, non-empty ID.
   /// Checks [artistItems] first; if empty or none has a valid ID, falls back to [albumArtists].
-  static NameIdPair? resolveGenuineArtist({
-    List<NameIdPair>? artistItems,
-    List<NameIdPair>? albumArtists,
-  }) {
+  static NameIdPair? resolveGenuineArtist({List<NameIdPair>? artistItems, List<NameIdPair>? albumArtists}) {
     if (artistItems != null) {
       for (final item in artistItems) {
         if (item.id.raw.trim().isNotEmpty) {
@@ -34,14 +31,8 @@ class ArtistResolutionHelper {
   /// Truthfully falls back from [artistItems] to [albumArtists] when [artistItems] is empty
   /// or contains invalid/whitespace IDs. Returns null if no genuine artist ID exists,
   /// avoiding fabricating an artist target using the track's ID.
-  static BaseItemDto? resolveArtistNavigationTarget({
-    required BaseItemDto track,
-    String? fallbackArtistName,
-  }) {
-    final genuine = resolveGenuineArtist(
-      artistItems: track.artistItems,
-      albumArtists: track.albumArtists,
-    );
+  static BaseItemDto? resolveArtistNavigationTarget({required BaseItemDto track, String? fallbackArtistName}) {
+    final genuine = resolveGenuineArtist(artistItems: track.artistItems, albumArtists: track.albumArtists);
     if (genuine != null) {
       return BaseItemDto(
         id: genuine.id,
@@ -70,21 +61,15 @@ class ArtistResolutionHelper {
 
     // 1. If currently in offline mode, bypass all catalog resolution and open local ArtistScreen
     if (ArtistIdentityService.isOffline) {
-      final target = artistItem ??
+      final target =
+          artistItem ??
           (effectiveJfId != null
-              ? BaseItemDto(
-                  id: BaseItemId(effectiveJfId),
-                  name: effectiveName,
-                  type: 'MusicArtist',
-                )
+              ? BaseItemDto(id: BaseItemId(effectiveJfId), name: effectiveName, type: 'MusicArtist')
               : null);
       if (target != null && context.mounted) {
         if (genreFilter != null) {
           final route = MaterialPageRoute<ArtistScreen>(
-            builder: (_) => ArtistScreen(
-              widgetArtist: target,
-              genreFilter: genreFilter,
-            ),
+            builder: (_) => ArtistScreen(widgetArtist: target, genreFilter: genreFilter),
           );
           if (popFirst) {
             Navigator.of(context).pop();
@@ -120,13 +105,10 @@ class ArtistResolutionHelper {
       final args = CatalogArtistScreenArguments(
         artistMbid: resolvedMbid,
         initialName: effectiveName,
-        fallbackArtist: artistItem ??
+        fallbackArtist:
+            artistItem ??
             (effectiveJfId != null
-                ? BaseItemDto(
-                    id: BaseItemId(effectiveJfId),
-                    name: effectiveName,
-                    type: 'MusicArtist',
-                  )
+                ? BaseItemDto(id: BaseItemId(effectiveJfId), name: effectiveName, type: 'MusicArtist')
                 : null),
       );
       if (popFirst) {
@@ -138,21 +120,15 @@ class ArtistResolutionHelper {
     }
 
     // 4. Fallback: navigate to local ArtistScreen
-    final target = artistItem ??
+    final target =
+        artistItem ??
         (effectiveJfId != null
-            ? BaseItemDto(
-                id: BaseItemId(effectiveJfId),
-                name: effectiveName,
-                type: 'MusicArtist',
-              )
+            ? BaseItemDto(id: BaseItemId(effectiveJfId), name: effectiveName, type: 'MusicArtist')
             : null);
     if (target != null && context.mounted) {
       if (genreFilter != null) {
         final route = MaterialPageRoute<ArtistScreen>(
-          builder: (_) => ArtistScreen(
-            widgetArtist: target,
-            genreFilter: genreFilter,
-          ),
+          builder: (_) => ArtistScreen(widgetArtist: target, genreFilter: genreFilter),
         );
         if (popFirst) {
           Navigator.of(context).pop();

@@ -26,11 +26,7 @@ class EpubParsedChapter {
 }
 
 class EpubBookData {
-  const EpubBookData({
-    required this.title,
-    required this.author,
-    required this.chapters,
-  });
+  const EpubBookData({required this.title, required this.author, required this.chapters});
 
   final String title;
   final String author;
@@ -65,10 +61,7 @@ class EpubBookData {
         final paraNum = int.tryParse(cleanParaStr) ?? 2;
         paraIdx = (paraNum ~/ 2) - 1;
       }
-      return (
-        chapterIdx.clamp(0, chapters.isEmpty ? 0 : chapters.length - 1),
-        paraIdx.clamp(0, 99999),
-      );
+      return (chapterIdx.clamp(0, chapters.isEmpty ? 0 : chapters.length - 1), paraIdx.clamp(0, 99999));
     } catch (_) {
       return (0, 0);
     }
@@ -134,10 +127,9 @@ class EpubReaderService {
             if (navPoint.localName?.toLowerCase() == 'navpoint') {
               final textElem = navPoint.querySelector('*');
               final text = navPoint.text.trim();
-              final contentElem = navPoint.querySelectorAll('*').firstWhere(
-                (e) => e.localName?.toLowerCase() == 'content',
-                orElse: () => dom.Element.tag('span'),
-              );
+              final contentElem = navPoint
+                  .querySelectorAll('*')
+                  .firstWhere((e) => e.localName?.toLowerCase() == 'content', orElse: () => dom.Element.tag('span'));
               final src = contentElem.attributes['src'];
               if (text.isNotEmpty && src != null) {
                 final cleanSrc = src.contains('#') ? src.substring(0, src.indexOf('#')) : src;
@@ -199,23 +191,21 @@ class EpubReaderService {
         }
       }
 
-      chapters.add(EpubParsedChapter(
-        index: chapterIndex,
-        id: idref,
-        title: chapterTitle,
-        href: relativeHref,
-        htmlContent: rawHtml,
-        plainText: plainText,
-        paragraphs: paragraphs.isNotEmpty ? paragraphs : [plainText],
-      ));
+      chapters.add(
+        EpubParsedChapter(
+          index: chapterIndex,
+          id: idref,
+          title: chapterTitle,
+          href: relativeHref,
+          htmlContent: rawHtml,
+          plainText: plainText,
+          paragraphs: paragraphs.isNotEmpty ? paragraphs : [plainText],
+        ),
+      );
 
       chapterIndex++;
     }
 
-    return EpubBookData(
-      title: title,
-      author: author,
-      chapters: chapters,
-    );
+    return EpubBookData(title: title, author: author, chapters: chapters);
   }
 }

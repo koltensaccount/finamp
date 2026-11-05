@@ -33,7 +33,7 @@
         "description": "Snackbar message that shows when the user presses the instant mix button with no albums selected"
     },
     "music": "Μουσική",
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "communityRating": "Βαθμολογία κοινότητας",
     "dlFailed": "{count} απέτυχαν",
     "@dlFailed": {

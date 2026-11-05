@@ -82,14 +82,10 @@ class NowPlayingBar extends ConsumerWidget {
             child: Container(
               height: 52,
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0x73141416)
-                    : const Color(0x99FFFFFF),
+                color: isDark ? const Color(0x73141416) : const Color(0x99FFFFFF),
                 borderRadius: BorderRadius.circular(14.0),
                 border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.18)
-                      : Colors.black.withValues(alpha: 0.08),
+                  color: isDark ? Colors.white.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.08),
                   width: 0.5,
                 ),
               ),
@@ -114,11 +110,7 @@ class NowPlayingBar extends ConsumerWidget {
                           : AppLocalizations.of(context)!.queueLoadingMessage,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(fontSize: 13, color: primaryTextColor, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -204,14 +196,10 @@ class NowPlayingBar extends ConsumerWidget {
                       height: 48,
                       padding: EdgeInsets.zero,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0x73141416)
-                            : const Color(0x99FFFFFF),
+                        color: isDark ? const Color(0x73141416) : const Color(0x99FFFFFF),
                         borderRadius: BorderRadius.circular(12.0),
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.18)
-                              : Colors.black.withValues(alpha: 0.08),
+                          color: isDark ? Colors.white.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.08),
                           width: 0.5,
                         ),
                       ),
@@ -296,10 +284,7 @@ class NowPlayingBar extends ConsumerWidget {
                                       },
                                       color: primaryTextColor,
                                       visualDensity: VisualDensity.compact,
-                                      icon: const Icon(
-                                        Icons.fast_forward_rounded,
-                                        size: 20,
-                                      ),
+                                      icon: const Icon(Icons.fast_forward_rounded, size: 20),
                                     ),
                                   ],
                                 ),
@@ -325,9 +310,7 @@ class NowPlayingBar extends ConsumerWidget {
                                       widthFactor: itemLength == null
                                           ? 0
                                           : (position.inMilliseconds / itemLength.inMilliseconds).clamp(0.0, 1.0),
-                                      child: Container(
-                                        color: Colors.white.withValues(alpha: 0.5),
-                                      ),
+                                      child: Container(color: Colors.white.withValues(alpha: 0.5)),
                                     );
                                   }
                                   return const SizedBox.shrink();

@@ -43,7 +43,8 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     final isFavorite = ref.watch(isFavoriteProvider(resolvedParent));
 
     final albumArtUrl = jellyfinApiHelper.getImageUrl(item: resolvedParent)?.toString();
-    final artistName = resolvedParent.albumArtist ??
+    final artistName =
+        resolvedParent.albumArtist ??
         ((resolvedParent.artists?.isNotEmpty ?? false) ? resolvedParent.artists!.first : 'Unknown Artist');
     final year = resolvedParent.productionYear != null ? '${resolvedParent.productionYear}' : '';
 
@@ -144,11 +145,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
           Text(
             resolvedParent.name ?? 'Album',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-            ),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4),
           ),
           const SizedBox(height: 4),
           // Artist Name (Tappable with Apple Red accent)
@@ -168,21 +165,13 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
             child: Text(
               artistName,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AlbumScreen.appleAccentColor,
-              ),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AlbumScreen.appleAccentColor),
             ),
           ),
           const SizedBox(height: 4),
           // Metadata: Album • Year • Lossless
           Text(
-            [
-              'Album',
-              if (year.isNotEmpty) year,
-              'Lossless',
-            ].join(' • '),
+            ['Album', if (year.isNotEmpty) year, 'Lossless'].join(' • '),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,
@@ -278,10 +267,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                       if (durationText.isNotEmpty)
                         Text(
                           durationText,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                          ),
+                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
                         ),
                       const SizedBox(width: 6),
                       IconButton(
@@ -301,11 +287,7 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
                     );
                   },
                 ),
-                Divider(
-                  height: 1,
-                  indent: 48,
-                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                ),
+                Divider(height: 1, indent: 48, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
               ],
             );
           }),

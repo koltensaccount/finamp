@@ -65,8 +65,9 @@ class GoToArtistMenuEntry extends ConsumerWidget implements HideableMenuEntry {
   @override
   bool get isVisible {
     return ArtistResolutionHelper.resolveGenuineArtist(
-      artistItems: baseItem.artistItems,
-      albumArtists: baseItem.albumArtists,
-    ) != null;
+          artistItems: baseItem.artistItems,
+          albumArtists: baseItem.albumArtists,
+        ) !=
+        null;
   }
 }

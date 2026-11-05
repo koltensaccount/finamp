@@ -214,7 +214,7 @@
             }
         }
     },
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "@finamp": {
         "description": "App name, possibly translated"
     },

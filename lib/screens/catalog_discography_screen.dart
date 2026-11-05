@@ -9,11 +9,7 @@ import 'catalog_album_screen.dart';
 enum DiscographyOwnershipFilter { all, inLibrary, unowned }
 
 class CatalogDiscographyScreenArguments {
-  const CatalogDiscographyScreenArguments({
-    required this.title,
-    required this.artistName,
-    required this.items,
-  });
+  const CatalogDiscographyScreenArguments({required this.title, required this.artistName, required this.items});
 
   final String title;
   final String artistName;
@@ -44,10 +40,7 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
     final rawArgs = ModalRoute.of(context)?.settings.arguments;
     if (rawArgs is! CatalogDiscographyScreenArguments) {
       return Scaffold(
-        appBar: AppBar(
-          leading: const FinampAppBarBackButton(),
-          title: const Text('Discography'),
-        ),
+        appBar: AppBar(leading: const FinampAppBarBackButton(), title: const Text('Discography')),
         body: const Center(child: Text('No discography data provided.')),
       );
     }
@@ -59,28 +52,30 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
     final unownedCount = allItems.where((i) => !i.isFullyOwned && !i.isPartiallyOwned).length;
 
     // Filter items by search query and ownership
-    final filtered = allItems.where((item) {
-      // Ownership filter
-      if (_filter == DiscographyOwnershipFilter.inLibrary && !item.isFullyOwned && !item.isPartiallyOwned) {
-        return false;
-      }
-      if (_filter == DiscographyOwnershipFilter.unowned && (item.isFullyOwned || item.isPartiallyOwned)) {
-        return false;
-      }
+    final filtered = allItems
+        .where((item) {
+          // Ownership filter
+          if (_filter == DiscographyOwnershipFilter.inLibrary && !item.isFullyOwned && !item.isPartiallyOwned) {
+            return false;
+          }
+          if (_filter == DiscographyOwnershipFilter.unowned && (item.isFullyOwned || item.isPartiallyOwned)) {
+            return false;
+          }
 
-      // Query filter
-      if (_query.isNotEmpty) {
-        final q = _query.toLowerCase();
-        final matchTitle = item.title.toLowerCase().contains(q);
-        final matchYear = item.firstDate?.toLowerCase().contains(q) ?? false;
-        final matchTypes = item.secondaryTypes.any((t) => t.toLowerCase().contains(q));
-        if (!matchTitle && !matchYear && !matchTypes) {
-          return false;
-        }
-      }
+          // Query filter
+          if (_query.isNotEmpty) {
+            final q = _query.toLowerCase();
+            final matchTitle = item.title.toLowerCase().contains(q);
+            final matchYear = item.firstDate?.toLowerCase().contains(q) ?? false;
+            final matchTypes = item.secondaryTypes.any((t) => t.toLowerCase().contains(q));
+            if (!matchTitle && !matchYear && !matchTypes) {
+              return false;
+            }
+          }
 
-      return true;
-    }).toList(growable: false);
+          return true;
+        })
+        .toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -235,7 +230,10 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
           children: [
             Icon(Icons.check_circle, size: 12, color: Colors.green),
             SizedBox(width: 4),
-            Text('In Library', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text(
+              'In Library',
+              style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       );
@@ -252,7 +250,10 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
           children: [
             Icon(Icons.pie_chart, size: 12, color: Colors.amber.shade800),
             const SizedBox(width: 4),
-            Text('Partial', style: TextStyle(color: Colors.amber.shade800, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text(
+              'Partial',
+              style: TextStyle(color: Colors.amber.shade800, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       );
@@ -276,13 +277,17 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
 
     return ListTile(
       leading: leadingWidget,
-      title: Text(album.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        album.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(info.isNotEmpty ? info : 'Album', maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: trailingWidget,
-      onTap: () => Navigator.of(context).pushNamed(
-        CatalogAlbumScreen.routeName,
-        arguments: CatalogAlbumScreenArguments.fromSearchResult(album),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).pushNamed(CatalogAlbumScreen.routeName, arguments: CatalogAlbumScreenArguments.fromSearchResult(album)),
     );
   }
 }

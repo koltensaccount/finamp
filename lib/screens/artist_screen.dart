@@ -62,11 +62,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
     if (mbid != null && mounted) {
       Navigator.of(context).pushReplacementNamed(
         CatalogArtistScreen.routeName,
-        arguments: CatalogArtistScreenArguments(
-          artistMbid: mbid,
-          initialName: artist.name,
-          fallbackArtist: artist,
-        ),
+        arguments: CatalogArtistScreenArguments(artistMbid: mbid, initialName: artist.name, fallbackArtist: artist),
       );
     }
   }
@@ -75,12 +71,13 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final rawArgs = ModalRoute.of(context)?.settings.arguments;
-    final BaseItemDto artist = widget.widgetArtist ??
+    final BaseItemDto artist =
+        widget.widgetArtist ??
         (rawArgs is BaseItemDto
             ? rawArgs
             : (rawArgs is Map && rawArgs['artist'] is BaseItemDto
-                ? rawArgs['artist'] as BaseItemDto
-                : BaseItemDto(id: const BaseItemId(''), name: 'Artist')));
+                  ? rawArgs['artist'] as BaseItemDto
+                  : BaseItemDto(id: const BaseItemId(''), name: 'Artist')));
 
     final finampUserHelper = GetIt.instance<FinampUserHelper>();
     final library = finampUserHelper.currentUser?.currentView;
@@ -195,11 +192,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
           Text(
             artist.name ?? 'Artist',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5),
           ),
           const SizedBox(height: 4),
           // Metadata: Albums & Songs
@@ -258,10 +251,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
 
           // Top Songs Section
           if (tracks != null && tracks.isNotEmpty) ...[
-            const Text(
-              'Top Songs',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.3),
-            ),
+            const Text('Top Songs', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
             const SizedBox(height: 10),
             ...tracks.take(8).toList().asMap().entries.map((entry) {
               final index = entry.key;
@@ -309,10 +299,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                         if (durationText.isNotEmpty)
                           Text(
                             durationText,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? Colors.white38 : Colors.black38,
-                            ),
+                            style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
                           ),
                         const SizedBox(width: 6),
                         IconButton(
@@ -332,11 +319,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       );
                     },
                   ),
-                  Divider(
-                    height: 1,
-                    indent: 44,
-                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                  ),
+                  Divider(height: 1, indent: 44, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
                 ],
               );
             }),
@@ -345,10 +328,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
 
           // Albums Section
           if (albums.isNotEmpty) ...[
-            const Text(
-              'Albums',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.3),
-            ),
+            const Text('Albums', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
             const SizedBox(height: 12),
             SizedBox(
               height: 195,

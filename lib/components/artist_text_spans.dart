@@ -33,21 +33,17 @@ List<TextSpan> getArtistsTextSpans(BaseItemDto item, BuildContext context, bool 
                   return;
                 }
 
-                jellyfinApiHelper
-                    .getItemById(e.id)
-                    .then(
-                      (artist) {
-                        if (context.mounted) {
-                          ArtistResolutionHelper.navigateToArtist(
-                            context,
-                            artistItem: artist,
-                            jellyfinId: e.id.raw,
-                            artistName: e.name,
-                            popFirst: popRoutes,
-                          );
-                        }
-                      },
+                jellyfinApiHelper.getItemById(e.id).then((artist) {
+                  if (context.mounted) {
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artist,
+                      jellyfinId: e.id.raw,
+                      artistName: e.name,
+                      popFirst: popRoutes,
                     );
+                  }
+                });
               },
           ),
         )

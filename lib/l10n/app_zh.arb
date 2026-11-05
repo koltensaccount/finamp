@@ -167,7 +167,7 @@
         }
     },
     "grid": "网格",
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "enableTranscodingSubtitle": "音乐流将由服务器转码。",
     "music": "音乐",
     "internalExternalIpExplanation": "如果您希望能够远程访问您的 Jellyfin 服务器，则需要使用您的外部 IP。\n\n如果您的服务器位于 HTTP 端口 (80/443) 上，则不必指定端口。 \n\n如果URL正确，你应该能在输入框下方看到弹出的服务器信息。",

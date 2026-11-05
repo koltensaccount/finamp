@@ -57,7 +57,7 @@
     "@selectMusicLibraries": {
         "description": "App bar title for library select screen"
     },
-    "finamp": "فین‌امپ",
+    "finamp": "KB Music",
     "@finamp": {
         "description": "App name, possibly translated"
     },

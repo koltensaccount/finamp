@@ -121,7 +121,12 @@ class MusicScreenPlayable<ChildType extends FinampPlayableDto> extends _Sortable
         return MusicScreenPlayable<Artist>._(tab: tab, library: library, source: source, sortConfig: sortConfig)
             as MusicScreenPlayable<ChildType>;
       case ContentType.genericArtists:
-        return MusicScreenPlayable<Artist>._(tab: ContentType.albumArtists, library: library, source: source, sortConfig: sortConfig)
+        return MusicScreenPlayable<Artist>._(
+              tab: ContentType.albumArtists,
+              library: library,
+              source: source,
+              sortConfig: sortConfig,
+            )
             as MusicScreenPlayable<ChildType>;
       case ContentType.genres:
         return MusicScreenPlayable<Genre>._(tab: tab, library: library, source: source, sortConfig: sortConfig)

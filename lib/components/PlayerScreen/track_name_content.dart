@@ -28,10 +28,8 @@ class TrackNameContent extends ConsumerWidget {
 
     final isFav = ref.watch(isFavoriteProvider(trackBaseItemDto));
 
-    final artistName = trackBaseItemDto.artists?.firstOrNull ??
-        trackBaseItemDto.albumArtist ??
-        currentTrack.item.artist ??
-        '';
+    final artistName =
+        trackBaseItemDto.artists?.firstOrNull ?? trackBaseItemDto.albumArtist ?? currentTrack.item.artist ?? '';
 
     final artistTarget = ArtistResolutionHelper.resolveArtistNavigationTarget(
       track: trackBaseItemDto,

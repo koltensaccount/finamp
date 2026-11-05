@@ -34,19 +34,17 @@ List<TextSpan> buildArtistsTextSpans(BaseItemDto item, Color? textColour, BuildC
                     ? isarDownloader.getCollectionInfo(id: e.id).then((value) => value!.baseItem!)
                     : jellyfinApiHelper.getItemById(e.id);
 
-                artistFuture.then(
-                  (artist) {
-                    if (context.mounted) {
-                      ArtistResolutionHelper.navigateToArtist(
-                        context,
-                        artistItem: artist,
-                        jellyfinId: e.id.raw,
-                        artistName: e.name,
-                        popFirst: popRoutes,
-                      );
-                    }
-                  },
-                );
+                artistFuture.then((artist) {
+                  if (context.mounted) {
+                    ArtistResolutionHelper.navigateToArtist(
+                      context,
+                      artistItem: artist,
+                      jellyfinId: e.id.raw,
+                      artistName: e.name,
+                      popFirst: popRoutes,
+                    );
+                  }
+                });
               },
           ),
         )

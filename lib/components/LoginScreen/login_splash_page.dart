@@ -30,7 +30,7 @@ class LoginSplashPage extends StatelessWidget {
                 children: [
                   TextSpan(text: welcomeString[0]),
                   TextSpan(
-                    text: "Finamp",
+                    text: "KB Music",
                     style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                       // color: Theme.of(context).colorScheme.secondary,
                       fontWeight: FontWeight.w500,

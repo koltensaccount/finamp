@@ -146,7 +146,7 @@
     "@selectMusicLibraries": {
         "description": "App bar title for library select screen"
     },
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "shuffleAll": "Tümünü karıştır",
     "playCount": "Oynatma Sayısı",
     "name": "Ad",

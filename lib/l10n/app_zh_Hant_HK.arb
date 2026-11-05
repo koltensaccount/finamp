@@ -178,7 +178,7 @@
         "description": "Snackbar message that shows when the user presses the instant mix button with no albums selected"
     },
     "shuffleAll": "隨機播放全部",
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "dlFailed": "{count} 失敗",
     "@dlFailed": {
         "placeholders": {

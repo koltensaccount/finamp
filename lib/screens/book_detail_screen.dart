@@ -9,11 +9,8 @@ import 'audiobook_player_screen.dart';
 import 'epub_reader_screen.dart';
 
 class BookDetailScreen extends StatefulWidget {
-  const BookDetailScreen({
-    super.key,
-    this.workId,
-    this.worldwideItem,
-  }) : assert(workId != null || worldwideItem != null);
+  const BookDetailScreen({super.key, this.workId, this.worldwideItem})
+    : assert(workId != null || worldwideItem != null);
 
   static const routeName = '/book_detail';
   final String? workId;
@@ -163,35 +160,33 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           _isRequesting = false;
         });
         _startPollingRequest(req.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Requested "$title". Searching authorized sources...'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Requested "$title". Searching authorized sources...')));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isRequesting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Request failed: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request failed: $e')));
       }
     }
   }
 
   void _openReader(BuildContext context) {
     if (_book == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => EpubReaderScreen(
-          workId: _book!.id,
-          title: _book!.title,
-          author: _book!.author,
-          initialCfi: _book!.progress.readingCfi,
-          hasPairedAudio: _book!.hasAudiobook,
-        ),
-      ),
-    ).then((_) => _loadBook());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => EpubReaderScreen(
+              workId: _book!.id,
+              title: _book!.title,
+              author: _book!.author,
+              initialCfi: _book!.progress.readingCfi,
+              hasPairedAudio: _book!.hasAudiobook,
+            ),
+          ),
+        )
+        .then((_) => _loadBook());
   }
 
   void _openAudioPlayer(BuildContext context) {
@@ -199,14 +194,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     final audioEd = _book!.audioEdition;
     if (audioEd == null) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AudiobookPlayerScreen(
-          book: _book!,
-          audioEdition: audioEd,
-        ),
-      ),
-    ).then((_) => _loadBook());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => AudiobookPlayerScreen(book: _book!, audioEdition: audioEd),
+          ),
+        )
+        .then((_) => _loadBook());
   }
 
   @override
@@ -224,34 +218,28 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, size: 20),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_horiz_rounded, size: 22),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_outlined, size: 20), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_horiz_rounded, size: 22), onPressed: () {}),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
-                      const SizedBox(height: 12),
-                      Text('Error: $_errorMessage'),
-                      const SizedBox(height: 12),
-                      FilledButton.tonal(onPressed: _loadBook, child: const Text('Retry')),
-                    ],
-                  ),
-                )
-              : _book == null && _worldwideItem == null
-                  ? const Center(child: Text('Book not found'))
-                  : _buildDetailContent(context, theme, isDark),
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
+                  const SizedBox(height: 12),
+                  Text('Error: $_errorMessage'),
+                  const SizedBox(height: 12),
+                  FilledButton.tonal(onPressed: _loadBook, child: const Text('Retry')),
+                ],
+              ),
+            )
+          : _book == null && _worldwideItem == null
+          ? const Center(child: Text('Book not found'))
+          : _buildDetailContent(context, theme, isDark),
     );
   }
 
@@ -266,7 +254,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     final isPaired = _book?.isPaired ?? false;
     final isOwned = _book != null;
     final activeState = _requestItem?.state ?? _worldwideItem?.requestState;
-    final isAcquiring = _isRequesting || (activeState != null && !const ['available', 'failed', 'imported'].contains(activeState));
+    final isAcquiring =
+        _isRequesting || (activeState != null && !const ['available', 'failed', 'imported'].contains(activeState));
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -292,11 +281,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: coverUrl != null
-                    ? Image.network(
-                        coverUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholderCover(),
-                      )
+                    ? Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholderCover())
                     : _buildPlaceholderCover(),
               ),
             ),
@@ -306,10 +291,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
           ),
           const SizedBox(height: 6),
           Text(
@@ -325,10 +307,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             const SizedBox(height: 4),
             Text(
               '$seriesName • Book ${_book?.seriesOrder ?? 1}',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white38 : Colors.black45,
-              ),
+              style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black45),
             ),
           ],
           const SizedBox(height: 12),
@@ -337,12 +316,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (isOwned) ...[
-                if (hasEpub)
-                  _buildFormatTag('EPUB', Icons.menu_book_rounded, isDark),
-                if (hasEpub && hasAudiobook)
-                  const SizedBox(width: 8),
-                if (hasAudiobook)
-                  _buildFormatTag('AUDIOBOOK', Icons.headphones_rounded, isDark),
+                if (hasEpub) _buildFormatTag('EPUB', Icons.menu_book_rounded, isDark),
+                if (hasEpub && hasAudiobook) const SizedBox(width: 8),
+                if (hasAudiobook) _buildFormatTag('AUDIOBOOK', Icons.headphones_rounded, isDark),
                 if (isPaired) ...[
                   const SizedBox(width: 8),
                   _buildFormatTag('PAIRED SYNC', Icons.sync_rounded, isDark, accent: true),
@@ -373,8 +349,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ),
                     ),
                   ),
-                if (hasEpub && hasAudiobook)
-                  const SizedBox(width: 12),
+                if (hasEpub && hasAudiobook) const SizedBox(width: 12),
                 if (hasAudiobook)
                   Expanded(
                     child: FilledButton.tonalIcon(
@@ -391,10 +366,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             ),
             if (hasEpub || hasAudiobook) ...[
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: _buildDownloadButton(context, isDark),
-              ),
+              SizedBox(width: double.infinity, child: _buildDownloadButton(context, isDark)),
             ],
             if (isPaired) ...[
               const SizedBox(height: 12),
@@ -403,9 +375,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFA2D48).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFFA2D48).withValues(alpha: 0.25),
-                  ),
+                  border: Border.all(color: const Color(0xFFFA2D48).withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                   children: [
@@ -429,9 +399,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF0F0F3),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFFFA2D48).withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: const Color(0xFFFA2D48).withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,10 +427,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Stage: ${(activeState ?? "searching").toUpperCase()} • ${(_requestItem?.progressPercentage ?? 25.0).toInt()}% completed',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white60 : Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
                   ),
                   const SizedBox(height: 10),
                   ClipRRect(
@@ -501,20 +466,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 'About this book',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 18),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               description,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: isDark ? Colors.white70 : Colors.black87,
-              ),
+              style: TextStyle(fontSize: 14, height: 1.5, color: isDark ? Colors.white70 : Colors.black87),
             ),
             const SizedBox(height: 28),
           ],
@@ -532,18 +490,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     showModalBottomSheet<String>(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1B1B1E) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-            const Text(
-              'Request for Home Server',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-            ),
+            const Text('Request for Home Server', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.auto_stories_rounded, color: Color(0xFFFA2D48)),
@@ -581,18 +534,12 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             ? const Color(0xFFFA2D48).withValues(alpha: 0.15)
             : (isDark ? const Color(0xFF26262A) : const Color(0xFFE9E9EB)),
         borderRadius: BorderRadius.circular(6),
-        border: accent
-            ? Border.all(color: const Color(0xFFFA2D48).withValues(alpha: 0.3), width: 0.8)
-            : null,
+        border: accent ? Border.all(color: const Color(0xFFFA2D48).withValues(alpha: 0.3), width: 0.8) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 12,
-            color: accent ? const Color(0xFFFA2D48) : (isDark ? Colors.white70 : Colors.black54),
-          ),
+          Icon(icon, size: 12, color: accent ? const Color(0xFFFA2D48) : (isDark ? Colors.white70 : Colors.black54)),
           const SizedBox(width: 4),
           Text(
             label,
@@ -620,10 +567,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           children: [
             Text(
               'Chapters (${chapters.length})',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 18),
             ),
             const Spacer(),
           ],
@@ -633,10 +577,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: chapters.take(15).length,
-          separatorBuilder: (_, __) => Divider(
-            height: 1,
-            color: isDark ? Colors.white12 : Colors.black12,
-          ),
+          separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
           itemBuilder: (context, index) {
             final ch = chapters[index];
             final durationStr = ch.endSeconds != null && ch.endSeconds! > 0
@@ -646,10 +587,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               contentPadding: EdgeInsets.zero,
               leading: Text(
                 '${index + 1}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white38 : Colors.black38,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white38 : Colors.black38),
               ),
               title: Text(
                 ch.title,
@@ -674,8 +612,14 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     final audioEd = _book?.audioEdition;
     final publisher = epubEd?.publisher ?? audioEd?.publisher;
     final year = epubEd?.publishedYear ?? audioEd?.publishedYear ?? _worldwideItem?.publishedYear;
-    final isbn = epubEd?.isbn ?? audioEd?.isbn ?? (_worldwideItem?.isbns.isNotEmpty == true ? _worldwideItem!.isbns.first : null);
-    final language = epubEd?.language ?? audioEd?.language ?? (_worldwideItem?.languages.isNotEmpty == true ? _worldwideItem!.languages.first : 'en');
+    final isbn =
+        epubEd?.isbn ??
+        audioEd?.isbn ??
+        (_worldwideItem?.isbns.isNotEmpty == true ? _worldwideItem!.isbns.first : null);
+    final language =
+        epubEd?.language ??
+        audioEd?.language ??
+        (_worldwideItem?.languages.isNotEmpty == true ? _worldwideItem!.languages.first : 'en');
     final genres = _book?.genres ?? _worldwideItem?.genres ?? [];
 
     return Container(
@@ -692,8 +636,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           _buildMetaRow('Language', language.toUpperCase(), isDark),
           if (_worldwideItem != null && _worldwideItem!.editionCount > 1)
             _buildMetaRow('Editions', '${_worldwideItem!.editionCount} editions worldwide', isDark),
-          if (genres.isNotEmpty)
-            _buildMetaRow('Genres', genres.join(', '), isDark),
+          if (genres.isNotEmpty) _buildMetaRow('Genres', genres.join(', '), isDark),
         ],
       ),
     );
@@ -767,10 +710,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       title: const Text('Remove Download'),
                       content: const Text('Do you want to delete this downloaded book from your device?'),
                       actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Cancel'),
-                        ),
+                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
                         FilledButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
                           style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -803,7 +743,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     final selected = await showModalBottomSheet<BookDownloadMode>(
                       context: context,
                       backgroundColor: isDark ? const Color(0xFF1B1B1E) : Colors.white,
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
                       builder: (ctx) => SafeArea(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -843,23 +785,23 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   if (targetId != null) {
                     await _downloadService!.downloadWork(targetId, mode: mode, bookDetail: _book);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Book downloaded for offline use')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('Book downloaded for offline use')));
                     }
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Download failed: $e')),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
                   }
                 }
               },
               icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-              label: Text(_book!.hasEpub && _book!.hasAudiobook
-                  ? 'Download for Offline Use'
-                  : (_book!.hasEpub ? 'Download for Offline Reading' : 'Download for Offline Listening')),
+              label: Text(
+                _book!.hasEpub && _book!.hasAudiobook
+                    ? 'Download for Offline Use'
+                    : (_book!.hasEpub ? 'Download for Offline Reading' : 'Download for Offline Listening'),
+              ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: isDark ? Colors.white70 : Colors.black87,
                 side: BorderSide(color: isDark ? Colors.white12 : Colors.black12),

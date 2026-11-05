@@ -139,7 +139,7 @@
     "artists": "Artister",
     "genres": "Genrer",
     "offlineMode": "Offlineläge",
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "password": "Lösenord",
     "pathReturnSlashErrorMessage": "Sökvägar som returnerar ett \"/\" kan inte användas",
     "internalExternalIpExplanation": "Om du vill kunna komma åt din Jellyfin-server utanför hemmet så måste du använda din externa IP-adress.\n\nOm din server är på en HTTP-standardport (80 eller 443) eller Jellyfins standardport (8096) så behöver du inte ange porten.\n\nOm webbadressen är korrekt bör du se viss information om din server dyka upp under inmatningsfältet.",

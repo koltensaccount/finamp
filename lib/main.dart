@@ -397,6 +397,7 @@ Future<void> _setupOSIntegration(List<String> commandLineArgs) async {
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
     WindowOptions windowOptions = WindowOptions(
+      title: "KB Music",
       size: screenSize?.size ?? Size(1200, 800),
       center: screenSize == null,
       backgroundColor: Colors.transparent,
@@ -466,7 +467,7 @@ Future<void> _setupPlaybackServices() async {
     builder: () => MusicPlayerBackgroundTask(),
     config: AudioServiceConfig(
       androidStopForegroundOnPause: FinampSettingsHelper.finampSettings.androidStopForegroundOnPause,
-      androidNotificationChannelName: "Finamp",
+      androidNotificationChannelName: "KB Music",
       androidNotificationIcon: "mipmap/white",
       androidNotificationChannelId: "com.unicornsonlsd.finamp.audio",
       // notificationColor: TODO use the theme color for older versions of Android,
@@ -882,7 +883,8 @@ class _FinampState extends State<Finamp> with WindowListener {
     switch (hostOrPath) {
       case "artist":
         final mbid = uri.queryParameters['mbid'];
-        final jfId = uri.queryParameters['id'] ??
+        final jfId =
+            uri.queryParameters['id'] ??
             (uri.pathSegments.length > 1
                 ? uri.pathSegments[1]
                 : (uri.host == 'artist' && uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null));
@@ -1015,7 +1017,7 @@ class FinampApp extends ConsumerWidget {
           )
         : null;
     return MaterialApp(
-      title: "Finamp",
+      title: "KB Music",
       routes: {
         SplashScreen.routeName: (context) => const SplashScreen(),
         LoginScreen.routeName: (context) => const LoginScreen(),
@@ -1024,11 +1026,13 @@ class FinampApp extends ConsumerWidget {
         MusicScreen.routeName: (context) => const MusicScreen(),
         BooksScreen.routeName: (context) => const BooksScreen(),
         BookDetailScreen.routeName: (context) => BookDetailScreen(
-          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ??
+          workId:
+              (ModalRoute.settingsOf(context)?.arguments as String?) ??
               const String.fromEnvironment('INITIAL_BOOK_ID', defaultValue: 'work-the-time-machine-h-g-wells'),
         ),
         EpubReaderScreen.routeName: (context) => EpubReaderScreen(
-          workId: (ModalRoute.settingsOf(context)?.arguments as String?) ??
+          workId:
+              (ModalRoute.settingsOf(context)?.arguments as String?) ??
               const String.fromEnvironment('INITIAL_BOOK_ID', defaultValue: 'work-the-time-machine-h-g-wells'),
           title: const String.fromEnvironment('INITIAL_BOOK_TITLE', defaultValue: 'The Time Machine'),
           author: const String.fromEnvironment('INITIAL_BOOK_AUTHOR', defaultValue: 'H. G. Wells'),
@@ -1154,7 +1158,7 @@ class FinampErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "Finamp",
+      title: "KB Music",
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

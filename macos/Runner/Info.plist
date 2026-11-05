@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Finamp</string>
+	<string>KB Music</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -37,7 +37,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>I don&apos;t know why this permission is being requested, you should probably deny it. If you can, create a GitHub issue with a screenshot of this message.</string>
 	<key>NSAppleMusicUsageDescription</key>
-	<string>Finamp can use your media library to store downloaded songs. If you don&apos;t want this, Finamp can also download songs to the app&apos;s internal directory, which doesn&apos;t use any permissions.</string>
+	<string>KB Music can use your media library to store downloaded songs. If you don&apos;t want this, KB Music can also download songs to the app&apos;s internal directory, which doesn&apos;t use any permissions.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

@@ -28,9 +28,7 @@ class ArtistImageService {
           final v = prefs.getString(key);
           if (v != null) {
             try {
-              final list = (jsonDecode(v) as List)
-                  .map((e) => Map<String, String>.from(e as Map))
-                  .toList();
+              final list = (jsonDecode(v) as List).map((e) => Map<String, String>.from(e as Map)).toList();
               _similarCache[k] = list;
             } catch (_) {}
           }
@@ -60,7 +58,9 @@ class ArtistImageService {
     try {
       final cleanTitle = Uri.encodeComponent(artistName.trim().replaceAll(' ', '_'));
       final wikiUri = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$cleanTitle');
-      final wikiRes = await http.get(wikiUri, headers: {'User-Agent': 'FinampCatalog/0.1'}).timeout(const Duration(seconds: 4));
+      final wikiRes = await http
+          .get(wikiUri, headers: {'User-Agent': 'KBMusicCatalog/0.1'})
+          .timeout(const Duration(seconds: 4));
       if (wikiRes.statusCode == 200) {
         final data = jsonDecode(wikiRes.body);
         if (data is Map<String, dynamic>) {
@@ -106,16 +106,22 @@ class ArtistImageService {
     try {
       final cleanTitle = Uri.encodeComponent(artistName.trim().replaceAll(' ', '_'));
       final wikiUri = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$cleanTitle');
-      final wikiRes = await http.get(wikiUri, headers: {'User-Agent': 'FinampCatalog/0.1'}).timeout(const Duration(seconds: 4));
+      final wikiRes = await http
+          .get(wikiUri, headers: {'User-Agent': 'KBMusicCatalog/0.1'})
+          .timeout(const Duration(seconds: 4));
       if (wikiRes.statusCode == 200) {
         final data = jsonDecode(wikiRes.body);
         if (data is Map<String, dynamic>) {
           final extract = data['extract'] as String?;
           if (extract != null && extract.isNotEmpty) {
             _bioCache[key] = extract;
-            unawaited(SharedPreferences.getInstance().then((prefs) {
-              prefs.setString('artist_bio:$key', extract);
-            }).catchError((_) {}));
+            unawaited(
+              SharedPreferences.getInstance()
+                  .then((prefs) {
+                    prefs.setString('artist_bio:$key', extract);
+                  })
+                  .catchError((_) {}),
+            );
             return extract;
           }
         }
@@ -153,18 +159,19 @@ class ArtistImageService {
                     final name = item['name'] as String?;
                     final pic = (item['picture_medium'] ?? item['picture_big'] ?? item['picture']) as String?;
                     if (name != null && name.isNotEmpty) {
-                      list.add({
-                        'name': name,
-                        'imageUrl': pic ?? '',
-                      });
+                      list.add({'name': name, 'imageUrl': pic ?? ''});
                     }
                   }
                 }
                 if (list.isNotEmpty) {
                   _similarCache[key] = list;
-                  unawaited(SharedPreferences.getInstance().then((prefs) {
-                    prefs.setString('artist_similar:$key', jsonEncode(list));
-                  }).catchError((_) {}));
+                  unawaited(
+                    SharedPreferences.getInstance()
+                        .then((prefs) {
+                          prefs.setString('artist_similar:$key', jsonEncode(list));
+                        })
+                        .catchError((_) {}),
+                  );
                   return list;
                 }
               }
@@ -179,8 +186,12 @@ class ArtistImageService {
 
   static void _saveImage(String key, String url) {
     _imageCache[key] = url;
-    unawaited(SharedPreferences.getInstance().then((prefs) {
-      prefs.setString('artist_img:$key', url);
-    }).catchError((_) {}));
+    unawaited(
+      SharedPreferences.getInstance()
+          .then((prefs) {
+            prefs.setString('artist_img:$key', url);
+          })
+          .catchError((_) {}),
+    );
   }
 }

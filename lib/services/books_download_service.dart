@@ -10,8 +10,8 @@ import 'books_api_client.dart';
 
 class BooksDownloadService {
   BooksDownloadService({required BooksApiClient apiClient, Directory? baseDirectory})
-      : _apiClient = apiClient,
-        _baseDirectoryOverride = baseDirectory;
+    : _apiClient = apiClient,
+      _baseDirectoryOverride = baseDirectory;
 
   final BooksApiClient _apiClient;
   final Directory? _baseDirectoryOverride;
@@ -36,7 +36,9 @@ class BooksDownloadService {
           final epubFile = File('${entity.path}/book.epub');
           final audioDir = Directory('${entity.path}/audio');
           // Check if valid download exists (either manifest or book.epub or audio files)
-          if (manifestFile.existsSync() || epubFile.existsSync() || (audioDir.existsSync() && audioDir.listSync().isNotEmpty)) {
+          if (manifestFile.existsSync() ||
+              epubFile.existsSync() ||
+              (audioDir.existsSync() && audioDir.listSync().isNotEmpty)) {
             ids.add(workId);
           }
         } else if (entity is File && entity.path.endsWith('.epub')) {
@@ -59,9 +61,7 @@ class BooksDownloadService {
       if (!await d.exists()) await d.create(recursive: true);
       return d;
     }
-    final baseDir = Platform.isIOS
-        ? await getApplicationDocumentsDirectory()
-        : await getApplicationSupportDirectory();
+    final baseDir = Platform.isIOS ? await getApplicationDocumentsDirectory() : await getApplicationSupportDirectory();
     final booksDir = Directory('${baseDir.path}/books');
     if (!await booksDir.exists()) {
       await booksDir.create(recursive: true);
@@ -162,19 +162,21 @@ class BooksDownloadService {
             final json = jsonDecode(content) as Map<String, dynamic>;
             final detail = BookDetail.fromJson(json);
             final coverFile = File('${entity.path}/cover.jpg');
-            result.add(BookSummary(
-              id: detail.id,
-              title: detail.title,
-              author: detail.author,
-              description: detail.description,
-              genres: detail.genres,
-              seriesName: detail.seriesName,
-              seriesOrder: detail.seriesOrder,
-              coverUrl: coverFile.existsSync() ? 'file://${coverFile.path}' : detail.coverUrl,
-              availableFormats: detail.availableFormats,
-              isPaired: detail.isPaired,
-              progress: detail.progress,
-            ));
+            result.add(
+              BookSummary(
+                id: detail.id,
+                title: detail.title,
+                author: detail.author,
+                description: detail.description,
+                genres: detail.genres,
+                seriesName: detail.seriesName,
+                seriesOrder: detail.seriesOrder,
+                coverUrl: coverFile.existsSync() ? 'file://${coverFile.path}' : detail.coverUrl,
+                availableFormats: detail.availableFormats,
+                isPaired: detail.isPaired,
+                progress: detail.progress,
+              ),
+            );
           }
         }
       }
@@ -217,47 +219,61 @@ class BooksDownloadService {
 
       // Save metadata.json
       final metaFile = File('${workDir.path}/metadata.json');
-      await metaFile.writeAsString(jsonEncode({
-        'id': detail.id,
-        'title': detail.title,
-        'author': detail.author,
-        'description': detail.description,
-        'genres': detail.genres,
-        'series_name': detail.seriesName,
-        'series_order': detail.seriesOrder,
-        'cover_url': detail.coverUrl,
-        'available_formats': detail.availableFormats,
-        'is_paired': detail.isPaired,
-        'progress': detail.progress.toJson(),
-        'editions': detail.editions.map((e) => {
-          'id': e.id,
-          'work_id': e.workId,
-          'format': e.format,
-          'title': e.title,
-          'publisher': e.publisher,
-          'published_year': e.publishedYear,
-          'language': e.language,
-          'isbn': e.isbn,
-          'chapters': e.chapters.map((c) => {
-            'id': c.id,
-            'edition_id': c.editionId,
-            'index_num': c.indexNum,
-            'title': c.title,
-            'start_seconds': c.startSeconds,
-            'end_seconds': c.endSeconds,
-            'epub_cfi': c.epubCfi,
-          }).toList(),
-          'assets': e.assets.map((a) => {
-            'id': a.id,
-            'edition_id': a.editionId,
-            'kind': a.kind,
-            'format': a.format,
-            'duration_seconds': a.durationSeconds,
-            'track_number': a.trackNumber,
-          }).toList(),
-        }).toList(),
-        'alignment': detail.alignment,
-      }));
+      await metaFile.writeAsString(
+        jsonEncode({
+          'id': detail.id,
+          'title': detail.title,
+          'author': detail.author,
+          'description': detail.description,
+          'genres': detail.genres,
+          'series_name': detail.seriesName,
+          'series_order': detail.seriesOrder,
+          'cover_url': detail.coverUrl,
+          'available_formats': detail.availableFormats,
+          'is_paired': detail.isPaired,
+          'progress': detail.progress.toJson(),
+          'editions': detail.editions
+              .map(
+                (e) => {
+                  'id': e.id,
+                  'work_id': e.workId,
+                  'format': e.format,
+                  'title': e.title,
+                  'publisher': e.publisher,
+                  'published_year': e.publishedYear,
+                  'language': e.language,
+                  'isbn': e.isbn,
+                  'chapters': e.chapters
+                      .map(
+                        (c) => {
+                          'id': c.id,
+                          'edition_id': c.editionId,
+                          'index_num': c.indexNum,
+                          'title': c.title,
+                          'start_seconds': c.startSeconds,
+                          'end_seconds': c.endSeconds,
+                          'epub_cfi': c.epubCfi,
+                        },
+                      )
+                      .toList(),
+                  'assets': e.assets
+                      .map(
+                        (a) => {
+                          'id': a.id,
+                          'edition_id': a.editionId,
+                          'kind': a.kind,
+                          'format': a.format,
+                          'duration_seconds': a.durationSeconds,
+                          'track_number': a.trackNumber,
+                        },
+                      )
+                      .toList(),
+                },
+              )
+              .toList(),
+          'alignment': detail.alignment,
+        }),
+      );
 
       final savedFiles = <String>['metadata.json'];
       int totalBytes = metaFile.lengthSync();

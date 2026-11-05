@@ -180,10 +180,7 @@ class TrackInfo extends ConsumerWidget {
           builder: (context) {
             final artist = item.artists?.join(', ') ?? item.albumArtist ?? '';
             final album = item.album ?? '';
-            final subtitle = [
-              if (artist.isNotEmpty) artist,
-              if (album.isNotEmpty) album,
-            ].join(' • ');
+            final subtitle = [if (artist.isNotEmpty) artist, if (album.isNotEmpty) album].join(' • ');
             if (subtitle.isEmpty) return const SizedBox.shrink();
             final isDark = Theme.of(context).brightness == Brightness.dark;
             return Padding(

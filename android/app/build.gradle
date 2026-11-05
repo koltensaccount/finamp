@@ -61,7 +61,7 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            resValue "string", "app_name", "Finamp"
+            resValue "string", "app_name", "KB Music"
             // shrinkResources false
             // minifyEnabled false
         }
@@ -71,7 +71,7 @@ android {
             }
             applicationIdSuffix '.profile'
             // minifyEnabled true // avoid dexing issues
-            resValue "string", "app_name", "Finamp Profile"
+            resValue "string", "app_name", "KB Music Profile"
         }
         debug {
             if (signingConfigs.hasProperty('debug')) {
@@ -79,7 +79,7 @@ android {
             }
             applicationIdSuffix '.debug'
             // minifyEnabled true // avoid dexing issues
-            resValue "string", "app_name", "Finamp Debug"
+            resValue "string", "app_name", "KB Music Debug"
         }
     }
     namespace 'com.unicornsonlsd.finamp'

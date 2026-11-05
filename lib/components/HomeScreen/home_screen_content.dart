@@ -74,9 +74,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
       onRefresh: () async => _refresh(),
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: _buildTopPicksSection(context),
-          ),
+          SliverToBoxAdapter(child: _buildTopPicksSection(context)),
           const SliverPadding(padding: EdgeInsets.only(top: 8.0)),
           SliverMainAxisGroup(
             slivers: ref
@@ -147,10 +145,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
           child: Text(
             'Top Picks for You',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5),
           ),
         ),
         SizedBox(
@@ -178,9 +173,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final likedSongs = ref.watch(likedSongsProvider);
     final count = likedSongs.count;
-    final subtitle = count > 0
-        ? '$count favorite songs in Jellyfin'
-        : 'All your favorite tracks in one place';
+    final subtitle = count > 0 ? '$count favorite songs in Jellyfin' : 'All your favorite tracks in one place';
 
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(LikedSongsScreen.routeName),
@@ -214,16 +207,10 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF6B11FF),
-                    Color(0xFFFA2D48),
-                    Color(0xFFFF5252),
-                  ],
+                  colors: [Color(0xFF6B11FF), Color(0xFFFA2D48), Color(0xFFFF5252)],
                 ),
               ),
-              child: const Center(
-                child: Icon(Icons.favorite, size: 58, color: Colors.white),
-              ),
+              child: const Center(child: Icon(Icons.favorite, size: 58, color: Colors.white)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -272,11 +259,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF280B61),
-              Color(0xFF5A148C),
-              Color(0xFFC2185B),
-            ],
+            colors: [Color(0xFF280B61), Color(0xFF5A148C), Color(0xFFC2185B)],
           ),
           boxShadow: [
             BoxShadow(
@@ -307,23 +290,14 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 const SizedBox(height: 2),
                 const Text(
                   'Heavy Rotation',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Colors.white, letterSpacing: -0.3),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Instant mix from your music library',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.25,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
+                  style: TextStyle(fontSize: 12.5, height: 1.25, color: Colors.white.withValues(alpha: 0.85)),
                 ),
               ],
             ),
@@ -345,11 +319,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1E1B4B),
-              Color(0xFF4C1D95),
-              Color(0xFFBE185D),
-            ],
+            colors: [Color(0xFF1E1B4B), Color(0xFF4C1D95), Color(0xFFBE185D)],
           ),
           boxShadow: [
             BoxShadow(
@@ -380,23 +350,14 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 const SizedBox(height: 2),
                 const Text(
                   'Books & Audiobooks',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Colors.white, letterSpacing: -0.3),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Synchronized reading and narration ecosystem',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.25,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
+                  style: TextStyle(fontSize: 12.5, height: 1.25, color: Colors.white.withValues(alpha: 0.85)),
                 ),
               ],
             ),
@@ -418,11 +379,7 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF0369A1),
-              Color(0xFF0D9488),
-            ],
+            colors: [Color(0xFF0F172A), Color(0xFF0369A1), Color(0xFF0D9488)],
           ),
           boxShadow: [
             BoxShadow(
@@ -453,23 +410,14 @@ class _HomeScreenContentState extends ConsumerState<HomeScreenContent>
                 const SizedBox(height: 2),
                 const Text(
                   'Music Discovery',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Colors.white, letterSpacing: -0.3),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Explore artist discographies and global music',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.25,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
+                  style: TextStyle(fontSize: 12.5, height: 1.25, color: Colors.white.withValues(alpha: 0.85)),
                 ),
               ],
             ),

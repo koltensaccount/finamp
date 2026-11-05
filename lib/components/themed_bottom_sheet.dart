@@ -57,12 +57,7 @@ Future<T?> showThemedBottomSheet<T>({
     // On flip-style foldables, this will anchor to the bottom half of the screen.
     anchorPoint: Offset(double.maxFinite, double.maxFinite),
     builder: (BuildContext context) {
-      return ProviderScope(
-        overrides: [
-          localThemeProvider.overrideWith((_) => ColorScheme.of(context)),
-        ],
-        child: menu,
-      );
+      return ProviderScope(overrides: [localThemeProvider.overrideWith((_) => ColorScheme.of(context))], child: menu);
     },
   );
 }

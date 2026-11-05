@@ -72,26 +72,26 @@ class ArtistIdentityService {
     if (!isMbid(mbid)) return;
     if (jellyfinId != null && jellyfinId.isNotEmpty) {
       _jellyfinToMbid[jellyfinId] = mbid;
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setString('artist_mbid_by_jf:$jellyfinId', mbid);
-      }).catchError((_) {});
+      SharedPreferences.getInstance()
+          .then((prefs) {
+            prefs.setString('artist_mbid_by_jf:$jellyfinId', mbid);
+          })
+          .catchError((_) {});
     }
     if (name != null && name.trim().isNotEmpty) {
       final normName = name.trim().toLowerCase();
       _nameToMbid[normName] = mbid;
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setString('artist_mbid_by_name:$normName', mbid);
-      }).catchError((_) {});
+      SharedPreferences.getInstance()
+          .then((prefs) {
+            prefs.setString('artist_mbid_by_name:$normName', mbid);
+          })
+          .catchError((_) {});
     }
   }
 
   /// Deterministically resolves an artist to a verified MusicBrainz MBID.
   /// Returns null if offline, unresolvable, or ambiguous.
-  static Future<String?> resolveArtistMbid({
-    BaseItemDto? artistItem,
-    String? jellyfinId,
-    String? name,
-  }) async {
+  static Future<String?> resolveArtistMbid({BaseItemDto? artistItem, String? jellyfinId, String? name}) async {
     await init();
 
     // 0. If input jellyfinId is actually already a MusicBrainz MBID
@@ -102,11 +102,7 @@ class ArtistIdentityService {
       final pids = artistItem!.providerIds!;
       final mbId = pids['MusicBrainzArtist'] ?? pids['MusicBrainzAlbumArtist'] ?? pids['MusicBrainz'];
       if (mbId is String && isMbid(mbId)) {
-        recordMapping(
-          jellyfinId: artistItem.id.raw,
-          name: artistItem.name,
-          mbid: mbId,
-        );
+        recordMapping(jellyfinId: artistItem.id.raw, name: artistItem.name, mbid: mbId);
         return mbId;
       }
     }
@@ -145,11 +141,7 @@ class ArtistIdentityService {
               confidence == 'direct_mbid' ||
               confidence == 'disambiguated_local_presence' ||
               confidence == 'name_match') {
-            recordMapping(
-              jellyfinId: targetJfId,
-              name: targetName ?? (res['name'] as String?),
-              mbid: resolvedMbid,
-            );
+            recordMapping(jellyfinId: targetJfId, name: targetName ?? (res['name'] as String?), mbid: resolvedMbid);
           }
           return resolvedMbid;
         }
@@ -164,9 +156,9 @@ class ArtistIdentityService {
         final catalogClient = GetIt.instance<CatalogApiClient>();
         final searchRes = await catalogClient.search(targetName.trim());
         final normTarget = targetName.trim().toLowerCase();
-        final matchingArtists = searchRes.results.where(
-          (item) => item.kind == 'artist' && item.title.trim().toLowerCase() == normTarget && isMbid(item.id),
-        ).toList();
+        final matchingArtists = searchRes.results
+            .where((item) => item.kind == 'artist' && item.title.trim().toLowerCase() == normTarget && isMbid(item.id))
+            .toList();
 
         // Exactly one matching artist across catalog search results -> route for UI, but DO NOT persist
         if (matchingArtists.length == 1) {

@@ -42,9 +42,7 @@ class CatalogPlaybackHelper {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Playback failed: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
       }
     }
   }
@@ -62,11 +60,7 @@ class CatalogPlaybackHelper {
     }
 
     if (availability.canPlay) {
-      await playConfidentItem(
-        context,
-        playableItemId: availability.playableItemId!,
-        title: title,
-      );
+      await playConfidentItem(context, playableItemId: availability.playableItemId!, title: title);
       return;
     }
 
@@ -79,26 +73,17 @@ class CatalogPlaybackHelper {
     await _showUnsupportedNotice(context, title, onRequestAlbum);
   }
 
-  static Future<void> _showUnsupportedNotice(
-    BuildContext context,
-    String title,
-    VoidCallback? onRequestAlbum,
-  ) async {
+  static Future<void> _showUnsupportedNotice(BuildContext context, String title, VoidCallback? onRequestAlbum) async {
     await showCupertinoDialog<void>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
         title: const Text('Track Not in Library'),
         content: Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Text(
-            '"$title" is not available locally. You can add the full album to your library.',
-          ),
+          child: Text('"$title" is not available locally. You can add the full album to your library.'),
         ),
         actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          CupertinoDialogAction(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           if (onRequestAlbum != null)
             CupertinoDialogAction(
               isDefaultAction: true,
@@ -125,9 +110,7 @@ class CatalogPlaybackHelper {
           title: const Text('Track Unavailable'),
           content: Padding(
             padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              'No local match was found for "$title".',
-            ),
+            child: Text('No local match was found for "$title".'),
           ),
           actions: [
             CupertinoDialogAction(
@@ -165,12 +148,7 @@ class CatalogPlaybackHelper {
             'Multiple local candidates exist for "$title", but details could not be loaded from your server. '
             'Playback was prevented to avoid playing the wrong version.',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
         ),
       );
       return;
@@ -190,9 +168,7 @@ class CatalogPlaybackHelper {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'Choose Local Version for "$title"',
-                  style: Theme.of(bottomSheetContext).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(bottomSheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
               const Padding(
@@ -214,11 +190,7 @@ class CatalogPlaybackHelper {
                   trailing: const Icon(Icons.play_arrow),
                   onTap: () async {
                     Navigator.of(bottomSheetContext).pop();
-                    await playConfidentItem(
-                      context,
-                      playableItemId: item.id.raw,
-                      title: item.name ?? title,
-                    );
+                    await playConfidentItem(context, playableItemId: item.id.raw, title: item.name ?? title);
                   },
                 );
               }),

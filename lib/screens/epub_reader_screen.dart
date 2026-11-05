@@ -185,12 +185,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
   }
 
   TextStyle get _bodyTextStyle {
-    TextStyle style = TextStyle(
-      fontSize: _fontSize,
-      height: _lineHeight,
-      color: _textColor,
-      letterSpacing: -0.1,
-    );
+    TextStyle style = TextStyle(fontSize: _fontSize, height: _lineHeight, color: _textColor, letterSpacing: -0.1);
     if (_fontFamily == 'Serif') {
       style = style.copyWith(fontFamily: 'Georgia');
     } else if (_fontFamily == 'Monospace') {
@@ -217,10 +212,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                     child: Container(
                       width: 36,
                       height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -228,11 +220,29 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _buildThemeOption('Dark', ReadingTheme.dark, const Color(0xFF000000), Colors.white, setSheetState),
+                      _buildThemeOption(
+                        'Dark',
+                        ReadingTheme.dark,
+                        const Color(0xFF000000),
+                        Colors.white,
+                        setSheetState,
+                      ),
                       const SizedBox(width: 12),
-                      _buildThemeOption('Sepia', ReadingTheme.sepia, const Color(0xFFF7F1E3), const Color(0xFF433422), setSheetState),
+                      _buildThemeOption(
+                        'Sepia',
+                        ReadingTheme.sepia,
+                        const Color(0xFFF7F1E3),
+                        const Color(0xFF433422),
+                        setSheetState,
+                      ),
                       const SizedBox(width: 12),
-                      _buildThemeOption('Light', ReadingTheme.light, const Color(0xFFFFFFFF), Colors.black, setSheetState),
+                      _buildThemeOption(
+                        'Light',
+                        ReadingTheme.light,
+                        const Color(0xFFFFFFFF),
+                        Colors.black,
+                        setSheetState,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -287,10 +297,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? const Color(0xFFFA2D48) : Colors.white24,
-              width: isSelected ? 2 : 1,
-            ),
+            border: Border.all(color: isSelected ? const Color(0xFFFA2D48) : Colors.white24, width: isSelected ? 2 : 1),
           ),
           child: Center(
             child: Text(
@@ -343,10 +350,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                   child: ListView.separated(
                     controller: controller,
                     itemCount: _bookData!.chapters.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: _textColor.withValues(alpha: 0.1),
-                    ),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: _textColor.withValues(alpha: 0.1)),
                     itemBuilder: (context, idx) {
                       final ch = _bookData!.chapters[idx];
                       final isSelected = idx == _currentChapterIndex;
@@ -425,9 +429,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
 
     if (book == null || book.audioEdition == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Audiobook edition not available')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audiobook edition not available')));
       }
       return;
     }
@@ -505,36 +507,33 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    ...currentChapter.paragraphs.asMap().entries.map(
-                      (entry) {
-                        final pIdx = entry.key;
-                        final pText = entry.value;
-                        final isHighlighted = _readAlongEnabled &&
-                            (_highlightedParagraphIndex == pIdx ||
-                                (_activeHighlightCfi != null &&
-                                    _bookData!.makeCfi(_currentChapterIndex, pIdx) == _activeHighlightCfi));
+                    ...currentChapter.paragraphs.asMap().entries.map((entry) {
+                      final pIdx = entry.key;
+                      final pText = entry.value;
+                      final isHighlighted =
+                          _readAlongEnabled &&
+                          (_highlightedParagraphIndex == pIdx ||
+                              (_activeHighlightCfi != null &&
+                                  _bookData!.makeCfi(_currentChapterIndex, pIdx) == _activeHighlightCfi));
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            decoration: isHighlighted
-                                ? BoxDecoration(
-                                    color: const Color(0xFFFA2D48).withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: const Color(0xFFFA2D48).withValues(alpha: 0.35),
-                                    ),
-                                  )
-                                : null,
-                            padding: isHighlighted
-                                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
-                                : EdgeInsets.zero,
-                            child: Text(pText, style: _bodyTextStyle),
-                          ),
-                        );
-                      },
-                    ),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          decoration: isHighlighted
+                              ? BoxDecoration(
+                                  color: const Color(0xFFFA2D48).withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFFA2D48).withValues(alpha: 0.35)),
+                                )
+                              : null,
+                          padding: isHighlighted
+                              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
+                              : EdgeInsets.zero,
+                          child: Text(pText, style: _bodyTextStyle),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 48),
                     // Chapter navigation controls
                     Row(
@@ -574,12 +573,7 @@ class _EpubReaderScreenState extends State<EpubReaderScreen> {
                 right: 0,
                 child: Container(
                   color: _backgroundColor.withValues(alpha: 0.95),
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 4,
-                    bottom: 8,
-                    left: 12,
-                    right: 12,
-                  ),
+                  padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 4, bottom: 8, left: 12, right: 12),
                   child: Row(
                     children: [
                       IconButton(

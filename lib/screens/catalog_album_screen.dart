@@ -19,14 +19,13 @@ class CatalogAlbumScreenArguments {
     this.initialYear,
   });
 
-  factory CatalogAlbumScreenArguments.fromSearchResult(CatalogSearchResult result) =>
-      CatalogAlbumScreenArguments(
-        releaseGroupMbid: result.id,
-        initialTitle: result.title,
-        initialArtist: result.displayArtist,
-        initialImageUrl: result.imageUrl,
-        initialYear: result.firstDate,
-      );
+  factory CatalogAlbumScreenArguments.fromSearchResult(CatalogSearchResult result) => CatalogAlbumScreenArguments(
+    releaseGroupMbid: result.id,
+    initialTitle: result.title,
+    initialArtist: result.displayArtist,
+    initialImageUrl: result.imageUrl,
+    initialYear: result.firstDate,
+  );
 
   final String releaseGroupMbid;
   final String? initialTitle;
@@ -92,10 +91,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
       if (group.editions.isNotEmpty) {
         final preferred = group.editions.firstWhere(
           (e) => e.isFullyOwned,
-          orElse: () => group.editions.firstWhere(
-            (e) => e.isPartiallyOwned,
-            orElse: () => group.editions.first,
-          ),
+          orElse: () => group.editions.firstWhere((e) => e.isPartiallyOwned, orElse: () => group.editions.first),
         );
         _activeRelease = await client.getRelease(preferred.id);
       }
@@ -132,9 +128,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit request: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to submit request: $e')));
       }
     } finally {
       if (mounted) setState(() => _requesting = false);
@@ -217,7 +211,11 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
               const SizedBox(height: 16),
               const Text('Could not load album', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 16),
               FilledButton.icon(
                 icon: const Icon(Icons.refresh),
@@ -285,11 +283,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
         Text(
           release.title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.4,
-          ),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
         const SizedBox(height: 4),
         // Artist Name (Tappable with Apple red accent)
@@ -308,11 +302,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
           child: Text(
             displayArtist,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: appleAccentColor,
-            ),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: appleAccentColor),
           ),
         ),
         const SizedBox(height: 4),
@@ -446,21 +436,14 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
             track.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              letterSpacing: -0.2,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -0.2),
           ),
           subtitle: track.displayArtist != null && track.displayArtist!.isNotEmpty
               ? Text(
                   track.displayArtist!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
-                  ),
+                  style: TextStyle(fontSize: 12.5, color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73)),
                 )
               : null,
           trailing: Row(
@@ -469,10 +452,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
               if (track.formattedDuration.isNotEmpty)
                 Text(
                   track.formattedDuration,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.white38 : Colors.black38,
-                  ),
+                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
                 ),
               const SizedBox(width: 6),
               const Icon(Icons.more_horiz, size: 20, color: Colors.grey),
@@ -486,11 +466,7 @@ class _CatalogAlbumScreenState extends State<CatalogAlbumScreen> {
             onRequestAlbum: _requestAlbum,
           ),
         ),
-        Divider(
-          height: 1,
-          indent: 48,
-          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-        ),
+        Divider(height: 1, indent: 48, color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
       ],
     );
   }

@@ -11,7 +11,7 @@ import 'jellyfin_api_helper.dart';
 
 class LikedSongsService extends ChangeNotifier {
   LikedSongsService({JellyfinApiHelper? apiHelper})
-      : _jellyfinApiHelper = apiHelper ?? GetIt.instance<JellyfinApiHelper>();
+    : _jellyfinApiHelper = apiHelper ?? GetIt.instance<JellyfinApiHelper>();
 
   final JellyfinApiHelper _jellyfinApiHelper;
 
@@ -52,12 +52,7 @@ class LikedSongsService extends ChangeNotifier {
 
       final resultList = items ?? <BaseItemDto>[];
       for (final item in resultList) {
-        item.userData ??= UserItemDataDto(
-          playbackPositionTicks: 0,
-          playCount: 0,
-          isFavorite: true,
-          played: false,
-        );
+        item.userData ??= UserItemDataDto(playbackPositionTicks: 0, playCount: 0, isFavorite: true, played: false);
         item.userData!.isFavorite = true;
       }
       _tracks = resultList;
@@ -75,12 +70,7 @@ class LikedSongsService extends ChangeNotifier {
   void onFavoriteChanged(BaseItemDto item, bool isFavorite) {
     if (isFavorite) {
       final existingIndex = _tracks.indexWhere((t) => t.id == item.id);
-      item.userData ??= UserItemDataDto(
-        playbackPositionTicks: 0,
-        playCount: 0,
-        isFavorite: true,
-        played: false,
-      );
+      item.userData ??= UserItemDataDto(playbackPositionTicks: 0, playCount: 0, isFavorite: true, played: false);
       item.userData!.isFavorite = true;
 
       if (existingIndex >= 0) {

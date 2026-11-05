@@ -683,7 +683,7 @@ Future<String> getAuthHeader({required String deviceId}) async {
     authHeader = '${authHeader}Token="${finampUserHelper.currentUser!.accessToken}", ';
   }
 
-  authHeader = '${authHeader}Client="Finamp", ';
+  authHeader = '${authHeader}Client="KB Music", ';
 
   final deviceInfo = await getDeviceInfo(deviceId: deviceId);
   authHeader = '${authHeader}Device="${deviceInfo.name}",DeviceId="${deviceInfo.id}", ';

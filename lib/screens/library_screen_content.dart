@@ -23,10 +23,7 @@ class LibraryScreenContent extends ConsumerWidget {
       MaterialPageRoute<void>(
         builder: (context) => MusicScreen(
           singleTabConfig: HomeScreenSectionConfiguration(
-            base: TabsHomeSection(
-              libraryId: currentLibraryPlaceholder,
-              contentType: actualContentType,
-            ),
+            base: TabsHomeSection(libraryId: currentLibraryPlaceholder, contentType: actualContentType),
             sortConfig: SortAndFilterController.trackSettings(actualContentType).resolveConfig(),
           ),
         ),
@@ -49,16 +46,8 @@ class LibraryScreenContent extends ConsumerWidget {
         'icon': TablerIcons.microphone_2,
         'action': () => _openTab(context, ref, ContentType.genericArtists),
       },
-      {
-        'title': 'Albums',
-        'icon': TablerIcons.disc,
-        'action': () => _openTab(context, ref, ContentType.albums),
-      },
-      {
-        'title': 'Songs',
-        'icon': TablerIcons.music,
-        'action': () => _openTab(context, ref, ContentType.tracks),
-      },
+      {'title': 'Albums', 'icon': TablerIcons.disc, 'action': () => _openTab(context, ref, ContentType.albums)},
+      {'title': 'Songs', 'icon': TablerIcons.music, 'action': () => _openTab(context, ref, ContentType.tracks)},
       {
         'title': 'Liked Songs',
         'icon': TablerIcons.heart,
@@ -79,32 +68,14 @@ class LibraryScreenContent extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: categories.length,
-            separatorBuilder: (_, _) => Divider(
-              indent: 52,
-              height: 1,
-              color: isDark ? Colors.white12 : Colors.black12,
-            ),
+            separatorBuilder: (_, _) => Divider(indent: 52, height: 1, color: isDark ? Colors.white12 : Colors.black12),
             itemBuilder: (context, index) {
               final cat = categories[index];
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                leading: Icon(
-                  cat['icon'] as IconData,
-                  color: appleAccentColor,
-                  size: 26,
-                ),
-                title: Text(
-                  cat['title'] as String,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey,
-                  size: 20,
-                ),
+                leading: Icon(cat['icon'] as IconData, color: appleAccentColor, size: 26),
+                title: Text(cat['title'] as String, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                 onTap: cat['action'] as VoidCallback,
               );
             },

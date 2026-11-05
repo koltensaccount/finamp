@@ -7,7 +7,7 @@
     "@aboutContributionLink": {
         "description": "Link to the Finamp GitHub repository, shown in the about screen."
     },
-    "finamp": "Finamp",
+    "finamp": "KB Music",
     "@finamp": {
         "description": "App name, possibly translated"
     },

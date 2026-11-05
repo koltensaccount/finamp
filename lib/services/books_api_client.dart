@@ -16,8 +16,8 @@ class BooksNotConfiguredException implements Exception {
 
 class BooksApiClient {
   BooksApiClient({required CatalogCredentialStore credentials, http.Client? client})
-      : _credentials = credentials,
-        _client = client ?? http.Client();
+    : _credentials = credentials,
+      _client = client ?? http.Client();
 
   final CatalogCredentialStore _credentials;
   final http.Client _client;
@@ -251,13 +251,8 @@ class BooksApiClient {
     return jsonDecode(resp.body) as Map<String, dynamic>?;
   }
 
-  Future<Map<String, dynamic>?> mapReadingLocationToAudio(
-    String workId, {
-    required String cfi,
-  }) async {
-    final uri = await _buildUri('/v1/books/$workId/align/cfi-to-audio', {
-      'cfi': cfi,
-    });
+  Future<Map<String, dynamic>?> mapReadingLocationToAudio(String workId, {required String cfi}) async {
+    final uri = await _buildUri('/v1/books/$workId/align/cfi-to-audio', {'cfi': cfi});
     final headers = await _authHeaders();
     final resp = await _client.get(uri, headers: headers);
     if (resp.statusCode != 200) return null;
@@ -275,9 +270,7 @@ class BooksApiClient {
     String? formatFilter,
     bool refresh = false,
   }) async {
-    final queryParams = <String, String>{
-      'q': query,
-    };
+    final queryParams = <String, String>{'q': query};
     if (formatFilter != null && formatFilter != 'all') {
       queryParams['format'] = formatFilter;
     }
@@ -310,12 +303,7 @@ class BooksApiClient {
   }) async {
     final uri = await _buildUri('/v1/books/requests');
     final headers = await _authHeaders(jsonBody: true);
-    final payload = {
-      'title': title,
-      'author': author,
-      if (isbn != null) 'isbn': isbn,
-      'format_requested': format,
-    };
+    final payload = {'title': title, 'author': author, if (isbn != null) 'isbn': isbn, 'format_requested': format};
     final resp = await _client.post(uri, headers: headers, body: jsonEncode(payload));
     if (resp.statusCode != 200 && resp.statusCode != 201) {
       throw Exception('Failed to request book: ${resp.statusCode}');

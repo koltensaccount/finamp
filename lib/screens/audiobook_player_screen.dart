@@ -190,9 +190,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
 
   Future<void> _skip(int seconds) async {
     final newPos = _position + Duration(seconds: seconds);
-    final clamped = newPos < Duration.zero
-        ? Duration.zero
-        : (newPos > _duration ? _duration : newPos);
+    final clamped = newPos < Duration.zero ? Duration.zero : (newPos > _duration ? _duration : newPos);
     await _player.seek(clamped);
     _saveProgress(clamped);
   }
@@ -226,11 +224,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
 
     // 1. Try server forced alignment mapping
     try {
-      final loc = await _apiClient.mapAudioToReadingLocation(
-        widget.book.id,
-        track: trackNum,
-        seconds: currentSec,
-      );
+      final loc = await _apiClient.mapAudioToReadingLocation(widget.book.id, track: trackNum, seconds: currentSec);
       if (loc != null && loc['epub_cfi'] != null) {
         targetCfi = loc['epub_cfi'] as String;
       }
@@ -306,10 +300,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
               style: TextButton.styleFrom(foregroundColor: const Color(0xFFFA2D48)),
               onPressed: () => _openReaderHandoff(context),
             ),
-          IconButton(
-            icon: const Icon(Icons.more_horiz_rounded, size: 22),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.more_horiz_rounded, size: 22), onPressed: () {}),
         ],
       ),
       body: SafeArea(
@@ -368,11 +359,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
               Text(
                 currentChapter?.title ?? 'Chapter ${_currentChapterIndex + 1}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFFA2D48),
-                ),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFFA2D48)),
               ),
               const Spacer(flex: 1),
               // Scrubber
@@ -386,7 +373,10 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                   trackHeight: 4,
                 ),
                 child: Slider(
-                  value: _position.inSeconds.toDouble().clamp(0.0, _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0),
+                  value: _position.inSeconds.toDouble().clamp(
+                    0.0,
+                    _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0,
+                  ),
                   max: _duration.inSeconds > 0 ? _duration.inSeconds.toDouble() : 1.0,
                   onChanged: (val) {
                     setState(() => _position = Duration(seconds: val.toInt()));
@@ -403,8 +393,14 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_formatDuration(_position), style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38)),
-                    Text('-${_formatDuration(_duration - _position)}', style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38)),
+                    Text(
+                      _formatDuration(_position),
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38),
+                    ),
+                    Text(
+                      '-${_formatDuration(_duration - _position)}',
+                      style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38),
+                    ),
                   ],
                 ),
               ),
@@ -413,19 +409,12 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    iconSize: 36,
-                    icon: const Icon(Icons.replay_10_rounded),
-                    onPressed: () => _skip(-15),
-                  ),
+                  IconButton(iconSize: 36, icon: const Icon(Icons.replay_10_rounded), onPressed: () => _skip(-15)),
                   const SizedBox(width: 24),
                   Container(
                     width: 72,
                     height: 72,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFA2D48),
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: const BoxDecoration(color: Color(0xFFFA2D48), shape: BoxShape.circle),
                     child: IconButton(
                       iconSize: 38,
                       color: Colors.white,
@@ -434,11 +423,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                     ),
                   ),
                   const SizedBox(width: 24),
-                  IconButton(
-                    iconSize: 36,
-                    icon: const Icon(Icons.forward_10_rounded),
-                    onPressed: () => _skip(30),
-                  ),
+                  IconButton(iconSize: 36, icon: const Icon(Icons.forward_10_rounded), onPressed: () => _skip(30)),
                 ],
               ),
               const Spacer(flex: 1),
@@ -461,10 +446,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                     ),
                     onPressed: () => _setSleepTimer(_sleepTimerMinutes == null ? 30 : 0),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.list_rounded, size: 24),
-                    onPressed: _showChaptersSheet,
-                  ),
+                  IconButton(icon: const Icon(Icons.list_rounded, size: 24), onPressed: _showChaptersSheet),
                 ],
               ),
               const SizedBox(height: 12),
@@ -517,10 +499,7 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                   child: ListView.separated(
                     controller: controller,
                     itemCount: chapters.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: isDark ? Colors.white12 : Colors.black12,
-                    ),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
                     itemBuilder: (context, idx) {
                       final ch = chapters[idx];
                       final isSelected = idx == _currentChapterIndex;
@@ -551,7 +530,10 @@ class _AudiobookPlayerScreenState extends State<AudiobookPlayerScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (durStr.isNotEmpty)
-                              Text(durStr, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38)),
+                              Text(
+                                durStr,
+                                style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38),
+                              ),
                             if (isSelected) ...[
                               const SizedBox(width: 8),
                               const Icon(Icons.volume_up_rounded, color: Color(0xFFFA2D48), size: 18),

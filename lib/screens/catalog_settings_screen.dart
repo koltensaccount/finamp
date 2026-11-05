@@ -113,24 +113,20 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
     final uri = Uri.tryParse(endpointStr);
 
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid endpoint URI')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid endpoint URI')));
       return;
     }
 
     if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token cannot be empty')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Token cannot be empty')));
       return;
     }
 
     await _credentialStore.save(CatalogCredentials(endpoint: uri, token: token));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Catalog credentials saved successfully.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Catalog credentials saved successfully.')));
       Navigator.of(context).pop(true);
     }
   }
@@ -143,9 +139,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
         _statusMessage = 'Credentials cleared.';
         _statusSuccess = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Catalog & Books credentials cleared.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Catalog & Books credentials cleared.')));
     }
   }
 
@@ -153,19 +147,13 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Catalog & Books Connection'),
-          leading: const FinampAppBarBackButton(),
-        ),
+        appBar: AppBar(title: const Text('Catalog & Books Connection'), leading: const FinampAppBarBackButton()),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Catalog & Books Connection'),
-        leading: const FinampAppBarBackButton(),
-      ),
+      appBar: AppBar(title: const Text('Catalog & Books Connection'), leading: const FinampAppBarBackButton()),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -206,10 +194,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
               decoration: BoxDecoration(
                 color: _statusSuccess ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _statusSuccess ? Colors.green : Colors.red,
-                  width: 1,
-                ),
+                border: Border.all(color: _statusSuccess ? Colors.green : Colors.red, width: 1),
               ),
               child: Row(
                 children: [
@@ -221,10 +206,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
                   Expanded(
                     child: Text(
                       _statusMessage!,
-                      style: TextStyle(
-                        color: _statusSuccess ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(color: _statusSuccess ? Colors.green : Colors.red, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -245,11 +227,7 @@ class _CatalogSettingsScreenState extends State<CatalogSettingsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save'),
-                  onPressed: _save,
-                ),
+                child: FilledButton.icon(icon: const Icon(Icons.save), label: const Text('Save'), onPressed: _save),
               ),
             ],
           ),
