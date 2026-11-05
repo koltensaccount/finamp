@@ -1187,7 +1187,7 @@ class ErrorScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Hero(tag: "finamp_logo", child: SvgPicture.asset('images/finamp_cropped.svg', width: 75, height: 75)),
+              Hero(tag: "finamp_logo", child: Image.asset('images/finamp_cropped.png', width: 75, height: 75)),
               const SizedBox(height: 16.0),
               Text.rich(
                 TextSpan(
