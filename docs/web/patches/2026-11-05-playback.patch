@@ -1,9 +1,6 @@
 --- a/src/context/player-context.tsx
 +++ b/src/context/player-context.tsx
-@@ -16,6 +16,20 @@
-   bookId?: string;
-   chapterIndex?: number;
-   chapterTitle?: string;
+@@ -18,0 +19,14 @@
 +}
 +
 +// Fisher-Yates with an anti-repeat guard when distinct tracks permit a new order.
@@ -18,58 +15,23 @@
 +    if (different > 0) [result[0], result[different]] = [result[different], result[0]];
 +  }
 +  return result;
- }
- 
- interface PlayerContextType {
-@@ -33,6 +47,7 @@
-   sleepTimer: number | null; // minutes remaining
-   playTrack: (track: Track, newQueue?: Track[]) => void;
-   playBook: (book: { id: string; title: string; author: string; coverUrl?: string; duration?: number }) => void;
+@@ -35,0 +50 @@
 +  shuffleAndPlay: (tracks: Track[]) => void;
-   togglePlay: () => void;
-   seek: (seconds: number) => void;
-   setVolume: (vol: number) => void;
-@@ -65,6 +80,7 @@
-   sleepTimer: null,
-   playTrack: () => {},
-   playBook: () => {},
+@@ -67,0 +83 @@
 +  shuffleAndPlay: () => {},
-   togglePlay: () => {},
-   seek: () => {},
-   setVolume: () => {},
-@@ -85,6 +101,9 @@
- export function PlayerProvider({ children }: { children: React.ReactNode }) {
-   const { updatePresence } = useAuth();
-   const audioRef = useRef<HTMLAudioElement | null>(null);
+@@ -87,0 +104,3 @@
 +  const linearQueueRef = useRef<Track[]>([]);
 +  const lastShuffleRef = useRef<string[]>([]);
 +  const sleepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
- 
-   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-@@ -110,105 +129,36 @@
-     const onDurationChange = () => setDuration(audio.duration || 0);
-     const onPlay = () => setIsPlaying(true);
-     const onPause = () => setIsPlaying(false);
+@@ -113 +131,0 @@
 -    const onEnded = () => handleTrackEnded();
- 
-     audio.addEventListener("timeupdate", onTimeUpdate);
-     audio.addEventListener("durationchange", onDurationChange);
-     audio.addEventListener("play", onPlay);
-     audio.addEventListener("pause", onPause);
+@@ -119 +136,0 @@
 -    audio.addEventListener("ended", onEnded);
- 
-     return () => {
-       audio.removeEventListener("timeupdate", onTimeUpdate);
-       audio.removeEventListener("durationchange", onDurationChange);
-       audio.removeEventListener("play", onPlay);
-       audio.removeEventListener("pause", onPause);
+@@ -126 +142,0 @@
 -      audio.removeEventListener("ended", onEnded);
-       audio.pause();
+@@ -127,0 +144 @@
 +      if (sleepTimeoutRef.current !== null) clearTimeout(sleepTimeoutRef.current);
-     };
-   }, []);
- 
+@@ -131,43 +148,13 @@
 -  // Update MediaSession
 -  useEffect(() => {
 -    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
@@ -126,7 +88,7 @@
 +    if (matchingIndex >= 0) {
 +      if (newQueue) setQueue(targetQueue);
 +      setQueueIndex(matchingIndex);
-     } else {
+@@ -175,37 +161,0 @@
 -      navigator.mediaSession.metadata = null;
 -      updatePresence("");
 -    }
@@ -164,13 +126,7 @@
 -      const idx = newQueue.findIndex((t) => t.id === track.id);
 -      setQueueIndex(idx >= 0 ? idx : 0);
 -    } else if (queue.length === 0) {
-       setQueue([track]);
-       setQueueIndex(0);
-     }
-@@ -219,7 +169,16 @@
-     audioRef.current.play().catch((err) => {
-       console.warn("Audio autoplay blocked, requires user click", err);
-     });
+@@ -222 +172,10 @@
 -  };
 +  }, [queue, playbackRate]);
 +
@@ -182,53 +138,26 @@
 +    linearQueueRef.current = [...tracks];
 +    setIsShuffle(true);
 +  }, [playTrack]);
- 
-   const playBook = (book: { id: string; title: string; author: string; coverUrl?: string; duration?: number }) => {
-     const bookTrack: Track = {
-@@ -245,11 +204,11 @@
-     }
-   };
- 
+@@ -248 +207 @@
 -  const seek = (seconds: number) => {
 +  const seek = useCallback((seconds: number) => {
-     if (!audioRef.current) return;
-     audioRef.current.currentTime = seconds;
-     setCurrentTime(seconds);
+@@ -252 +211 @@
 -  };
 +  }, []);
- 
-   const setVolume = (vol: number) => {
-     setVolumeState(vol);
-@@ -265,7 +224,7 @@
-     }
-   };
- 
+@@ -268 +227 @@
 -  const nextTrack = () => {
 +  const nextTrack = useCallback(() => {
-     if (queue.length === 0) return;
-     let nextIdx = queueIndex + 1;
-     if (nextIdx >= queue.length) {
-@@ -278,12 +237,12 @@
-     }
-     setQueueIndex(nextIdx);
-     playTrack(queue[nextIdx]);
+@@ -281,3 +240,3 @@
 -  };
 -
 -  const previousTrack = () => {
 +  }, [queue, queueIndex, repeatMode, playTrack]);
 +
 +  const previousTrack = useCallback(() => {
-     if (!audioRef.current) return;
-     // If more than 3 seconds in, restart track
+@@ -286 +245 @@
 -    if (currentTime > 3) {
 +    if (audioRef.current.currentTime > 3) {
-       seek(0);
-       return;
-     }
-@@ -294,7 +253,25 @@
-     }
-     setQueueIndex(prevIdx);
-     playTrack(queue[prevIdx]);
+@@ -297 +256,19 @@
 -  };
 +  }, [queue, queueIndex, repeatMode, playTrack, seek]);
 +
@@ -249,13 +178,7 @@
 +    return () => audio.removeEventListener("ended", handleTrackEnded);
 +  }, [handleTrackEnded]);
 +
- 
-   const addToQueue = (track: Track) => {
-     setQueue((prev) => [...prev, track]);
-@@ -326,18 +303,35 @@
-   };
- 
-   const toggleShuffle = () => {
+@@ -329 +306,13 @@
 -    setIsShuffle((s) => !s);
 +    const historyAndCurrent = queue.slice(0, queueIndex + 1);
 +    const upcoming = queue.slice(queueIndex + 1);
@@ -270,30 +193,17 @@
 +      : shuffleTracks(upcoming);
 +    setQueue([...historyAndCurrent, ...reordered]);
 +    setIsShuffle(!isShuffle);
-   };
- 
-   const setSleepTimerDuration = (minutes: number | null) => {
+@@ -332,0 +322,4 @@
 +    if (sleepTimeoutRef.current !== null) {
 +      clearTimeout(sleepTimeoutRef.current);
 +      sleepTimeoutRef.current = null;
 +    }
-     setSleepTimer(minutes);
-     if (!minutes) return;
- 
+@@ -336 +329 @@
 -    setTimeout(() => {
 +    sleepTimeoutRef.current = setTimeout(() => {
-       if (audioRef.current) {
-         audioRef.current.pause();
-       }
-       setSleepTimer(null);
+@@ -340,0 +334 @@
 +      sleepTimeoutRef.current = null;
-     }, minutes * 60 * 1000);
-   };
- 
-@@ -350,6 +344,80 @@
-       prev.map((t) => (t.id === trackId ? { ...t, isLiked: !t.isLiked } : t))
-     );
-   };
+@@ -352,0 +347,74 @@
 +
 +  // Update MediaSession
 +  useEffect(() => {
@@ -368,88 +278,38 @@
 +      currentTrack ? (isPlaying ? "playing" : "paused") : "idle"
 +    );
 +  }, [currentTrack, isPlaying, updatePresence]);
- 
-   return (
-     <PlayerContext.Provider
-@@ -374,6 +442,7 @@
-         setPlaybackRate,
-         setRepeatMode,
-         toggleShuffle,
+@@ -376,0 +445 @@
 +        shuffleAndPlay,
-         nextTrack,
-         previousTrack,
-         addToQueue,
 --- a/src/context/auth-context.tsx
 +++ b/src/context/auth-context.tsx
-@@ -1,6 +1,6 @@
- "use client";
- 
+@@ -3 +3 @@
 -import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 +import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
- 
- export interface KBSession {
-   token: string;
-@@ -34,7 +34,7 @@
-   pairWithCode: (code: string) => Promise<boolean>;
-   generatePairCode: () => Promise<string | null>;
-   logout: () => Promise<void>;
+@@ -37 +37 @@
 -  updatePresence: (nowPlayingTitle?: string) => Promise<void>;
 +  updatePresence: (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => Promise<void>;
- }
- 
- const AuthContext = createContext<AuthContextType>({
-@@ -49,6 +49,7 @@
- });
- 
- export function AuthProvider({ children }: { children: React.ReactNode }) {
+@@ -51,0 +52 @@
 +  const presenceRef = useRef({ title: "", state: "idle" });
-   const [session, setSession] = useState<KBSession | null>(null);
-   const [isLoading, setIsLoading] = useState(true);
- 
-@@ -174,7 +175,10 @@
-     localStorage.removeItem("kb_account_token");
-   };
- 
+@@ -177 +178,4 @@
 -  const updatePresence = useCallback(async (nowPlayingTitle?: string) => {
 +  const updatePresence = useCallback(async (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => {
 +    if (nowPlayingTitle !== undefined) {
 +      presenceRef.current = { title: nowPlayingTitle, state: state || (nowPlayingTitle ? "playing" : "idle") };
 +    }
-     if (!session?.token) return;
-     try {
-       await fetch("/api/account/presence", {
-@@ -185,8 +189,8 @@
-         },
-         body: JSON.stringify({
-           device_name: "Web PWA (" + (window.innerWidth < 768 ? "iPhone" : window.innerWidth <= 1024 ? "iPad" : "Mac") + ")",
+@@ -188,2 +192,2 @@
 -          now_playing: nowPlayingTitle || "",
 -          state: nowPlayingTitle ? "playing" : "idle",
 +          now_playing: presenceRef.current.title,
 +          state: presenceRef.current.state,
-         }),
-       });
-     } catch (_) {}
 --- a/src/components/player/mini-player.tsx
 +++ b/src/components/player/mini-player.tsx
-@@ -1,12 +1,12 @@
- "use client";
- 
- import React from "react";
+@@ -4 +4 @@
 -import { Play, Pause, SkipForward, BookOpen } from "lucide-react";
 +import { Play, Pause, SkipBack, SkipForward, BookOpen } from "lucide-react";
- import { usePlayer } from "@/context/player-context";
- import { CoverArt } from "@/components/ui/cover-art";
- 
- export function MiniPlayer() {
+@@ -9 +9 @@
 -  const { currentTrack, isPlaying, togglePlay, nextTrack, setIsExpanded } =
 +  const { currentTrack, isPlaying, togglePlay, previousTrack, nextTrack, setIsExpanded } =
-     usePlayer();
- 
-   if (!currentTrack) return null;
-@@ -48,8 +48,16 @@
-       >
-         <button
-           type="button"
+@@ -50,0 +51,8 @@
 +          onClick={previousTrack}
 +          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
 +          aria-label="Previous track"
@@ -458,39 +318,18 @@
 +        </button>
 +        <button
 +          type="button"
-           onClick={togglePlay}
+@@ -52 +60 @@
 -          className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
 +          className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
-           aria-label={isPlaying ? "Pause" : "Play"}
-         >
-           {isPlaying ? (
-@@ -61,7 +69,7 @@
-         <button
-           type="button"
-           onClick={nextTrack}
+@@ -64 +72 @@
 -          className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
 +          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
-           aria-label="Next track"
-         >
-           <SkipForward className="w-5 h-5 fill-current" />
 --- a/src/components/views/album-detail-view.tsx
 +++ b/src/components/views/album-detail-view.tsx
-@@ -45,7 +45,7 @@
-   onBack: () => void;
-   onSelectArtist: (artist: ArtistTarget) => void;
- }) {
+@@ -48 +48 @@
 -  const { playTrack, currentTrack, isPlaying, togglePlay } = usePlayer();
 +  const { playTrack, shuffleAndPlay, currentTrack, isPlaying, togglePlay } = usePlayer();
-   const { session } = useAuth();
- 
-   const [tracks, setTracks] = useState<AlbumTrackItem[]>([]);
-@@ -294,8 +294,7 @@
-   const handleShuffleAll = () => {
-     const queue = buildQueue();
-     if (queue.length > 0) {
+@@ -297,2 +297 @@
 -      const shuffled = [...queue].sort(() => Math.random() - 0.5);
 -      playTrack(shuffled[0], shuffled);
 +      shuffleAndPlay(queue);
-     }
-   };
- 
