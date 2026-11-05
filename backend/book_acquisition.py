@@ -125,8 +125,10 @@ class InternetArchiveLibriVoxAdapter:
                 meta_data = json.loads(meta_resp.read().decode("utf-8"))
 
             files = meta_data.get("result", [])
-            # Filter mp3 tracks
-            mp3_files = [f for f in files if f.get("name", "").lower().endswith(".mp3") and "64kb" not in f.get("name", "").lower()]
+            # Filter mp3 tracks (prefer non-64kb, non-vbr full tracks)
+            mp3_files = [f for f in files if f.get("name", "").lower().endswith(".mp3") and "64kb" not in f.get("name", "").lower() and "_vbr" not in f.get("name", "").lower()]
+            if not mp3_files:
+                mp3_files = [f for f in files if f.get("name", "").lower().endswith(".mp3") and "64kb" not in f.get("name", "").lower()]
             if not mp3_files:
                 mp3_files = [f for f in files if f.get("name", "").lower().endswith(".mp3")]
 
@@ -225,6 +227,14 @@ class AcquisitionCoordinator:
             if audio_result.get("acquired"):
                 acquired_formats.append("audiobook")
 
+        # Check if any formats are already in the library
+        work_slug = f"work-{_norm(title).replace(' ', '-')}-{_norm(author).replace(' ', '-')}"
+        with self.books_core.get_db() as db:
+            existing_eds = [r["format"] for r in db.execute("SELECT format FROM editions WHERE work_id=?", (work_slug,)).fetchall()]
+            for ef in existing_eds:
+                if ef in ("epub", "audiobook") and ef not in acquired_formats:
+                    acquired_formats.append(ef)
+
         if not acquired_formats:
             err_msg = "No authorized open-access sources currently have this title available for automatic download"
             self.books_core.update_request_state(
@@ -260,13 +270,16 @@ class AcquisitionCoordinator:
 
         # If Audio was acquired: inspect and embed tags
         if audio_result and audio_result.get("acquired"):
-            for tr_path in audio_result.get("file_paths", []):
+            total_tr = len(audio_result.get("file_paths", []))
+            for idx, tr_path in enumerate(audio_result.get("file_paths", []), 1):
                 try:
                     self.metadata_engine.write_audio_metadata(
                         tr_path,
-                        title=os.path.splitext(os.path.basename(tr_path))[0],
+                        title=f"Chapter {idx}",
                         artist=author,
                         album=title,
+                        track_number=idx,
+                        total_tracks=total_tr,
                     )
                 except Exception as e:
                     logger.warning(f"Audio metadata tagging warning on {tr_path}: {e}")
@@ -338,13 +351,37 @@ class AcquisitionCoordinator:
                     ON CONFLICT(id) DO UPDATE SET updated_at=excluded.updated_at
                 """, (ed_id, work_slug, title, json.dumps([author]), now, now))
 
+                cumulative_sec = 0.0
                 for idx, a_path in enumerate(published_audio_paths, 1):
                     asset_id = f"asset-{ed_id}-{idx}"
+                    dur = 0.0
+                    try:
+                        import mutagen
+                        mf = mutagen.File(a_path)
+                        if mf and mf.info and hasattr(mf.info, "length"):
+                            dur = float(mf.info.length)
+                    except Exception:
+                        pass
+
                     db.execute("""
                         INSERT INTO assets (id, edition_id, kind, file_path, file_size, mime_type, format, duration_seconds, track_number, abs_item_id, abs_file_ino, created_at)
-                        VALUES (?, ?, 'audio_track', ?, ?, 'audio/mpeg', 'mp3', 0.0, ?, NULL, NULL, ?)
-                        ON CONFLICT(id) DO UPDATE SET file_path=excluded.file_path
-                    """, (asset_id, ed_id, a_path, os.path.getsize(a_path), idx, now))
+                        VALUES (?, ?, 'audio_track', ?, ?, 'audio/mpeg', 'mp3', ?, ?, NULL, NULL, ?)
+                        ON CONFLICT(id) DO UPDATE SET file_path=excluded.file_path, duration_seconds=excluded.duration_seconds
+                    """, (asset_id, ed_id, a_path, os.path.getsize(a_path), dur, idx, now))
+
+                    # Insert initial chapter record for track
+                    ch_id = f"ch-{ed_id}-{idx}"
+                    start_s = cumulative_sec
+                    end_s = cumulative_sec + dur if dur > 0 else 0.0
+                    cumulative_sec = end_s
+                    db.execute("""
+                        INSERT INTO chapters (id, edition_id, index_num, title, start_seconds, end_seconds, epub_href, epub_cfi)
+                        VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
+                        ON CONFLICT(id) DO UPDATE SET
+                            title=excluded.title,
+                            start_seconds=excluded.start_seconds,
+                            end_seconds=excluded.end_seconds
+                    """, (ch_id, ed_id, idx, f"Chapter {idx}", start_s, end_s))
 
             db.commit()
 
@@ -364,11 +401,11 @@ class AcquisitionCoordinator:
         )
 
         # If both formats exist, enqueue alignment
-        if len(acquired_formats) >= 2 or (published_epub_path and published_audio_paths):
+        if ("epub" in acquired_formats and "audiobook" in acquired_formats) or len(acquired_formats) >= 2 or (published_epub_path and published_audio_paths):
             self.books_core.enqueue_task(
                 task_type="align_work",
                 payload={"work_id": work_slug},
-                priority="opportunistic"
+                priority="immediate"
             )
 
         return self.books_core.get_request(request_id)
@@ -377,13 +414,17 @@ class AcquisitionCoordinator:
         abs_url = os.environ.get("ABS_URL", "http://127.0.0.1:13378")
         abs_token = os.environ.get("ABS_TOKEN", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0")
 
-        # Scan Books library
-        try:
-            req = urllib.request.Request(
-                f"{abs_url}/api/libraries/0f39b9e1-8501-424b-9cb5-1e59f64b605f/scan",
-                headers={"Authorization": f"Bearer {abs_token}"},
-                method="POST"
-            )
-            urllib.request.urlopen(req, timeout=5)
-        except Exception:
-            pass
+        # Scan Books library and Audiobooks library
+        for lib_id in (
+            "0f39b9e1-8501-424b-9cb5-1e59f64b605f",  # Books
+            "d4d8b7bd-234c-4c95-bb9b-faa50ec0a34d",  # Audiobooks
+        ):
+            try:
+                req = urllib.request.Request(
+                    f"{abs_url}/api/libraries/{lib_id}/scan",
+                    headers={"Authorization": f"Bearer {abs_token}"},
+                    method="POST"
+                )
+                urllib.request.urlopen(req, timeout=5)
+            except Exception:
+                pass

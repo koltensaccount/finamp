@@ -441,7 +441,20 @@ class Handler(BaseHTTPRequestHandler):
                         self.send_error(404)
                         return
                     asset = epub_ed['assets'][0]
+                    local_path = asset.get('file_path')
+                    if local_path and os.path.exists(local_path):
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/epub+zip')
+                        self.send_header('Content-Length', str(os.path.getsize(local_path)))
+                        self.end_headers()
+                        with open(local_path, 'rb') as f:
+                            while chunk := f.read(65536):
+                                self.wfile.write(chunk)
+                        return
                     abs_item_id = asset.get('abs_item_id')
+                    if not abs_item_id:
+                        self.send_error(404)
+                        return
                     abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')
                     abs_token = os.environ.get('ABS_TOKEN', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0M2IwZjY1NS0xZjc3LTQ1ZDAtYTFlMC1hNWEyN2MzNzE3NjEiLCJ1c2VybmFtZSI6InJvb3QiLCJpYXQiOjE3NzM5NTI4OTF9.GbOc3bhWXnr8-r9ewGul2OBVgs2s_HWbKjAkvJW0qV0')
                     req = urllib.request.Request(f'{abs_url}/api/items/{abs_item_id}/ebook', headers={'Authorization': f'Bearer {abs_token}'})
@@ -501,7 +514,46 @@ class Handler(BaseHTTPRequestHandler):
                         self.send_error(404)
                         return
                     asset = next((a for a in audio_ed['assets'] if a.get('track_number') == track_num), None)
-                    if not asset or not asset.get('abs_item_id') or not asset.get('abs_file_ino'):
+                    if not asset:
+                        self.send_error(404)
+                        return
+                    local_path = asset.get('file_path')
+                    if local_path and os.path.exists(local_path):
+                        file_size = os.path.getsize(local_path)
+                        range_hdr = self.headers.get('Range')
+                        if range_hdr:
+                            m = re.match(r'bytes=(\d+)-(\d*)', range_hdr)
+                            if m:
+                                start = int(m.group(1))
+                                end = int(m.group(2)) if m.group(2) else file_size - 1
+                                length = end - start + 1
+                                self.send_response(206)
+                                self.send_header('Content-Type', 'audio/mpeg')
+                                self.send_header('Content-Range', f'bytes {start}-{end}/{file_size}')
+                                self.send_header('Content-Length', str(length))
+                                self.send_header('Accept-Ranges', 'bytes')
+                                self.end_headers()
+                                with open(local_path, 'rb') as f:
+                                    f.seek(start)
+                                    rem = length
+                                    while rem > 0:
+                                        chunk = f.read(min(rem, 65536))
+                                        if not chunk:
+                                            break
+                                        self.wfile.write(chunk)
+                                        rem -= len(chunk)
+                                return
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'audio/mpeg')
+                        self.send_header('Content-Length', str(file_size))
+                        self.send_header('Accept-Ranges', 'bytes')
+                        self.end_headers()
+                        with open(local_path, 'rb') as f:
+                            while chunk := f.read(65536):
+                                self.wfile.write(chunk)
+                        return
+
+                    if not asset.get('abs_item_id') or not asset.get('abs_file_ino'):
                         self.send_error(404)
                         return
                     abs_url = os.environ.get('ABS_URL', 'http://127.0.0.1:13378')

@@ -221,6 +221,14 @@ class BooksCore:
             asset_cols = [r["name"] for r in db.execute("PRAGMA table_info(assets)").fetchall()]
             if "sha256_hash" not in asset_cols:
                 db.execute("ALTER TABLE assets ADD COLUMN sha256_hash TEXT")
+
+            align_cols = [r["name"] for r in db.execute("PRAGMA table_info(alignments)").fetchall()]
+            if "epub_asset_hash" not in align_cols:
+                db.execute("ALTER TABLE alignments ADD COLUMN epub_asset_hash TEXT")
+            if "audio_asset_hash" not in align_cols:
+                db.execute("ALTER TABLE alignments ADD COLUMN audio_asset_hash TEXT")
+            if "unmatched_regions" not in align_cols:
+                db.execute("ALTER TABLE alignments ADD COLUMN unmatched_regions TEXT")
             db.commit()
         except Exception:
             pass
@@ -646,16 +654,29 @@ class BooksCore:
             work_slug = f"work-{_norm(title_clean).replace(' ', '-')}-{_norm(author_clean).replace(' ', '-')}"
             existing_work = db.execute("SELECT id FROM works WHERE id=?", (work_slug,)).fetchone()
             if existing_work:
-                return {
-                    "request_id": None,
-                    "state": "available",
-                    "work_id": existing_work["id"],
-                    "message": "Book is already in your library",
-                }
+                ed_rows = db.execute("SELECT format FROM editions WHERE work_id=?", (work_slug,)).fetchall()
+                formats = {er["format"] for er in ed_rows}
+                already_has_format = False
+                if not formats:
+                    already_has_format = True
+                elif format_requested == "epub" and "epub" in formats:
+                    already_has_format = True
+                elif format_requested == "audiobook" and "audiobook" in formats:
+                    already_has_format = True
+                elif format_requested == "paired" and "epub" in formats and "audiobook" in formats:
+                    already_has_format = True
+
+                if already_has_format:
+                    return {
+                        "request_id": None,
+                        "state": "available",
+                        "work_id": existing_work["id"],
+                        "message": "Requested format is already in your library",
+                    }
 
             existing_req = db.execute(
-                "SELECT * FROM book_requests WHERE (LOWER(title)=? AND LOWER(author)=?) AND state NOT IN ('failed', 'imported')",
-                (title_clean.lower(), author_clean.lower()),
+                "SELECT * FROM book_requests WHERE (LOWER(title)=? AND LOWER(author)=?) AND format_requested=? AND state NOT IN ('failed', 'imported', 'available')",
+                (title_clean.lower(), author_clean.lower(), format_requested),
             ).fetchone()
             if existing_req:
                 return {
@@ -1120,7 +1141,16 @@ class BooksCore:
                     audio_asset_hash=payload.get("audio_asset_hash"),
                     unmatched_regions=payload.get("unmatched_regions"),
                 )
-            return {"status": "alignment_queued_or_ready", "work_id": work_id}
+            try:
+                try:
+                    from backend.alignment_engine import AlignmentEngine
+                except ImportError:
+                    from alignment_engine import AlignmentEngine
+                engine = AlignmentEngine(self)
+                return engine.align_work(work_id)
+            except Exception as e:
+                logger.error(f"Alignment engine error for {work_id}: {e}", exc_info=True)
+                raise
         elif task_type == "acquire_book":
             req_id = payload.get("request_id")
             try:
