@@ -383,6 +383,43 @@ class KBAccountService extends ChangeNotifier {
     return resp.statusCode == 200;
   }
 
+  /// Submit a bug report directly to backend BUGS.md
+  Future<Map<String, dynamic>> submitBugReport({
+    required String title,
+    String description = '',
+    String category = 'UI/Layout',
+    String screen = '',
+    String nowPlaying = '',
+  }) async {
+    final ep = await endpoint;
+    final dName = await resolveDeviceName();
+    final body = jsonEncode({
+      'title': title,
+      'description': description,
+      'category': category,
+      'screen': screen,
+      'device_name': dName,
+      'platform': Platform.operatingSystem,
+      'client_version': '1.0.0',
+      'now_playing': nowPlaying,
+    });
+
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (isSignedIn) {
+      headers['Authorization'] = 'Bearer ${_currentSession!.token}';
+    }
+
+    final resp = await _client
+        .post(Uri.parse('$ep/v1/account/bug-reports'), headers: headers, body: body)
+        .timeout(const Duration(seconds: 8));
+
+    if (resp.statusCode == 200 || resp.statusCode == 201) {
+      return jsonDecode(resp.body) as Map<String, dynamic>;
+    } else {
+      throw Exception('Failed to submit bug report');
+    }
+  }
+
   /// Apply config from server response and sign in
   Future<void> applyConfigAndSignIn(Map<String, dynamic> data) async {
     final account = data['account'] as Map<String, dynamic>? ?? {};

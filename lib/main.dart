@@ -15,6 +15,7 @@ import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/models/jellyfin_models.dart';
 import 'package:finamp/models/locale_adapter.dart';
 import 'package:finamp/models/music_models.dart';
+import 'package:finamp/components/bug_reporter_button.dart';
 import 'package:finamp/screens/accessibility_settings_screen.dart';
 import 'package:finamp/screens/account_screen.dart';
 import 'package:finamp/screens/advanced_login_options_screen.dart';
@@ -1021,6 +1022,7 @@ class FinampApp extends ConsumerWidget {
           )
         : null;
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: "KB Music",
       routes: {
         SplashScreen.routeName: (context) => const SplashScreen(),
@@ -1163,6 +1165,7 @@ class FinampErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: "KB Music",
       localizationsDelegates: const [
         AppLocalizations.delegate,

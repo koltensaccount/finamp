@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:finamp/components/bug_reporter_button.dart';
 import 'package:finamp/components/finamp_icon.dart';
 import 'package:finamp/screens/view_selector.dart';
 import 'package:finamp/services/kb_account_service.dart';
@@ -254,7 +255,11 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 24),
+                  const Align(
+                    alignment: Alignment.topRight,
+                    child: BugReporterButton(),
+                  ),
+                  const SizedBox(height: 12),
                   Hero(tag: "finamp_logo", child: FinampIcon(140, 140)),
                   const SizedBox(height: 20),
                   Text(

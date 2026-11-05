@@ -19,6 +19,7 @@ import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:finamp/services/music_providers.dart';
 import 'package:finamp/screens/catalog_search_screen.dart';
 import 'package:finamp/screens/books_screen.dart';
+import 'package:finamp/components/bug_reporter_button.dart';
 import 'package:finamp/components/navigation/apple_floating_bottom_bar.dart';
 import 'package:finamp/components/navigation/apple_sidebar_navigation.dart';
 import 'package:finamp/screens/library_screen_content.dart';
@@ -277,7 +278,11 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                  actions: [Padding(padding: const EdgeInsets.only(right: 16), child: _buildUserAvatar(context))],
+                  actions: [
+                    const BugReporterButton(),
+                    const SizedBox(width: 8),
+                    Padding(padding: const EdgeInsets.only(right: 16), child: _buildUserAvatar(context)),
+                  ],
                 ),
           body: Row(
             children: [
@@ -307,7 +312,13 @@ class _MusicScreenState extends ConsumerState<MusicScreen> with TickerProviderSt
                                   color: isDark ? Colors.white : Colors.black,
                                 ),
                               ),
-                              _buildUserAvatar(context),
+                              Row(
+                                children: [
+                                  const BugReporterButton(),
+                                  const SizedBox(width: 12),
+                                  _buildUserAvatar(context),
+                                ],
+                              ),
                             ],
                           ),
                         ),
