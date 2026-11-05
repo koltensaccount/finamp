@@ -578,6 +578,96 @@ void main() {
       expect(cachedMbid, equals('b29020d6-5dbf-4c99-b16f-c009f8a712ff'));
     });
 
+    testWidgets('credited_identity confidence routes Steve Lacy by itemId and persists mapping', (tester) async {
+      final client = CatalogApiClient(
+        credentials: _TestCredentials(),
+        client: _MockHttpClient((request) async {
+          expect(request.url.path, '/v1/artists/resolve');
+          expect(request.url.queryParameters['item_id'], '349ff016da8eade9fb2ba11ed655a2b9');
+          return http.Response(
+            jsonEncode({
+              'id': 'b29020d6-5dbf-4c99-b16f-c009f8a712ff',
+              'artist_id': 'b29020d6-5dbf-4c99-b16f-c009f8a712ff',
+              'name': 'Steve Lacy',
+              'confidence': 'credited_identity',
+            }),
+            200,
+          );
+        }),
+      );
+      GetIt.instance.registerSingleton<CatalogApiClient>(client);
+
+      final mbid = await ArtistIdentityService.resolveArtistMbid(
+        jellyfinId: '349ff016da8eade9fb2ba11ed655a2b9',
+        name: 'Steve Lacy',
+      );
+
+      expect(mbid, equals('b29020d6-5dbf-4c99-b16f-c009f8a712ff'));
+
+      // Check persistent prefs
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('artist_mbid_by_jf:349ff016da8eade9fb2ba11ed655a2b9'), equals('b29020d6-5dbf-4c99-b16f-c009f8a712ff'));
+      expect(prefs.getString('artist_mbid_by_name:steve lacy'), equals('b29020d6-5dbf-4c99-b16f-c009f8a712ff'));
+    });
+
+    testWidgets('The Mamas & the Papas resolves accurately preserving name and ampersand', (tester) async {
+      final client = CatalogApiClient(
+        credentials: _TestCredentials(),
+        client: _MockHttpClient((request) async {
+          expect(request.url.path, '/v1/artists/resolve');
+          return http.Response(
+            jsonEncode({
+              'id': 'ff294730-0315-440d-a543-54005779c15b',
+              'artist_id': 'ff294730-0315-440d-a543-54005779c15b',
+              'name': 'The Mamas & the Papas',
+              'confidence': 'canonical_identity',
+            }),
+            200,
+          );
+        }),
+      );
+      GetIt.instance.registerSingleton<CatalogApiClient>(client);
+
+      final testObserver = _TestNavigatorObserver();
+      final mamasArtistItem = BaseItemDto(
+        id: const BaseItemId('b15fc9bf8c3c5667e13a0312cf4beb10'),
+        name: 'The Mamas & the Papas',
+        type: 'MusicArtist',
+        providerIds: {
+          'MusicBrainzArtist': 'ff294730-0315-440d-a543-54005779c15b',
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [testObserver],
+          routes: {
+            CatalogArtistScreen.routeName: (context) => const Scaffold(body: Text('CatalogArtistScreen')),
+            ArtistScreen.routeName: (context) => const Scaffold(body: Text('LocalArtistScreen')),
+          },
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                ArtistResolutionHelper.navigateToArtist(
+                  context,
+                  artistItem: mamasArtistItem,
+                );
+              },
+              child: const Text('Tap The Mamas & the Papas'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap The Mamas & the Papas'));
+      await tester.pumpAndSettle();
+
+      expect(testObserver.pushedRoutes, contains(CatalogArtistScreen.routeName));
+      final args = testObserver.pushedArguments.whereType<CatalogArtistScreenArguments>().first;
+      expect(args.artistMbid, equals('ff294730-0315-440d-a543-54005779c15b'));
+      expect(args.initialName, equals('The Mamas & the Papas'));
+    });
+
     testWidgets('unresolvable ambiguity does not guess and safely falls back to local ArtistScreen', (tester) async {
       final client = CatalogApiClient(
         credentials: _TestCredentials(),

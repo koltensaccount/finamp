@@ -402,7 +402,7 @@ Future<void> _setupOSIntegration(List<String> commandLineArgs) async {
       center: screenSize == null,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.normal,
+      titleBarStyle: TitleBarStyle.hidden,
       minimumSize: Size(400, 250),
       // This matches the size of the iPhone 5, which is probably the smallest screen size worth testing against
       //minimumSize: Size(336, 607),

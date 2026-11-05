@@ -89,5 +89,33 @@ void main() {
       );
       expect(prefs.getKeys(), isEmpty);
     });
+
+    test('init purges known poisoned mappings for Steve Lacy (jazz) and "The Mamas"', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('artist_mbid_by_jf:jf-steve-lacy', 'ca9766a0-1c30-43e6-a213-bac1334efc4a');
+      await prefs.setString('artist_mbid_by_name:steve lacy', 'ca9766a0-1c30-43e6-a213-bac1334efc4a');
+      await prefs.setString('artist_mbid_by_name:the mamas', 'ff294730-0315-440d-a543-54005779c15b');
+      await prefs.setString('artist_mbid_by_name:the mamas & the papas', 'ff294730-0315-440d-a543-54005779c15b');
+
+      ArtistIdentityService.resetForTesting();
+      await ArtistIdentityService.init();
+
+      // Poisoned keys must be removed from prefs
+      expect(prefs.containsKey('artist_mbid_by_jf:jf-steve-lacy'), isFalse);
+      expect(prefs.containsKey('artist_mbid_by_name:steve lacy'), isFalse);
+      expect(prefs.containsKey('artist_mbid_by_name:the mamas'), isFalse);
+
+      // Canonical valid key must remain intact
+      expect(prefs.containsKey('artist_mbid_by_name:the mamas & the papas'), isTrue);
+      expect(prefs.getString('artist_mbid_by_name:the mamas & the papas'), equals('ff294730-0315-440d-a543-54005779c15b'));
+
+      // Resolving "The Mamas & the Papas" returns the canonical MBID
+      final resolvedMamas = await ArtistIdentityService.resolveArtistMbid(name: 'The Mamas & the Papas');
+      expect(resolvedMamas, equals('ff294730-0315-440d-a543-54005779c15b'));
+
+      // Resolving poisoned "The Mamas" returns null
+      final resolvedPoison = await ArtistIdentityService.resolveArtistMbid(name: 'the mamas');
+      expect(resolvedPoison, isNull);
+    });
   });
 }

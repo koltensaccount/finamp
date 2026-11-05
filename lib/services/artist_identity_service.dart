@@ -53,12 +53,22 @@ class ArtistIdentityService {
           final jfId = key.substring('artist_mbid_by_jf:'.length);
           final mbid = prefs.getString(key);
           if (mbid != null && isMbid(mbid)) {
+            // Guard: purge known poisoned mappings (e.g. jazz saxophonist Steve Lacy)
+            if (mbid == 'ca9766a0-1c30-43e6-a213-bac1334efc4a') {
+              prefs.remove(key);
+              continue;
+            }
             _jellyfinToMbid[jfId] = mbid;
           }
         } else if (key.startsWith('artist_mbid_by_name:')) {
           final name = key.substring('artist_mbid_by_name:'.length);
           final mbid = prefs.getString(key);
           if (mbid != null && isMbid(mbid)) {
+            // Guard: purge known poisoned mappings
+            if (mbid == 'ca9766a0-1c30-43e6-a213-bac1334efc4a' || name == 'the mamas') {
+              prefs.remove(key);
+              continue;
+            }
             _nameToMbid[name.toLowerCase()] = mbid;
           }
         }
@@ -97,7 +107,38 @@ class ArtistIdentityService {
     // 0. If input jellyfinId is actually already a MusicBrainz MBID
     if (isMbid(jellyfinId)) return jellyfinId;
 
-    // 1. Check artistItem ProviderIds
+    final targetJfId = jellyfinId ?? artistItem?.id.raw;
+    final targetName = name ?? artistItem?.name;
+
+    // 1. When online, query authoritative catalog resolve endpoint first if available
+    if (!isOffline && GetIt.instance.isRegistered<CatalogApiClient>()) {
+      try {
+        final catalogClient = GetIt.instance<CatalogApiClient>();
+        final res = await catalogClient.resolveArtist(itemId: targetJfId, name: targetName);
+        if (res != null) {
+          final confidence = res['confidence'] as String?;
+          if (confidence != 'ambiguous') {
+            final resolvedMbid = res['artist_id'] ?? res['id'];
+            if (resolvedMbid is String && isMbid(resolvedMbid)) {
+              if (confidence == 'verified' ||
+                  confidence == 'exact' ||
+                  confidence == 'direct_mbid' ||
+                  confidence == 'disambiguated_local_presence' ||
+                  confidence == 'name_match' ||
+                  confidence == 'canonical_identity' ||
+                  confidence == 'credited_identity' ||
+                  confidence == 'registered_alias' ||
+                  confidence == 'primary_credit') {
+                recordMapping(jellyfinId: targetJfId, name: targetName ?? (res['name'] as String?), mbid: resolvedMbid);
+              }
+              return resolvedMbid;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Check artistItem ProviderIds
     if (artistItem?.providerIds != null) {
       final pids = artistItem!.providerIds!;
       final mbId = pids['MusicBrainzArtist'] ?? pids['MusicBrainzAlbumArtist'] ?? pids['MusicBrainz'];
@@ -107,10 +148,7 @@ class ArtistIdentityService {
       }
     }
 
-    final targetJfId = jellyfinId ?? artistItem?.id.raw;
-    final targetName = name ?? artistItem?.name;
-
-    // 2. Check cached mappings
+    // 3. Check cached mappings
     if (targetJfId != null && _jellyfinToMbid.containsKey(targetJfId)) {
       return _jellyfinToMbid[targetJfId];
     }
@@ -122,31 +160,6 @@ class ArtistIdentityService {
     if (isOffline) {
       return null;
     }
-
-    // 3. Query catalog resolve endpoint
-    try {
-      final catalogClient = GetIt.instance<CatalogApiClient>();
-      final res = await catalogClient.resolveArtist(itemId: targetJfId, name: targetName);
-      if (res != null) {
-        final confidence = res['confidence'] as String?;
-        if (confidence == 'ambiguous') {
-          return null;
-        }
-
-        final resolvedMbid = res['artist_id'] ?? res['id'];
-        if (resolvedMbid is String && isMbid(resolvedMbid)) {
-          // Record and persist mapping for verified, exact, direct, or disambiguated identity
-          if (confidence == 'verified' ||
-              confidence == 'exact' ||
-              confidence == 'direct_mbid' ||
-              confidence == 'disambiguated_local_presence' ||
-              confidence == 'name_match') {
-            recordMapping(jellyfinId: targetJfId, name: targetName ?? (res['name'] as String?), mbid: resolvedMbid);
-          }
-          return resolvedMbid;
-        }
-      }
-    } catch (_) {}
 
     // 4. Query catalog search endpoint for exact normalized name match.
     // Strictly guard against ambiguity: if multiple artists share the exact name, NEVER route blindly.

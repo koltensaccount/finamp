@@ -12,5 +12,9 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
     self.title = "KB Music"
+    self.titleVisibility = .hidden
+    self.titlebarAppearsTransparent = true
+    self.styleMask.insert(.fullSizeContentView)
+    self.isMovableByWindowBackground = true
   }
 }
