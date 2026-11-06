@@ -104,7 +104,7 @@ class CatalogApiClient {
   }
 
   static void _requireSuccess(http.Response response) {
-    if (response.statusCode == 401) throw const CatalogUnavailableException('Catalog authentication failed.');
+    if (response.statusCode == 401) throw const CatalogUnavailableException('Catalog session expired or was revoked. Sign in again to reconnect.');
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw CatalogUnavailableException('Catalog is unavailable (HTTP ${response.statusCode}).');
     }

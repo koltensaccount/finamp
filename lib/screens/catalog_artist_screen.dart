@@ -1,3 +1,4 @@
+import 'login_screen.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -323,6 +324,14 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     label: const Text('Retry'),
                     onPressed: _loadArtist,
                   ),
+                  if (_error!.contains('Sign in again')) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.login),
+                      label: const Text('Sign In Again'),
+                      onPressed: () => Navigator.of(context, rootNavigator: true).pushNamed(LoginScreen.routeName),
+                    ),
+                  ],
                   if (_fallbackArtist != null) ...[
                     const SizedBox(width: 12),
                     OutlinedButton.icon(

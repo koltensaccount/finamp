@@ -357,7 +357,20 @@ class KBAccountService extends ChangeNotifier {
   }
 
   /// Refresh active session
-  Future<bool> refreshSession() async {
+  Future<bool>? _refreshInFlight;
+
+  Future<bool> refreshSession() {
+    return _refreshInFlight ??= _refreshSession().whenComplete(() => _refreshInFlight = null);
+  }
+
+  /// Only renew this account's token; never replace a manually configured key.
+  Future<String?> renewRejectedToken(String rejectedToken) async {
+    if (_currentSession == null || !rejectedToken.startsWith('kba_')) return null;
+    if (_currentSession!.token != rejectedToken) return _currentSession!.token;
+    return await refreshSession() ? _currentSession?.token : null;
+  }
+
+  Future<bool> _refreshSession() async {
     if (_currentSession == null || _currentSession!.refreshToken.isEmpty) return false;
     try {
       final ep = await endpoint;
@@ -372,7 +385,21 @@ class KBAccountService extends ChangeNotifier {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        await applyConfigAndSignIn(data);
+        final previous = _currentSession!;
+        final store = GetIt.instance.isRegistered<CatalogCredentialStore>()
+            ? GetIt.instance<CatalogCredentialStore>()
+            : SecureCatalogCredentialStore(storage: _storage);
+        final catalog = await store.read();
+        // Refresh returns session fields, not the full login/bootstrap envelope.
+        await applyConfigAndSignIn({
+          'account': {'id': previous.accountId, 'username': previous.username, 'display_name': previous.displayName},
+          'device': {'id': previous.deviceId, 'name': previous.deviceName},
+          'session': data,
+          'config': {
+            if (catalog != null && catalog.token == previous.token)
+              'catalog': {'endpoint': catalog.endpoint.toString()},
+          },
+        });
         return true;
       }
     } catch (e) {

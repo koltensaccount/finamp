@@ -1,3 +1,4 @@
+import 'package:finamp/services/account_retry_client.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -254,9 +255,9 @@ Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
   final kbAccountService = KBAccountService();
   GetIt.instance.registerSingleton<KBAccountService>(kbAccountService);
-  unawaited(kbAccountService.init());
-  GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore()));
-  final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore());
+  await kbAccountService.init();
+  GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken)));
+  final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken));
   GetIt.instance.registerSingleton(booksApiClient);
   final booksDownloadService = BooksDownloadService(apiClient: booksApiClient);
   GetIt.instance.registerSingleton(booksDownloadService);
