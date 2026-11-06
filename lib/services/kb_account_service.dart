@@ -79,7 +79,9 @@ class KBAccountService extends ChangeNotifier {
       final val = await _storage.read(key: key);
       return val;
     } catch (e) {
-      if (Platform.isMacOS) return null;
+      if (Platform.isMacOS) {
+        throw StateError('macOS Keychain could not read your saved KB Account session. Reconnect in Account settings; your saved credentials have not been deleted.');
+      }
       _logger.warning('SecureStorage read failed for $key, checking SharedPreferences fallback: $e');
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
@@ -203,12 +205,17 @@ class KBAccountService extends ChangeNotifier {
           expiresAt: expiresAt,
         );
 
-        if (_currentSession!.isExpired && refreshToken != null && refreshToken.isNotEmpty) {
-          await refreshSession();
+        if (_currentSession!.isExpired) {
+          // A stored but expired token is not an authenticated restoration.
+          // Preserve saved credentials so the user can retry/reconnect.
+          if (refreshToken == null || refreshToken.isEmpty || !await refreshSession()) {
+            notifyListeners();
+            return false;
+          }
         }
 
         notifyListeners();
-        return true;
+        return isSignedIn;
       }
     } catch (e) {
       _logger.warning('Failed to initialize KB Account session: $e');
@@ -487,27 +494,31 @@ class KBAccountService extends ChangeNotifier {
     }
   }
 
-  /// List registered devices
+  /// List registered devices. A failed request is not an empty device list.
   Future<List<Map<String, dynamic>>> listDevices() async {
-    if (!isSignedIn) return [];
-    try {
-      final ep = await endpoint;
-      final resp = await _client
-          .get(
-            Uri.parse('$ep/v1/account/devices'),
-            headers: {'Authorization': 'Bearer ${_currentSession!.token}'},
-          )
-          .timeout(const Duration(seconds: 6));
-
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final devices = (data['devices'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-        return devices;
-      }
-    } catch (e) {
-      _logger.warning('Failed to fetch devices: $e');
+    if (!isSignedIn) {
+      throw StateError('Your KB Account session is not active. Sign in again.');
     }
-    return [];
+    final ep = await endpoint;
+    final resp = await _client
+        .get(
+          Uri.parse('$ep/v1/account/devices'),
+          headers: {'Authorization': 'Bearer ${_currentSession!.token}'},
+        )
+        .timeout(const Duration(seconds: 6));
+
+    if (resp.statusCode == 401 || resp.statusCode == 403) {
+      throw StateError('Your KB Account session expired or was revoked. Sign in again.');
+    }
+    if (resp.statusCode != 200) {
+      throw StateError('Could not load account devices (server returned ${resp.statusCode}).');
+    }
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    final devices = data['devices'];
+    if (devices is! List) {
+      throw const FormatException('Account response is missing its device list.');
+    }
+    return devices.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   /// Rename a device
