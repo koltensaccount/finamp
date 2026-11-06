@@ -169,7 +169,7 @@ class DefaultSettings {
     ContentType.tracks: true,
     ContentType.genres: true,
   };
-  static const itemSwipeActionLeftToRight = ItemSwipeActions.nothing;
+  static const itemSwipeActionLeftToRight = ItemSwipeActions.toggleFavorite;
   static const itemSwipeActionRightToLeft = ItemSwipeActions.addToNextUp;
   static const loopMode = FinampLoopMode.none;
   static const playbackSpeed = 1.0;
