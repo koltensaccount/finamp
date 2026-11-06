@@ -282,7 +282,7 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
                           if (ctx.mounted && isCreatingAccount) {
                             setModalState(() {
                               if (check['available'] == false) {
-                                usernameError = check['error'] ?? 'Username is already taken';
+                                usernameError = check['error']?.toString() ?? 'Username is already taken';
                               }
                             });
                           }
@@ -487,7 +487,7 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
       ),
     ).then((authenticated) {
       debounceTimer?.cancel();
-      if (authenticated == true && mounted && parentNav.mounted) {
+      if ((authenticated ?? false) && mounted && parentNav.mounted) {
         parentNav.pushReplacementNamed(ViewSelector.routeName);
       }
     });

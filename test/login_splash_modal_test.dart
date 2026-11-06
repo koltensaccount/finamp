@@ -180,7 +180,7 @@ void main() {
       'account': {'id': 'fixture-account', 'username': 'fixture_user'},
       'device': {'id': 'fixture-device', 'name': 'Fixture'},
       'session': {'token': 'fixture-token', 'refresh_token': 'fixture-refresh'},
-      'config': {},
+      'config': <String, dynamic>{},
     });
     expect(find.text('Library setup reached'), findsOneWidget);
     expect(find.text('Unexpected nested route'), findsNothing);
