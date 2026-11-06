@@ -42,3 +42,6 @@ move/delete seeded content, alter seeding/ratio settings, or add monitoring as a
 side effect of unrelated work. Do not guess rules or use evasion. Existing
 seeding must be preserved. This hold does not disable authorized public-domain
 providers such as Standard Ebooks and LibriVox.
+
+Apply [the MAM boundary](../docs/agents/MAM_BOUNDARY.md), based on the rules the
+user supplied. Receipt of those rules does not establish API-tool approval.
