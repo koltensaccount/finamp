@@ -14,5 +14,9 @@
   "src/components/views/album-detail-view.tsx": {
     "before": "ef01f338618ed12e02f26b7ac3ef5ae0965c021d891a35518afa80bc0f315e23",
     "after": "e01fac33ef71f89e9b61ba62e664d52bb4615d336ff75af69269de95b46471db"
+  },
+  "public/sw.js": {
+    "before": "6fcf5310fb87cadff7653052bb9028f34d12d693db1658e2b1916d16e77afa85",
+    "after": "1fe11118e96faa63c4dbce99ae795746a6c7c88eb7636ca214e83e14fb79a23c"
   }
 }

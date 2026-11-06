@@ -333,3 +333,25 @@
 -      const shuffled = [...queue].sort(() => Math.random() - 0.5);
 -      playTrack(shuffled[0], shuffled);
 +      shuffleAndPlay(queue);
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -1 +1 @@
+-const CACHE_NAME = 'kb-music-v1';
++const CACHE_NAME = 'kb-music-v2-workflows';
+@@ -26 +26 @@
+-          if (key !== CACHE_NAME) {
++          if (key.startsWith('kb-music-') && key !== CACHE_NAME) {
+@@ -49,0 +50,10 @@
++  // Prefer current HTML so an update cannot serve old bundle URLs indefinitely.
++  if (event.request.mode === 'navigate') {
++    event.respondWith(
++      fetch(event.request).catch(() =>
++        caches.open(CACHE_NAME).then((cache) => cache.match('/'))
++      )
++    );
++    return;
++  }
++
+@@ -51 +61 @@
+-    caches.match(event.request).then((cachedResponse) => {
++    caches.open(CACHE_NAME).then((cache) => cache.match(event.request)).then((cachedResponse) => {

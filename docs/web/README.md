@@ -35,3 +35,6 @@ Before release: use the correct locked dependencies for a production build,
 record source/image provenance, test phone/tablet/desktop visuals and real iPhone
 lock-screen/headset/track-end behavior, and retain an image rollback. The app's
 account-proxy access and placeholder Books reader are separate open blockers.
+
+The PWA cache update prefers fresh navigation HTML, retains offline shell fallback,
+and removes only obsolete KB Music caches. Four isolated cache tests pass.
