@@ -1,3 +1,4 @@
+import 'kb_secure_storage.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -43,13 +44,7 @@ class KBAccountSession {
 }
 
 class KBAccountService extends ChangeNotifier {
-  static const _defaultStorage = FlutterSecureStorage(
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    mOptions: MacOsOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-      usesDataProtectionKeychain: false,
-    ),
-  );
+  static const _defaultStorage = kbSecureStorage;
 
   KBAccountService({FlutterSecureStorage? storage, http.Client? client})
       : _storage = storage ?? _defaultStorage,
@@ -64,6 +59,9 @@ class KBAccountService extends ChangeNotifier {
       await _storage.write(key: key, value: value);
       secureOk = true;
     } catch (e) {
+      if (Platform.isMacOS) {
+        throw StateError('Secure login storage is unavailable. Use the installed KB Music app; your existing saved data has not been deleted.');
+      }
       _logger.warning('SecureStorage write failed for $key, using SharedPreferences fallback: $e');
     }
     if (!secureOk) {
@@ -81,6 +79,7 @@ class KBAccountService extends ChangeNotifier {
       final val = await _storage.read(key: key);
       return val;
     } catch (e) {
+      if (Platform.isMacOS) return null;
       _logger.warning('SecureStorage read failed for $key, checking SharedPreferences fallback: $e');
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));

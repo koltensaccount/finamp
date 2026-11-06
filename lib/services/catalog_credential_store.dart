@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'kb_secure_storage.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,14 +18,7 @@ abstract class CatalogCredentialStore {
 
 class SecureCatalogCredentialStore implements CatalogCredentialStore {
   SecureCatalogCredentialStore({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-              mOptions: MacOsOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-                usesDataProtectionKeychain: false,
-              ),
-            );
+      : _storage = storage ?? kbSecureStorage;
 
   static const _endpointKey = 'catalog_api_endpoint';
   static const _tokenKey = 'catalog_api_bearer_token';
@@ -37,7 +32,9 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
     try {
       await _storage.write(key: key, value: value);
       secureOk = true;
-    } catch (_) {}
+    } catch (_) {
+      if (Platform.isMacOS) throw StateError('Secure login storage is unavailable. Sign in using the installed KB Music app.');
+    }
     if (!secureOk) {
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
@@ -50,6 +47,7 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
     try {
       return await _storage.read(key: key);
     } catch (_) {
+      if (Platform.isMacOS) return null;
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
         return prefs.getString('kb_sec_$key');
@@ -100,9 +98,6 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
 
   @override
   Future<void> clear() async {
-    try {
-      await _storage.deleteAll();
-    } catch (_) {}
     await _safeDelete(_endpointKey);
     await _safeDelete(_tokenKey);
     if (_envToken.isNotEmpty) {

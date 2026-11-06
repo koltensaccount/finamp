@@ -90,7 +90,7 @@ class CatalogApiClient {
   Future<CatalogCredentials> _requireCredentials() async {
     final credentials = await _credentials.read();
     if (credentials == null) {
-      throw const CatalogUnavailableException('Catalog connection is not configured.');
+      throw const CatalogUnavailableException('Catalog connection is not configured. Sign in again to reconnect.');
     }
     return credentials;
   }
