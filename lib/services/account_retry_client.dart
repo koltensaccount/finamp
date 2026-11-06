@@ -3,14 +3,16 @@ import 'package:http/http.dart' as http;
 /// Retry only read requests after a rejected account token. No write/acquisition
 /// request is replayed, and no credentials are sent to a different destination.
 class AccountRetryClient extends http.BaseClient {
-  AccountRetryClient({required this.renewToken, http.Client? inner})
+  AccountRetryClient({required this.renewToken, this.ready, http.Client? inner})
       : _inner = inner ?? http.Client();
 
   final Future<String?> Function(String rejectedToken) renewToken;
   final http.Client _inner;
+  final Future<void>? ready;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    await ready;
     final response = await _inner.send(request);
     final authorization = request.headers['Authorization'];
     if (response.statusCode != 401 ||

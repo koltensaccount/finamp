@@ -255,9 +255,9 @@ Future<void> _setupJellyfinApiData() async {
   GetIt.instance.registerSingleton(JellyfinApiHelper());
   final kbAccountService = KBAccountService();
   GetIt.instance.registerSingleton<KBAccountService>(kbAccountService);
-  await kbAccountService.init();
-  GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken)));
-  final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken));
+  final accountReady = kbAccountService.init().then((_) {});
+  GetIt.instance.registerSingleton(CatalogApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken, ready: accountReady)));
+  final booksApiClient = BooksApiClient(credentials: SecureCatalogCredentialStore(), client: AccountRetryClient(renewToken: kbAccountService.renewRejectedToken, ready: accountReady));
   GetIt.instance.registerSingleton(booksApiClient);
   final booksDownloadService = BooksDownloadService(apiClient: booksApiClient);
   GetIt.instance.registerSingleton(booksDownloadService);

@@ -28,7 +28,7 @@ rotation or broader privilege changes were performed.
   rotate session and matching catalog credentials, and single-flight renewal.
 - Catalog and Books GET/HEAD requests retry once after401 with the renewed account
   token. Never replay writes/acquisition requests or replace manual API keys.
-- Account initialization completes before the API clients are exposed. Failed
+- API reads await account initialization without blocking the first app frame. Failed
   renewal gives an actionable sign-in message. Artist and Account screens expose
   Sign In Again without deleting offline media or signing out other devices.
 - Incorrect-password errors remain on the login form (existing widget regression).
@@ -39,3 +39,7 @@ using a newly authenticated Mac session require runtime verification. A200 servi
 probe does not certify acquisition, metadata-provider coverage, Spotify OAuth,
 Apple Music setup, Books correctness, full visual parity or device handoff.
 No downloads, media writes, migrations or server configuration changes.
+
+Build206 runtime check caught black-window startup when account initialization
+was awaited before runApp. Superseded by207: initialization gates API reads,
+not rendering. No startup completion claim is based on the build alone.
