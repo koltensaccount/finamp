@@ -29,6 +29,7 @@ Future<T?> showThemedBottomSheet<T>({
   WrapperBuilder? buildWrapper,
   double minDraggableHeight = 0.6,
   bool showDragHandle = true,
+  double? maxWidth,
   bool useRootNavigator = false,
 }) async {
   FeedbackHelper.feedback(FeedbackType.selection);
@@ -45,7 +46,7 @@ Future<T?> showThemedBottomSheet<T>({
     isScrollControlled: true,
     clipBehavior: Clip.hardEdge,
     constraints: BoxConstraints(
-      maxWidth: (Platform.isIOS || Platform.isAndroid) ? 500 : min(500, MediaQuery.widthOf(context) * 0.9),
+      maxWidth: maxWidth ?? ((Platform.isIOS || Platform.isAndroid) ? 500 : min(500, MediaQuery.widthOf(context) * 0.9)),
     ),
     useRootNavigator: useRootNavigator,
     isDismissible: true,
@@ -82,11 +83,13 @@ class ThemedBottomSheet extends ConsumerStatefulWidget {
     double? extraHeight,
     bool includePlaybackRow = true,
     bool includePlaybackRowPageIndicator = true,
+    bool compactHeader = false,
+    bool compactEntries = false,
   }) {
-    double stackHeight = infoHeaderFullExtent;
+    double stackHeight = compactHeader ? MenuItemInfoSliverHeader.condensedHeight.raw + 10.0 : infoHeaderFullExtent;
     stackHeight +=
         menuEntries.where((element) => element.isVisible).length *
-        (Theme.of(context).visualDensity == VisualDensity.compact ? 48 : 56);
+        (compactEntries || Theme.of(context).visualDensity == VisualDensity.compact ? 48 : 56);
     stackHeight += extraHeight ?? 0.0;
     stackHeight += includePlaybackRow ? playActionRowHeightDefault : 0;
     stackHeight += includePlaybackRowPageIndicator ? playActionPageIndicatorHeightDefault : 0;
