@@ -15,6 +15,7 @@ import 'package:finamp/services/artist_content_provider.dart';
 import 'package:finamp/services/current_album_image_provider.dart';
 import 'package:finamp/services/datetime_helper.dart';
 import 'package:finamp/services/feedback_helper.dart';
+import 'package:finamp/services/favorite_provider.dart';
 import 'package:finamp/services/finamp_user_helper.dart';
 import 'package:finamp/services/jellyfin_api_helper.dart';
 import 'package:finamp/services/music_screen_provider.dart';
@@ -300,6 +301,8 @@ IconData getSwipeActionIcon(ItemSwipeActions action) {
   switch (action) {
     case ItemSwipeActions.addToQueue:
       return TablerIcons.playlist;
+    case ItemSwipeActions.toggleFavorite:
+      return TablerIcons.heart;
     case ItemSwipeActions.playNext:
       return TablerIcons.corner_right_down;
     case ItemSwipeActions.addToNextUp:
@@ -316,6 +319,18 @@ Future<bool> onConfirmPlayableDismiss({required ItemSwipeActions followUpAction,
     FinampPlayableDto itemPlayable => BaseItemDtoType.fromItem(itemPlayable.item).name,
     _ => item.source.name.getLocalized(GlobalSnackbar.requireL10n),
   };
+
+  // Favorite gestures should never fetch tracks or disturb playback.
+  if (followUpAction == ItemSwipeActions.toggleFavorite) {
+    if (item is FinampPlayableDto) {
+      final providers = GetIt.instance<ProviderContainer>();
+      final favorite = isFavoriteProvider(item.item);
+      final currentlyFavorite = providers.read(favorite);
+      providers.read(favorite.notifier).updateFavorite(!currentlyFavorite);
+    }
+    return false;
+  }
+  if (followUpAction == ItemSwipeActions.nothing) return false;
 
   final slice = await GetIt.instance<ProviderContainer>().read(
     getPlayableSliceProvider(item: item, startingOffset: 0).future,
@@ -344,6 +359,7 @@ Future<bool> onConfirmPlayableDismiss({required ItemSwipeActions followUpAction,
       );
       break;
     case ItemSwipeActions.nothing:
+    case ItemSwipeActions.toggleFavorite:
       break;
   }
 

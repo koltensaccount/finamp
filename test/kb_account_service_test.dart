@@ -14,12 +14,7 @@ void main() {
       final mockClient = MockClient((request) async {
         expect(request.url.path, '/v1/account/status');
         return http.Response(
-          jsonEncode({
-            'enrolled': true,
-            'server_name': 'KB Music Server',
-            'version': '1.0.0',
-            'device_count': 2,
-          }),
+          jsonEncode({'enrolled': true, 'server_name': 'KB Music Server', 'version': '1.0.0', 'device_count': 2}),
           200,
         );
       });
@@ -121,13 +116,9 @@ void main() {
         if (request.url.path == '/v1/account/pair/approve') {
           sentAuth = request.headers['Authorization'];
           final body = jsonDecode(request.body) as Map<String, dynamic>;
-          sentCode = body['code'];
+          sentCode = body['code'] as String?;
           return http.Response(
-            jsonEncode({
-              'status': 'approved',
-              'device_id': 'dev_tablet',
-              'device_name': 'iPad Pro',
-            }),
+            jsonEncode({'status': 'approved', 'device_id': 'dev_tablet', 'device_name': 'iPad Pro'}),
             200,
           );
         }
@@ -161,7 +152,7 @@ void main() {
               'devices': [
                 {'id': 'dev_1', 'device_name': 'MacBook Pro', 'platform': 'macos', 'is_current': true},
                 {'id': 'dev_2', 'device_name': 'iPad Pro', 'platform': 'ios', 'is_current': false},
-              ]
+              ],
             }),
             200,
           );
@@ -197,7 +188,10 @@ void main() {
       final mockClient = MockClient((request) async {
         if (request.url.path == '/v1/account/check-username') {
           if (request.url.queryParameters['username'] == 'existinguser') {
-            return http.Response(jsonEncode({'available': false, 'error': "Username 'existinguser' is already taken"}), 409);
+            return http.Response(
+              jsonEncode({'available': false, 'error': "Username 'existinguser' is already taken"}),
+              409,
+            );
           }
           return http.Response(jsonEncode({'available': true}), 200);
         }
@@ -238,11 +232,7 @@ void main() {
       FlutterSecureStorage.setMockInitialValues({'kb_account_endpoint': 'http://127.0.0.1:8765'});
       final service = KBAccountService(client: mockClient);
 
-      final res = await service.createAccount(
-        username: 'kolten2',
-        password: 'Password123!',
-        displayName: 'Kolten B',
-      );
+      final res = await service.createAccount(username: 'kolten2', password: 'Password123!', displayName: 'Kolten B');
 
       expect(res['account']['username'], equals('kolten2'));
       expect(service.isSignedIn, isTrue);

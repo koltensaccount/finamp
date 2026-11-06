@@ -317,36 +317,68 @@ class _PlayerScreenContent extends ConsumerWidget {
                             ],
                           );
                         } else {
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
+                          // Keep the artwork and transport controls as one balanced visual group.
+                          // We bound the artwork so controls are never cramped off-screen on short phones,
+                          // and never separated by enormous gaps on tall displays or iPad/Mac windows.
+                          final availableHeight = constraints.maxHeight;
+                          final availableWidth = constraints.maxWidth;
+                          final bool showBottom = controller.shouldShow(PlayerHideable.bottomActions);
+                          final controlsMinHeight = showBottom ? 250.0 : 200.0;
+                          final maxArtFromHeight = max(150.0, availableHeight - controlsMinHeight);
+                          final coverSide = min(availableWidth * 0.86, min(maxArtFromHeight, 460.0));
+                          final contentWidth = min(availableWidth - 32.0, 560.0);
+                          final excessHeight = max(0.0, availableHeight - coverSide - controlsMinHeight);
+                          final gapArtToMeta = min(28.0, 14.0 + excessHeight * 0.25);
+                          final gapMetaToControl = min(18.0, 10.0 + excessHeight * 0.15);
+                          final gapControlToBottom = min(14.0, 8.0 + excessHeight * 0.1);
+
+                          final playerColumn = Column(
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              SizedBox(width: coverSide, height: coverSide, child: const PlayerScreenAlbumImage()),
+                              SizedBox(height: gapArtToMeta),
                               SizedBox(
-                                height: controller.albumSize.height,
-                                width: controller.albumSize.width,
-                                child: const PlayerScreenAlbumImage(),
-                              ),
-                              SizedBox(
-                                height: controller.controlsSize.height,
-                                width: controller.controlsSize.width,
+                                width: contentWidth,
                                 child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     TrackNameContent(controller),
+                                    SizedBox(height: gapMetaToControl),
                                     ControlArea(controller),
-                                    if (controller.shouldShow(PlayerHideable.bottomActions))
+                                    if (showBottom) ...[
+                                      SizedBox(height: gapControlToBottom),
                                       _buildBottomActions(
                                         context,
                                         controller,
                                         isLyricsLoading: isLyricsLoading,
                                         isLyricsAvailable: isLyricsAvailable,
                                       ),
-                                    if (!controller.shouldShow(PlayerHideable.bottomActions)) const SizedBox(height: 5),
+                                    ],
                                   ],
                                 ),
                               ),
                             ],
+                          );
+
+                          // On ultra-compact heights (<460px), safely permit scrolling with clamp physics.
+                          // On all standard phones, iPads and Mac windows, center directly so downward
+                          // dismiss gestures remain 100% responsive and frictionless.
+                          if (availableHeight < 460.0) {
+                            return Center(
+                              child: SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                child: playerColumn,
+                              ),
+                            );
+                          }
+
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                              child: playerColumn,
+                            ),
                           );
                         }
                       },

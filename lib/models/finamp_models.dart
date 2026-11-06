@@ -169,7 +169,7 @@ class DefaultSettings {
     ContentType.tracks: true,
     ContentType.genres: true,
   };
-  static const itemSwipeActionLeftToRight = ItemSwipeActions.nothing;
+  static const itemSwipeActionLeftToRight = ItemSwipeActions.toggleFavorite;
   static const itemSwipeActionRightToLeft = ItemSwipeActions.addToNextUp;
   static const loopMode = FinampLoopMode.none;
   static const playbackSpeed = 1.0;
@@ -2310,7 +2310,12 @@ class QueueItemSourceName {
       case QueueItemSourceNameType.preTranslated:
         return pretranslatedName ?? "";
       case QueueItemSourceNameType.yourLikes:
-        return localizations.yourLikes(localizationParameter ?? "");
+        // A Liked Songs queue has no originating track name. Avoid rendering
+        // "Your Likes (from \\"\\")" when the parameter is missing.
+        final fromTrack = localizationParameter?.trim();
+        return fromTrack == null || fromTrack.isEmpty
+            ? localizations.favoriteTracks
+            : localizations.yourLikes(fromTrack);
       case QueueItemSourceNameType.shuffleAll:
         return localizations.shuffleAllQueueSource;
       case QueueItemSourceNameType.mix:
@@ -3154,7 +3159,9 @@ enum ItemSwipeActions {
   @HiveField(2)
   addToNextUp,
   @HiveField(3)
-  playNext;
+  playNext,
+  @HiveField(4)
+  toggleFavorite;
 
   /// Human-readable version of this enum.
   @override
@@ -3171,6 +3178,8 @@ enum ItemSwipeActions {
         return l10n.addToNextUp;
       case ItemSwipeActions.playNext:
         return l10n.playNext;
+      case ItemSwipeActions.toggleFavorite:
+        return l10n.favorite;
     }
   }
 }

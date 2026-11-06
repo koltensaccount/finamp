@@ -11,5 +11,5 @@
 - Authenticated loopback development API; no administrative credentials in app.
 - Requests persist in an outbox but do not trigger Soularr. Dispatch needs an
   explicit-user allowlist separate from optional wanted-list monitoring.
-- No duplicate scrobbling or additional playback engine. No visual redesign yet.
+- No duplicate scrobbling or additional playback engine. Targeted, user-authorized UX parity improvements across phone/tablet/desktop/web started 2026-11-06; see docs/UX_PARITY_CONTRACT.md.
 - Full iOS build requires installing/configuring Xcode and pinned Flutter first.

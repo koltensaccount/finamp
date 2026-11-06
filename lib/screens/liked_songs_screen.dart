@@ -1,18 +1,37 @@
 import 'dart:math';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 
 import '../components/album_image.dart';
+import '../components/AlbumScreen/track_list_tile.dart';
 import '../components/now_playing_bar.dart';
 import '../menus/track_menu.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
+import '../models/music_models.dart';
 import '../services/favorite_provider.dart';
+import '../services/finamp_settings_helper.dart';
+import '../services/kb_account_service.dart';
 import '../services/liked_songs_service.dart';
 import '../services/queue_service.dart';
+
+enum _LikedSongsSort { dateLiked, libraryNewest, libraryOldest, title, artist, album, lastPlayed }
+
+extension _LikedSongsSortLabel on _LikedSongsSort {
+  String get label => switch (this) {
+    _LikedSongsSort.dateLiked => 'Date Liked',
+    _LikedSongsSort.libraryNewest => 'Recently added to library',
+    _LikedSongsSort.libraryOldest => 'Oldest in library',
+    _LikedSongsSort.title => 'Title',
+    _LikedSongsSort.artist => 'Artist',
+    _LikedSongsSort.album => 'Album',
+    _LikedSongsSort.lastPlayed => 'Recently played',
+  };
+}
 
 class LikedSongsScreen extends ConsumerStatefulWidget {
   const LikedSongsScreen({super.key});
@@ -28,14 +47,24 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
 
   String _query = '';
   String? _selectedGenre;
+  _LikedSongsSort _sort = _LikedSongsSort.dateLiked;
+  Map<String, String> _likedDates = {};
 
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(likedSongsProvider).syncWithJellyfin();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      unawaited(ref.read(likedSongsProvider).syncWithJellyfin());
+      if (GetIt.instance.isRegistered<KBAccountService>()) {
+        final map = await GetIt.instance<KBAccountService>().getLikedHistory();
+        if (mounted && map.isNotEmpty) {
+          setState(() {
+            _likedDates = map;
+          });
+        }
+      }
     });
   }
 
@@ -116,6 +145,41 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
       }
       return true;
     }).toList();
+
+    // Jellyfin DateCreated is the library-import date, NOT the date favorited.
+    // Do not mislabel it as "Date liked" until the account backend supplies
+    // an authoritative liked_at event for this user's favorites.
+    int compareText(String? a, String? b) => (a ?? '').toLowerCase().compareTo((b ?? '').toLowerCase());
+    int compareDate(String? a, String? b) {
+      final first = DateTime.tryParse(a ?? '');
+      final second = DateTime.tryParse(b ?? '');
+      if (first == null && second == null) return 0;
+      if (first == null) return 1;
+      if (second == null) return -1;
+      return first.compareTo(second);
+    }
+
+    filteredTracks.sort((a, b) {
+      final order = switch (_sort) {
+        _LikedSongsSort.dateLiked => () {
+          final normA = a.id.raw.toLowerCase().replaceAll('-', '');
+          final normB = b.id.raw.toLowerCase().replaceAll('-', '');
+          final dateA = _likedDates[normA] ?? a.dateCreated;
+          final dateB = _likedDates[normB] ?? b.dateCreated;
+          return compareDate(dateB, dateA);
+        }(),
+        _LikedSongsSort.libraryNewest => compareDate(b.dateCreated, a.dateCreated),
+        _LikedSongsSort.libraryOldest => compareDate(a.dateCreated, b.dateCreated),
+        _LikedSongsSort.title => compareText(a.name, b.name),
+        _LikedSongsSort.artist => compareText(
+          a.artists?.firstOrNull ?? a.albumArtist,
+          b.artists?.firstOrNull ?? b.albumArtist,
+        ),
+        _LikedSongsSort.album => compareText(a.album, b.album),
+        _LikedSongsSort.lastPlayed => compareDate(b.userData?.lastPlayedDate, a.userData?.lastPlayedDate),
+      };
+      return order != 0 ? order : compareText(a.name, b.name);
+    });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
@@ -274,74 +338,8 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 8),
-                // Apple Music Liked Songs Artwork Card
-                Center(
-                  child: Container(
-                    width: 148,
-                    height: 148,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF6B11FF), // Deep Electric Purple
-                          Color(0xFFFA2D48), // Apple Music Red
-                          Color(0xFFFF5252), // Coral Flame
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: appleAccentColor.withValues(alpha: 0.32),
-                          blurRadius: 22,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Center(child: Icon(Icons.favorite, size: 68, color: Colors.white)),
-                  ),
-                ),
+                _buildLikedHeader(filteredTracks, totalDuration, isDark),
                 const SizedBox(height: 16),
-                const Text(
-                  'Liked Songs',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Made By You • ${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'} • $totalDuration',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Dual Apple Music Action Buttons: [ ▶ Play ] [ 🔀 Shuffle ]
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildAppleActionButton(
-                          icon: Icons.play_arrow_rounded,
-                          label: 'Play',
-                          isDark: isDark,
-                          onTap: () => _playTracks(filteredTracks, shuffle: false),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildAppleActionButton(
-                          icon: TablerIcons.arrows_shuffle,
-                          label: 'Shuffle',
-                          isDark: isDark,
-                          onTap: () => _playTracks(filteredTracks, shuffle: true),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
                 // Apple-style In-Playlist Search Field
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -380,6 +378,50 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                           ),
                       ],
                     ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: MediaQuery.sizeOf(context).width >= 900 ? 24 : 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'}',
+                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54),
+                      ),
+                      const Spacer(),
+                      PopupMenuButton<_LikedSongsSort>(
+                        initialValue: _sort,
+                        tooltip: 'Sort liked songs',
+                        onSelected: (value) => setState(() => _sort = value),
+                        itemBuilder: (context) => _LikedSongsSort.values
+                            .map(
+                              (value) => PopupMenuItem<_LikedSongsSort>(
+                                value: value,
+                                child: Row(
+                                  children: [
+                                    if (_sort == value) const Icon(Icons.check, size: 16),
+                                    if (_sort == value) const SizedBox(width: 8),
+                                    Text(value.label),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sort, size: 17),
+                              const SizedBox(width: 8),
+                              Text(_sort.label, style: const TextStyle(fontSize: 13)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.expand_more, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Spotify-style Genre / Mood Filter Chips
@@ -430,6 +472,31 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               ],
             ),
           ),
+          if (MediaQuery.sizeOf(context).width >= 900 && filteredTracks.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Column(
+                  children: [
+                    Row(
+                      children: const [
+                        SizedBox(width: 38, child: Text('#')),
+                        Expanded(flex: 5, child: Text('TITLE')),
+                        Expanded(flex: 3, child: Text('ALBUM')),
+                        Expanded(flex: 2, child: Text('DATE LIKED / ADDED')),
+                        SizedBox(
+                          width: 66,
+                          child: Align(alignment: Alignment.centerRight, child: Icon(Icons.schedule, size: 17)),
+                        ),
+                        SizedBox(width: 116),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                  ],
+                ),
+              ),
+            ),
           if (filteredTracks.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -459,76 +526,309 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final item = filteredTracks[index];
-                  final artistName = item.artists?.join(', ') ?? (item.albumArtist ?? 'Unknown Artist');
-
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: SizedBox(width: 48, height: 48, child: AlbumImage(item: item)),
-                        ),
-                        title: Text(
-                          item.name ?? 'Untitled',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -0.2),
-                        ),
-                        subtitle: Text(
-                          [artistName, if (item.album != null && item.album!.isNotEmpty) item.album!].join(' • '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
+                  final wide = MediaQuery.sizeOf(context).width >= 900;
+                  return wide
+                      ? _buildDesktopLikedRow(item, index, filteredTracks, isDark)
+                      : TrackListItem(
+                          key: ValueKey('liked-${item.id}'),
+                          baseItem: item,
+                          listIndex: index,
+                          actualIndex: null,
+                          onTap: (playable) {
+                            if (playable) _playTracks(filteredTracks, startingIndex: index);
+                          },
+                          confirmDismiss: (direction) => onConfirmPlayableDismiss(
+                            followUpAction: direction == DismissDirection.startToEnd
+                                ? ref.read(finampSettingsProvider.itemSwipeActionLeftToRight)
+                                : ref.read(finampSettingsProvider.itemSwipeActionRightToLeft),
+                            item: Track(item, source: QueueItemSource.fromBaseItem(item)),
                           ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Dedicated Red Heart Icon (stays active & syncs bi-directionally)
-                            Consumer(
-                              builder: (context, ref, _) {
-                                final isFav = ref.watch(isFavoriteProvider(item));
-                                return IconButton(
-                                  icon: Icon(
-                                    isFav ? Icons.favorite : Icons.favorite_border,
-                                    color: isFav ? appleAccentColor : (isDark ? Colors.white54 : Colors.black45),
-                                    size: 22,
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  tooltip: isFav ? 'Remove from Liked Songs' : 'Add to Liked Songs',
-                                  onPressed: () {
-                                    ref.read(isFavoriteProvider(item).notifier).updateFavorite(!isFav);
-                                  },
-                                );
-                              },
-                            ),
-                            // Context Menu ("...") for Track Actions
-                            IconButton(
-                              icon: Icon(Icons.more_horiz, color: isDark ? Colors.white54 : Colors.black45, size: 20),
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () {
-                                showModalTrackMenu(context: context, item: item);
-                              },
-                            ),
+                          leftSwipeBackground: buildSwipeActionBackground(
+                            context: context,
+                            direction: DismissDirection.startToEnd,
+                            action: ref.watch(finampSettingsProvider.itemSwipeActionLeftToRight),
+                          ),
+                          rightSwipeBackground: buildSwipeActionBackground(
+                            context: context,
+                            direction: DismissDirection.endToStart,
+                            action: ref.watch(finampSettingsProvider.itemSwipeActionRightToLeft),
+                          ),
+                          features: const [
+                            TrackListItemFeatures.cover,
+                            TrackListItemFeatures.addToPlaylistOrFavorite,
+                            TrackListItemFeatures.swipeableInTrackList,
                           ],
-                        ),
-                        onTap: () => _playTracks(filteredTracks, shuffle: false, startingIndex: index),
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 76,
-                        endIndent: 16,
-                        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
-                      ),
-                    ],
-                  );
+                        );
                 }, childCount: filteredTracks.length),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  String _formatLibraryAdded(String? value) {
+    final date = DateTime.tryParse(value ?? '')?.toLocal();
+    return date == null ? '—' : '${date.month}/${date.day}/${date.year}';
+  }
+
+  String _formatLikedDate(BaseItemDto item) {
+    final normId = item.id.raw.toLowerCase().replaceAll('-', '');
+    final dateStr = _likedDates[normId];
+    if (dateStr != null) {
+      final d = DateTime.tryParse(dateStr)?.toLocal();
+      if (d != null) {
+        return '${d.month}/${d.day}/${d.year}';
+      }
+    }
+    return _formatLibraryAdded(item.dateCreated);
+  }
+
+  String _formatTrackDuration(int? ticks) {
+    if (ticks == null || ticks <= 0) return '—';
+    final seconds = ticks ~/ 10000000;
+    return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildDesktopLikedRow(BaseItemDto item, int index, List<BaseItemDto> tracks, bool isDark) {
+    final textSecondary = isDark ? Colors.white60 : Colors.black54;
+    final artist = item.artists?.join(', ') ?? item.albumArtist ?? 'Unknown Artist';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(5),
+          onTap: () => _playTracks(tracks, startingIndex: index),
+          onSecondaryTapDown: (details) =>
+              showModalTrackMenu(context: context, item: item, position: details.globalPosition),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 38,
+                  child: Text('${index + 1}', style: TextStyle(color: textSecondary)),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(width: 42, height: 42, child: AlbumImage(item: item)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(item.name ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            Text(
+                              artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    item.album ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: textSecondary),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(_formatLikedDate(item), style: TextStyle(fontSize: 12, color: textSecondary)),
+                ),
+                SizedBox(
+                  width: 66,
+                  child: Text(
+                    _formatTrackDuration(item.runTimeTicks),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: 12, color: textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 104,
+                  child: Row(
+                    children: [
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final isFav = ref.watch(isFavoriteProvider(item));
+                          return IconButton(
+                            icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, size: 19),
+                            color: isFav ? appleAccentColor : textSecondary,
+                            tooltip: isFav ? 'Remove Favorite' : 'Add Favorite',
+                            onPressed: () {
+                              ref.read(isFavoriteProvider(item).notifier).updateFavorite(!isFav);
+                              if (GetIt.instance.isRegistered<KBAccountService>()) {
+                                GetIt.instance<KBAccountService>().recordLikedEvent(item.id.raw, !isFav);
+                              }
+                            },
+                          );
+                        },
+                      ),
+                      IconButton(
+                        tooltip: 'More song actions',
+                        icon: Icon(Icons.more_horiz, size: 20, color: textSecondary),
+                        onPressed: () => showModalTrackMenu(context: context, item: item),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// One semantic collection header with adaptive presentation for every client.
+  /// Narrow views use stacked artwork and actions; wide views use a compact
+  /// desktop/table header instead of stretching the phone composition.
+  Widget _buildLikedHeader(List<BaseItemDto> filteredTracks, String totalDuration, bool isDark) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final artSide = wide ? 192.0 : 148.0;
+    final artwork = Container(
+      width: artSide,
+      height: artSide,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(wide ? 8 : 16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6B11FF), Color(0xFF9F4BBD), Color(0xFFB6E4D1)],
+        ),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.20), blurRadius: 22, offset: const Offset(0, 8))],
+      ),
+      child: Center(
+        child: Icon(Icons.favorite, size: wide ? 80 : 68, color: Colors.white),
+      ),
+    );
+
+    final details = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        if (wide) ...[
+          const Text('Playlist', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+        ],
+        Text(
+          'Liked Songs',
+          style: TextStyle(fontSize: wide ? 56 : 26, fontWeight: FontWeight.w800, letterSpacing: wide ? -2.0 : -0.5),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Made By You · ${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'} · $totalDuration',
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFFCBC8D1) : const Color(0xFF6E6E73),
+          ),
+        ),
+      ],
+    );
+
+    final playActions = wide
+        ? Row(
+            children: [
+              IconButton.filled(
+                onPressed: () => _playTracks(filteredTracks),
+                tooltip: 'Play liked songs',
+                icon: const Icon(Icons.play_arrow_rounded, size: 32),
+                iconSize: 32,
+                style: IconButton.styleFrom(
+                  backgroundColor: appleAccentColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(56, 56),
+                ),
+              ),
+              const SizedBox(width: 14),
+              OutlinedButton.icon(
+                onPressed: () => _playTracks(filteredTracks, shuffle: true),
+                icon: const Icon(TablerIcons.arrows_shuffle),
+                label: const Text('Shuffle'),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              Expanded(
+                child: _buildAppleActionButton(
+                  icon: Icons.play_arrow_rounded,
+                  label: 'Play',
+                  isDark: isDark,
+                  onTap: () => _playTracks(filteredTracks),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildAppleActionButton(
+                  icon: TablerIcons.arrows_shuffle,
+                  label: 'Shuffle',
+                  isDark: isDark,
+                  onTap: () => _playTracks(filteredTracks, shuffle: true),
+                ),
+              ),
+            ],
+          );
+
+    if (!wide) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            artwork,
+            const SizedBox(height: 16),
+            details,
+            const SizedBox(height: 18),
+            playActions,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [const Color(0xFF35214F), const Color(0xFF19141F)]
+              : [const Color(0xFFE9DCF8), const Color(0xFFF6F4F8)],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              artwork,
+              const SizedBox(width: 24),
+              Expanded(child: details),
+            ],
+          ),
+          const SizedBox(height: 20),
+          playActions,
         ],
       ),
     );

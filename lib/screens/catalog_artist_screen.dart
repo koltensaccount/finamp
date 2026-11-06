@@ -766,7 +766,11 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        [latest.primaryType ?? 'Album', ?year, if (latest.isFullyOwned) 'In Library'].join(' • '),
+                        [
+                          latest.primaryType ?? 'Album',
+                          if (year != null) year,
+                          if (latest.isFullyOwned) 'In Library',
+                        ].join(' • '),
                         style: TextStyle(
                           fontSize: 12,
                           color: latest.isFullyOwned ? Colors.green : Colors.grey,

@@ -198,7 +198,7 @@ class FinampSettingsAdapter extends TypeAdapter<FinampSettings> {
             ? false
             : fields[46] as bool,
         itemSwipeActionLeftToRight: fields[90] == null
-            ? ItemSwipeActions.nothing
+            ? ItemSwipeActions.toggleFavorite
             : fields[90] as ItemSwipeActions,
         itemSwipeActionRightToLeft: fields[91] == null
             ? ItemSwipeActions.addToNextUp
@@ -3035,6 +3035,8 @@ class ItemSwipeActionsAdapter extends TypeAdapter<ItemSwipeActions> {
         return ItemSwipeActions.addToNextUp;
       case 3:
         return ItemSwipeActions.playNext;
+      case 4:
+        return ItemSwipeActions.toggleFavorite;
       default:
         return ItemSwipeActions.nothing;
     }
@@ -3051,6 +3053,8 @@ class ItemSwipeActionsAdapter extends TypeAdapter<ItemSwipeActions> {
         writer.writeByte(2);
       case ItemSwipeActions.playNext:
         writer.writeByte(3);
+      case ItemSwipeActions.toggleFavorite:
+        writer.writeByte(4);
     }
   }
 

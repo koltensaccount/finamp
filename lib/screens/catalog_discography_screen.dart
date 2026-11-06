@@ -270,7 +270,7 @@ class _CatalogDiscographyScreenState extends State<CatalogDiscographyScreen> {
 
     final year = album.firstDate != null && album.firstDate!.length >= 4 ? album.firstDate!.substring(0, 4) : null;
     final info = [
-      ?year,
+      if (year != null) year,
       if (album.primaryType != null) album.primaryType,
       if (album.secondaryTypes.isNotEmpty) album.secondaryTypes.join(', '),
     ].join(' • ');

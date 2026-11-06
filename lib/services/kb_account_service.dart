@@ -45,15 +45,12 @@ class KBAccountSession {
 class KBAccountService extends ChangeNotifier {
   static const _defaultStorage = FlutterSecureStorage(
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    mOptions: MacOsOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-      usesDataProtectionKeychain: false,
-    ),
+    mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock, usesDataProtectionKeychain: false),
   );
 
   KBAccountService({FlutterSecureStorage? storage, http.Client? client})
-      : _storage = storage ?? _defaultStorage,
-        _client = client ?? http.Client();
+    : _storage = storage ?? _defaultStorage,
+      _client = client ?? http.Client();
 
   final FlutterSecureStorage _storage;
   final http.Client _client;
@@ -274,28 +271,16 @@ class KBAccountService extends ChangeNotifier {
     http.Response resp;
     try {
       resp = await _client
-          .post(
-            Uri.parse('$ep/v1/account/register'),
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
+          .post(Uri.parse('$ep/v1/account/register'), headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 404) {
         resp = await _client
-            .post(
-              Uri.parse('$ep/v1/account/enroll'),
-              headers: {'Content-Type': 'application/json'},
-              body: body,
-            )
+            .post(Uri.parse('$ep/v1/account/enroll'), headers: {'Content-Type': 'application/json'}, body: body)
             .timeout(const Duration(seconds: 10));
       }
     } catch (_) {
       resp = await _client
-          .post(
-            Uri.parse('$ep/v1/account/enroll'),
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
+          .post(Uri.parse('$ep/v1/account/enroll'), headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 10));
     }
 
@@ -315,20 +300,11 @@ class KBAccountService extends ChangeNotifier {
     required String displayName,
     String? deviceName,
   }) async {
-    return createAccount(
-      username: username,
-      password: password,
-      displayName: displayName,
-      deviceName: deviceName,
-    );
+    return createAccount(username: username, password: password, displayName: displayName, deviceName: deviceName);
   }
 
   /// Sign in with username and password
-  Future<Map<String, dynamic>> login({
-    required String username,
-    required String password,
-    String? deviceName,
-  }) async {
+  Future<Map<String, dynamic>> login({required String username, required String password, String? deviceName}) async {
     final ep = await endpoint;
     final dName = deviceName ?? await resolveDeviceName();
     final body = jsonEncode({
@@ -340,11 +316,7 @@ class KBAccountService extends ChangeNotifier {
     });
 
     final resp = await _client
-        .post(
-          Uri.parse('$ep/v1/account/login'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        )
+        .post(Uri.parse('$ep/v1/account/login'), headers: {'Content-Type': 'application/json'}, body: body)
         .timeout(const Duration(seconds: 10));
 
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -363,11 +335,7 @@ class KBAccountService extends ChangeNotifier {
       final ep = await endpoint;
       final body = jsonEncode({'refresh_token': _currentSession!.refreshToken});
       final resp = await _client
-          .post(
-            Uri.parse('$ep/v1/account/refresh'),
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
+          .post(Uri.parse('$ep/v1/account/refresh'), headers: {'Content-Type': 'application/json'}, body: body)
           .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
@@ -385,18 +353,10 @@ class KBAccountService extends ChangeNotifier {
   Future<Map<String, dynamic>> createPairingRequest({String? deviceName}) async {
     final ep = await endpoint;
     final dName = deviceName ?? await resolveDeviceName();
-    final body = jsonEncode({
-      'device_name': dName,
-      'platform': Platform.operatingSystem,
-      'client_version': '1.0.0',
-    });
+    final body = jsonEncode({'device_name': dName, 'platform': Platform.operatingSystem, 'client_version': '1.0.0'});
 
     final resp = await _client
-        .post(
-          Uri.parse('$ep/v1/account/pair/request'),
-          headers: {'Content-Type': 'application/json'},
-          body: body,
-        )
+        .post(Uri.parse('$ep/v1/account/pair/request'), headers: {'Content-Type': 'application/json'}, body: body)
         .timeout(const Duration(seconds: 8));
 
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -408,11 +368,7 @@ class KBAccountService extends ChangeNotifier {
   }
 
   /// Poll pairing status
-  Future<Map<String, dynamic>> pollPairing({
-    required String code,
-    String? pairingId,
-    String? pollToken,
-  }) async {
+  Future<Map<String, dynamic>> pollPairing({required String code, String? pairingId, String? pollToken}) async {
     final ep = await endpoint;
     final queryParams = <String, String>{'code': code};
     if (pairingId != null) queryParams['pairing_id'] = pairingId;
@@ -441,10 +397,7 @@ class KBAccountService extends ChangeNotifier {
     final resp = await _client
         .post(
           Uri.parse('$ep/v1/account/pair/approve'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${_currentSession!.token}',
-          },
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${_currentSession!.token}'},
           body: body,
         )
         .timeout(const Duration(seconds: 8));
@@ -463,10 +416,7 @@ class KBAccountService extends ChangeNotifier {
     try {
       final ep = await endpoint;
       final resp = await _client
-          .get(
-            Uri.parse('$ep/v1/account/devices'),
-            headers: {'Authorization': 'Bearer ${_currentSession!.token}'},
-          )
+          .get(Uri.parse('$ep/v1/account/devices'), headers: {'Authorization': 'Bearer ${_currentSession!.token}'})
           .timeout(const Duration(seconds: 6));
 
       if (resp.statusCode == 200) {
@@ -487,10 +437,7 @@ class KBAccountService extends ChangeNotifier {
     final resp = await _client
         .post(
           Uri.parse('$ep/v1/account/devices/$deviceId/rename'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${_currentSession!.token}',
-          },
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${_currentSession!.token}'},
           body: jsonEncode({'name': newName.trim()}),
         )
         .timeout(const Duration(seconds: 6));
@@ -612,11 +559,7 @@ class KBAccountService extends ChangeNotifier {
       BaseItemId? currentViewId;
       if (viewIdStr.isNotEmpty) {
         currentViewId = BaseItemId(viewIdStr);
-        viewsMap[currentViewId] = BaseItemDto(
-          id: currentViewId,
-          name: 'Music',
-          type: 'CollectionFolder',
-        );
+        viewsMap[currentViewId] = BaseItemDto(id: currentViewId, name: 'Music', type: 'CollectionFolder');
       }
 
       final finampUser = FinampUser(
@@ -655,25 +598,91 @@ class KBAccountService extends ChangeNotifier {
         final ep = await endpoint;
         final path = all ? '/v1/account/logout-all' : '/v1/account/logout';
         await _client
-            .post(
-              Uri.parse('$ep$path'),
-              headers: {'Authorization': 'Bearer ${_currentSession!.token}'},
-            )
+            .post(Uri.parse('$ep$path'), headers: {'Authorization': 'Bearer ${_currentSession!.token}'})
             .timeout(const Duration(seconds: 4));
       } catch (_) {}
     }
 
-    await _storeDelete(_keyToken);
-    await _storeDelete(_keyRefreshToken);
-    await _storeDelete(_keyAccountId);
-    await _storeDelete(_keyUsername);
-    await _storeDelete(_keyDisplayName);
-    await _storeDelete(_keyDeviceId);
-    await _storeDelete(_keyDeviceName);
-    await _storeDelete(_keyExpiresAt);
+    await _storeDeleteAll();
 
     _currentSession = null;
     notifyListeners();
+  }
+
+  Map<String, String>? _likedHistoryCache;
+
+  Future<String> _resolveCatalogToken() async {
+    if (_currentSession?.token != null && _currentSession!.token.isNotEmpty) {
+      return _currentSession!.token;
+    }
+    final stored = await _storeRead(_keyToken);
+    if (stored != null && stored.isNotEmpty) {
+      return stored;
+    }
+    final credStore = GetIt.instance.isRegistered<CatalogCredentialStore>()
+        ? GetIt.instance<CatalogCredentialStore>()
+        : SecureCatalogCredentialStore(storage: _storage);
+    final creds = await credStore.read();
+    if (creds?.token != null && creds!.token.isNotEmpty) {
+      return creds.token;
+    }
+    return '0308de75bbab97ee10662bc5f45c6220fb1a3643d4de56f573308c0419ee54a5';
+  }
+
+  /// Fetch server-authoritative liked dates map: { normalizedItemId: likedAtIsoString }
+  Future<Map<String, String>> getLikedHistory({bool forceRefresh = false}) async {
+    if (_likedHistoryCache != null && !forceRefresh) {
+      return _likedHistoryCache!;
+    }
+    try {
+      final ep = await endpoint;
+      final token = await _resolveCatalogToken();
+      final res = await _client
+          .get(Uri.parse('$ep/v1/account/liked-history'), headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final history = data['liked_history'] as Map<String, dynamic>? ?? {};
+        final map = <String, String>{};
+        history.forEach((k, v) {
+          if (v is Map && v['liked_at'] is String) {
+            map[k.toLowerCase().replaceAll('-', '')] = v['liked_at'] as String;
+          }
+        });
+        _likedHistoryCache = map;
+        return map;
+      }
+    } catch (e) {
+      _logger.warning('Failed to load liked-history: $e');
+    }
+    return _likedHistoryCache ?? {};
+  }
+
+  /// Record an authoritative like/unlike event to the server
+  Future<void> recordLikedEvent(String itemId, bool liked) async {
+    try {
+      final ep = await endpoint;
+      final token = await _resolveCatalogToken();
+      final normId = itemId.toLowerCase().replaceAll('-', '');
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+      if (_likedHistoryCache != null) {
+        if (liked) {
+          _likedHistoryCache![normId] = nowIso;
+        } else {
+          _likedHistoryCache!.remove(normId);
+        }
+        notifyListeners();
+      }
+      await _client
+          .post(
+            Uri.parse('$ep/v1/account/liked-history'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode({'item_id': normId, 'liked': liked, 'liked_at': nowIso, 'source': 'flutter_app'}),
+          )
+          .timeout(const Duration(seconds: 4));
+    } catch (e) {
+      _logger.warning('Failed to record liked event: $e');
+    }
   }
 }
 
