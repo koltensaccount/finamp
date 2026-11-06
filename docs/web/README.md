@@ -6,7 +6,8 @@ folder preserves the reviewed, narrow playback patch and expected before/after
 SHA-256 hashes so the server-only changes are reviewable and recoverable.
 
 Applied to the existing source on 2026-11-05 with hash guards and a local backup;
-subsequently built from a credential-free allowlisted Docker context and deployed
+subsequently built from an allowlisted Docker context excluding environment files
+and account databases, and deployed
 after a loopback canary, with the prior container retained for rollback. Native compact controls live
 in the Flutter source in this same change. The common target is in
 [WORKFLOWS](../WORKFLOWS.md), not whichever client happens to have a feature first.
@@ -51,3 +52,7 @@ recreate the hash inputs and review configuration before any subsequent rollout.
 They exclude account/env files from the build context, use a loopback canary,
 preserve the prior container, and roll back automatically on promotion failure.
 No inherited Aubrey script or Compose configuration is used.
+
+Pre-existing service-token literals in the PWA source remain an audited security
+gap; excluding environment files does not remove those literals. No credential
+rotation or claim of credential-free source is made by this change.
