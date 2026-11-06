@@ -3154,7 +3154,9 @@ enum ItemSwipeActions {
   @HiveField(2)
   addToNextUp,
   @HiveField(3)
-  playNext;
+  playNext,
+  @HiveField(4)
+  toggleFavorite;
 
   /// Human-readable version of this enum.
   @override
@@ -3171,6 +3173,8 @@ enum ItemSwipeActions {
         return l10n.addToNextUp;
       case ItemSwipeActions.playNext:
         return l10n.playNext;
+      case ItemSwipeActions.toggleFavorite:
+        return l10n.favorite;
     }
   }
 }
