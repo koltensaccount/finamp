@@ -6,13 +6,28 @@ import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get_it/get_it.dart';
 
 import '../components/album_image.dart';
+import '../components/AlbumScreen/track_list_tile.dart';
 import '../components/now_playing_bar.dart';
 import '../menus/track_menu.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
 import '../services/favorite_provider.dart';
+import '../services/finamp_settings_helper.dart';
 import '../services/liked_songs_service.dart';
 import '../services/queue_service.dart';
+
+enum _LikedSongsSort { libraryNewest, libraryOldest, title, artist, album, lastPlayed }
+
+extension _LikedSongsSortLabel on _LikedSongsSort {
+  String get label => switch (this) {
+    _LikedSongsSort.libraryNewest => 'Recently added to library',
+    _LikedSongsSort.libraryOldest => 'Oldest in library',
+    _LikedSongsSort.title => 'Title',
+    _LikedSongsSort.artist => 'Artist',
+    _LikedSongsSort.album => 'Album',
+    _LikedSongsSort.lastPlayed => 'Recently played',
+  };
+}
 
 class LikedSongsScreen extends ConsumerStatefulWidget {
   const LikedSongsScreen({super.key});
@@ -28,6 +43,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
 
   String _query = '';
   String? _selectedGenre;
+  _LikedSongsSort _sort = _LikedSongsSort.libraryNewest;
 
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
@@ -116,6 +132,31 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
       }
       return true;
     }).toList();
+
+    // Jellyfin DateCreated is the library-import date, NOT the date favorited.
+    // Do not mislabel it as "Date liked" until the account backend supplies
+    // an authoritative liked_at event for this user's favorites.
+    int compareText(String? a, String? b) => (a ?? '').toLowerCase().compareTo((b ?? '').toLowerCase());
+    int compareDate(String? a, String? b) {
+      final first = DateTime.tryParse(a ?? '');
+      final second = DateTime.tryParse(b ?? '');
+      if (first == null && second == null) return 0;
+      if (first == null) return 1;
+      if (second == null) return -1;
+      return first.compareTo(second);
+    }
+
+    filteredTracks.sort((a, b) {
+      final order = switch (_sort) {
+        _LikedSongsSort.libraryNewest => compareDate(b.dateCreated, a.dateCreated),
+        _LikedSongsSort.libraryOldest => compareDate(a.dateCreated, b.dateCreated),
+        _LikedSongsSort.title => compareText(a.name, b.name),
+        _LikedSongsSort.artist => compareText(a.artists?.firstOrNull ?? a.albumArtist, b.artists?.firstOrNull ?? b.albumArtist),
+        _LikedSongsSort.album => compareText(a.album, b.album),
+        _LikedSongsSort.lastPlayed => compareDate(b.userData?.lastPlayedDate, a.userData?.lastPlayedDate),
+      };
+      return order != 0 ? order : compareText(a.name, b.name);
+    });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
