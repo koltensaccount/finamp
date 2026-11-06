@@ -22,8 +22,15 @@ class AccountRetryClient extends http.BaseClient {
     }
     // Buffer the error so callers still receive it when renewal is unavailable.
     final body = await response.stream.toBytes();
-    final token = await renewToken(authorization.substring(7));
-    if (token == null) {
+    final rejectedToken = authorization.substring(7);
+    String? token;
+    try {
+      token = await renewToken(rejectedToken);
+    } catch (_) {
+      // Preserve the server's actionable 401 rather than obscuring it with a
+      // transient refresh error. Never replay requests without a new token.
+    }
+    if (token == null || token.isEmpty || token == rejectedToken) {
       return http.StreamedResponse(Stream.value(body), response.statusCode,
           headers: response.headers, request: request);
     }
