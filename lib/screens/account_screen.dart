@@ -196,6 +196,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final service = ref.watch(kbAccountServiceProvider);
     final session = service.currentSession;
 
+    if (session == null) {
+      return Scaffold(
+        appBar: AppBar(leading: const FinampAppBarBackButton(), title: const Text('KB Account')),
+        body: Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Connect your KB account'),
+            const SizedBox(height: 12),
+            const Text('Your downloaded music remains available.'),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true).pushNamed(LoginScreen.routeName),
+              child: const Text('Sign In with KB Account'),
+            ),
+          ]),
+        )),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: const FinampAppBarBackButton(),

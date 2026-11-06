@@ -43,7 +43,7 @@ It does not automatically migrate data from a separately identified iOS-on-Mac a
 
 This preview fixes silent account sign-in navigation and adds Previous / Play-Pause / Next compact controls and keeps
 Finamp's existing playback, queue, downloads and offline engine.
-93 Flutter tests pass, and the macOS release app was built and verified.
+94 Flutter tests pass, and the macOS release app was built and verified.
 
 The web app has separate source fixes for automatic next, queue selection,
 repeat, shuffle, sleep timers and music system controls. This DMG does not
@@ -73,6 +73,6 @@ with tempfile.TemporaryDirectory(prefix='kb-dmg-verify-',dir='/tmp') as mount:
   if attached:subprocess.run(['hdiutil','detach',mount],check=True)
 sha=hashlib.sha256(dmg.read_bytes()).hexdigest()
 (dmg.with_suffix('.dmg.sha256')).write_text(f'{sha}  {dmg.name}\n')
-manifest={'name':'KB Music','version':'1.0.4','build':str(info['CFBundleVersion']),'bundle_identifier':info['CFBundleIdentifier'],'minimum_macos':info.get('LSMinimumSystemVersion'),'architectures':architectures,'source_revision':revision,'source_repository':'https://github.com/koltensaccount/finamp','build_mode':'release','signing':'stable-local-certificate','signing_certificate_sha1':identity['sha1'],'apple_notarized':False,'preview_library_validation_exception':True,'system_security_settings':'unchanged','dmg':dmg.name,'size_bytes':dmg.stat().st_size,'sha256':sha,'checks':{'flutter_tests':93,'web_player_contract_tests':14,'codesign_deep_strict':'pass','dmg_verify':'pass','mounted_contents_and_binary':'pass','physical_iphone':'not_verified','web_deployment':'separate_guarded_rollout_verified'}}
+manifest={'name':'KB Music','version':'1.0.4','build':str(info['CFBundleVersion']),'bundle_identifier':info['CFBundleIdentifier'],'minimum_macos':info.get('LSMinimumSystemVersion'),'architectures':architectures,'source_revision':revision,'source_repository':'https://github.com/koltensaccount/finamp','build_mode':'release','signing':'stable-local-certificate','signing_certificate_sha1':identity['sha1'],'apple_notarized':False,'preview_library_validation_exception':True,'system_security_settings':'unchanged','dmg':dmg.name,'size_bytes':dmg.stat().st_size,'sha256':sha,'checks':{'flutter_tests':94,'web_player_contract_tests':14,'codesign_deep_strict':'pass','dmg_verify':'pass','mounted_contents_and_binary':'pass','physical_iphone':'not_verified','web_deployment':'separate_guarded_rollout_verified'}}
 (outputs/'KB_Music_macOS_Preview_Manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps({'dmg':str(dmg),'size_bytes':dmg.stat().st_size,'architectures':architectures,'sha256':sha}))

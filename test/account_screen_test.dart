@@ -25,6 +25,20 @@ void main() {
     }
   });
 
+  testWidgets('signed-out account offers reconnect without fake identity or sign-out actions', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final service = KBAccountService(client: MockClient((_) async => http.Response('{}', 200)));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [kbAccountServiceProvider.overrideWith((ref) => service)],
+      child: const MaterialApp(home: AccountScreen()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign In with KB Account'), findsOneWidget);
+    expect(find.text('Your downloaded music remains available.'), findsOneWidget);
+    expect(find.text('Sign Out of This Device'), findsNothing);
+    expect(find.text('Kolten'), findsNothing);
+  });
+
   testWidgets('AccountScreen displays user details and registered devices', (tester) async {
     final mockClient = MockClient((request) async {
       if (request.url.path == '/v1/account/devices') {
