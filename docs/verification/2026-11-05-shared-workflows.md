@@ -118,3 +118,11 @@ Reproducible preview packaging: `python3 scripts/package_macos_preview.py --app
 <release-app> --output <delivery-directory>`. This deliberately produces only a
 personal ad-hoc preview. UI/test files analyze cleanly; account service retains
 the pre-existing unused `_storeDeleteAll` warning.
+
+Installed build 205 from the final DMG; preserved account/download/media data and
+retained the previous app as a backup. CUA runtime verification reached
+authenticated Home with loaded albums/favorites using the existing saved session.
+The fixed fresh-password navigation path is widget-tested, not repeated against
+production. Final DMG SHA-256:
+`84afaa9513b5a01957247cde783456fd745a8dbe9689ab7c5f257327e96dff5a`.
+Source revision: `cd7cffb40d1e25759f19d09ce70e9edf67759209`.
