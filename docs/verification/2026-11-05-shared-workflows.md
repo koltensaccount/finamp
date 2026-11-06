@@ -36,11 +36,11 @@ contains the independent upstream changes via a non-destructive merge.
 | API authorization audit | fail | No-cookie/no-bearer GETs to Books, Jellyfin Items and catalog requests return 200 through the deployed PWA. Tailscale limits reachability; no write probes performed. |
 | Source installation | pass | All touched source hashes matched, backups created, installed after-hashes matched. Running image was not rebuilt/restarted. |
 | Full UI comparison | blocked | Responsive browser captures exist. Installed native app was signed out; no authenticated native/physical iPad side-by-side comparison. |
-| Native macOS debug build | pass | `flutter build macos --debug --no-pub`, pinned Rust/Rustdoc and Flutter 3.47.7: compiled KB Music.app. Existing plugin/Swift Package Manager and build-script warnings remain. Installed app not replaced. |
+| Native macOS debug build | pass | `flutter build macos --debug --no-pub`, pinned Rust/Rustdoc and Flutter 3.47.7: compiled KB Music.app. Existing plugin/Swift Package Manager and build-script warnings remain. That debug artifact was not installed; the later release installation is recorded below. |
 | Web optimized compilation | partial | Webpack production build exits 0 using existing local Next 16.4.2 dependencies. Default Turbopack fails because reused node_modules resolves outside isolated root; standalone tracing warns about external dependencies. Not a clean locked deployable artifact. |
 | Web locked production build and rollout | pass | Allowlisted source context excluded .env.local/account databases. Server Docker npm-ci build passed; loopback canary and production root/manifest/new-service-worker checks passed. Previous container retained for rollback; mounts and credentials unchanged. |
 | Post-deploy browser playback | pass | Existing sign-in restored. Seeking Charmer to its end automatically started Disappeared; visible queue shuffle retained 11 entries and current/history; selecting Labrador then Next followed the shuffled next row Living a Lie. Phone mini-player exposes Previous / Play-Pause / Next. Playback paused after tests. |
-| macOS DMG | pass | Release 1.0.4 (204), universal x86_64/arm64; codesign deep/strict, hdiutil verify, read-only mount, bundle/version/binary comparison and Applications link all passed. Ad-hoc signed, not Apple-notarized. |
+| macOS DMG | pass | Release 1.0.4 (205; supersedes 204), universal x86_64/arm64; codesign deep/strict, hdiutil verify, read-only mount, bundle/version/binary comparison and Applications link all passed. Ad-hoc signed, not Apple-notarized. |
 | Physical iPhone / full parity | blocked | No real iPhone lock-screen/headset/background or authenticated native/web visual parity claim. |
 | Media integrity / live acquisition | not_applicable | No media-library writes, requests, worker starts, migrations or destructive operations. |
 
@@ -71,15 +71,16 @@ and existing sign-in. The cache update now prefers current navigation HTML and
 preserves only the app's intended offline shell; four isolated cache tests pass.
 This one-time transition is not represented as a seamless update pass.
 
-The macOS DMG was built from native source revision `13fd50ef2a8849aedaa8f6f325a15a1aa74eb117`
-with `--release --build-name=1.0.4 --build-number=204`. Bundle identifier remains
-`com.unicornsonlsd.finamp`; minimum macOS 12.0; architectures x86_64 and arm64.
-DMG SHA-256: `f4144a2c71d39a80186088f6f1e7b8422dc82c2f3a9d72b5b6589100efe0c027`.
-The installer contains only the built app, Applications link, license and readme;
-it was not copied over the user's installed app. A separately identified
-iOS-on-Mac app does not automatically share its local data with this native build.
+The first 1.0.4 (204) preview passed static DMG/signature checks but failed its
+initial runtime launch under hardened library validation. A corrected ad-hoc
+signature opened successfully; user then reported silent sign-in dismissal.
+Build 205 includes the root-navigation correction below. The final artifact and
+installed-binary hashes are recorded in the adjacent delivery manifest/receipt.
+Bundle identifier remains `com.unicornsonlsd.finamp`; minimum macOS 12.0;
+architectures x86_64 and arm64. A separately identified iOS-on-Mac app does not
+automatically share its local data with this native build.
 
-Common agent policy snapshot `13fd50ef` (19 files) was also installed and verified
+Common agent policy snapshot `49959b3b` (22 files) was installed and hash-verified
 in the existing web workspace, retaining generated Next.js guidance.
 
 ## Open blockers and limits
@@ -112,3 +113,8 @@ Flutter/Isar libraries. The first build passed static signature verification but
 failed at launch under hardened library validation. The corrected preview keeps
 system settings unchanged; signed/notarized release requirements remain separate.
 See [Apple entitlement documentation](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.cs.disable-library-validation).
+
+Reproducible preview packaging: `python3 scripts/package_macos_preview.py --app
+<release-app> --output <delivery-directory>`. This deliberately produces only a
+personal ad-hoc preview. UI/test files analyze cleanly; account service retains
+the pre-existing unused `_storeDeleteAll` warning.
