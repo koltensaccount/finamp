@@ -1,0 +1,24 @@
+name: Agent guidance
+on:
+  pull_request:
+  push:
+    branches: [main, antigravity/catalog-client, 'codex/kb-agent-guidance-*']
+permissions:
+  contents: read
+jobs:
+  guidance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/check_agent_guidance.py
+      - run: python3 -m unittest discover -s scripts/tests -v
+      - name: Require evidence report for behavior changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/check_agent_guidance.py --base "$BASE_SHA"

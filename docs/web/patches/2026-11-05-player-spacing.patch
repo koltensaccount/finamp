@@ -1,0 +1,18 @@
+--- a/src/components/player/full-player-sheet.tsx
++++ b/src/components/player/full-player-sheet.tsx
+@@ -171,12 +171,12 @@
+             </div>
+ 
+             {/* Title & Artist & Like */}
+-            <div className="w-full flex items-center justify-between mt-6">
++            <div className="w-full flex items-start justify-between mt-4">
+               <div className="flex-1 min-w-0 pr-4">
+-                <h2 className="text-xl font-bold text-white truncate leading-tight">
++                <h2 className="text-xl font-bold text-white whitespace-normal break-words leading-snug">
+                   {currentTrack.title}
+                 </h2>
+-                <p className="text-sm font-medium text-white/60 truncate mt-1">
++                <p className="text-sm font-medium text-white/60 whitespace-normal break-words mt-1">
+                   {currentTrack.artist}
+                 </p>
+               </div>

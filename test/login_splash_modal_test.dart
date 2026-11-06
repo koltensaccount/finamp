@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:finamp/components/LoginScreen/login_splash_page.dart';
 import 'package:finamp/services/kb_account_service.dart';
+import 'package:finamp/screens/view_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -132,4 +134,73 @@ void main() {
 
     expect(find.text('Passwords do not match'), findsOneWidget);
   });
+
+  Future<void> pumpNestedLogin(WidgetTester tester, {required int status, required Map<String, dynamic> response}) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('dev.fluttercommunity.plus/device_info'),
+      (_) async => <String, dynamic>{'computerName': 'Fixture Mac'},
+    );
+    addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('dev.fluttercommunity.plus/device_info'), null));
+    final client = MockClient((request) async {
+      if (request.url.path == '/v1/account/status') {
+        return http.Response(jsonEncode({'enrolled': true}), 200);
+      }
+      if (request.url.path == '/v1/account/login') {
+        return http.Response(jsonEncode(response), status);
+      }
+      return http.Response('{}', 404);
+    });
+    FlutterSecureStorage.setMockInitialValues({'kb_account_endpoint': 'https://example.test'});
+    final service = KBAccountService(client: client);
+    GetIt.instance.registerSingleton<KBAccountService>(service);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [kbAccountServiceProvider.overrideWith((ref) => service)],
+      child: MaterialApp(
+        routes: {ViewSelector.routeName: (_) => const Scaffold(body: Text('Library setup reached'))},
+        home: Navigator(onGenerateRoute: (settings) => MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => settings.name == '/'
+              ? LoginSplashPage(onGetStartedPressed: () {})
+              : const Scaffold(body: Text('Unexpected nested route')),
+        )),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign In with KB Account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Username'), 'fixture_user');
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'fixture_password');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('successful sign-in exits the nested login navigator to library setup', (tester) async {
+    await pumpNestedLogin(tester, status: 200, response: {
+      'account': {'id': 'fixture-account', 'username': 'fixture_user'},
+      'device': {'id': 'fixture-device', 'name': 'Fixture'},
+      'session': {'token': 'fixture-token', 'refresh_token': 'fixture-refresh'},
+      'config': <String, dynamic>{},
+    });
+    expect(find.text('Library setup reached'), findsOneWidget);
+    expect(find.text('Unexpected nested route'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed sign-in retains the form and visible server error', (tester) async {
+    await pumpNestedLogin(tester, status: 401, response: {'error': 'Incorrect password'});
+    expect(find.widgetWithText(FilledButton, 'Sign In'), findsOneWidget);
+    expect(find.text('Incorrect password'), findsOneWidget);
+    expect(find.text('Library setup reached'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('incomplete successful response stays visible as an error', (tester) async {
+    await pumpNestedLogin(tester, status: 200, response: {'account': {'username': 'fixture_user'}});
+    expect(find.widgetWithText(FilledButton, 'Sign In'), findsOneWidget);
+    expect(find.textContaining('incomplete account session'), findsOneWidget);
+    expect(find.text('Library setup reached'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
 }

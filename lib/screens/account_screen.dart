@@ -1,3 +1,4 @@
+import 'login_screen.dart';
 import 'package:finamp/components/finamp_app_bar_back_button.dart';
 import 'package:finamp/services/kb_account_service.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ class AccountScreen extends ConsumerStatefulWidget {
 class _AccountScreenState extends ConsumerState<AccountScreen> {
   List<Map<String, dynamic>> _devices = [];
   bool _isLoadingDevices = true;
+  String? _deviceError;
 
   @override
   void initState() {
@@ -23,7 +25,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   }
 
   Future<void> _loadDevices() async {
-    setState(() => _isLoadingDevices = true);
+    setState(() { _isLoadingDevices = true; _deviceError = null; });
     final service = ref.read(kbAccountServiceProvider);
     try {
       final list = await service.listDevices();
@@ -36,6 +38,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
+          _deviceError = 'Could not verify your account connection. Sign in again if your session expired, or retry when the server is available.';
           _isLoadingDevices = false;
         });
       }
@@ -193,6 +196,25 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final service = ref.watch(kbAccountServiceProvider);
     final session = service.currentSession;
 
+    if (session == null) {
+      return Scaffold(
+        appBar: AppBar(leading: const FinampAppBarBackButton(), title: const Text('KB Account')),
+        body: Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Connect your KB account'),
+            const SizedBox(height: 12),
+            const Text('Your downloaded music remains available.'),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true).pushNamed(LoginScreen.routeName),
+              child: const Text('Sign In with KB Account'),
+            ),
+          ]),
+        )),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: const FinampAppBarBackButton(),
@@ -202,6 +224,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
+          if (_deviceError != null) ...[
+            Text(_deviceError!),
+            Wrap(spacing: 12, children: [
+              FilledButton(onPressed: () => Navigator.of(context, rootNavigator: true).pushNamed(LoginScreen.routeName), child: const Text('Sign In Again')),
+              TextButton(onPressed: _loadDevices, child: const Text('Retry')),
+            ]),
+            const SizedBox(height: 16),
+          ],
           // User Card
           Container(
             padding: const EdgeInsets.all(18),

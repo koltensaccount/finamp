@@ -1,0 +1,22 @@
+{
+  "src/context/player-context.tsx": {
+    "before": "48d7d0071ae14381c8732f3453b474e7bff050cfc45ce7a92ad73b315c870c4d",
+    "after": "2ae10f0501c7faa38c30a499f7cc86d7d901de76728c20f026e6c9410e869415"
+  },
+  "src/context/auth-context.tsx": {
+    "before": "b3da3e473abec20891ac36b0f682b8bbb932440e79775c891b4835cf850740ac",
+    "after": "297068f8b6b424af1cbc64191eb4c1ed3ff0961c387e6761e0307ee28f487eba"
+  },
+  "src/components/player/mini-player.tsx": {
+    "before": "8b5cde6f9362b79f99a23c8d214b489bff7fb0723710a8de998e266543e64b57",
+    "after": "74271813cec2f967aff40da84f989bf13c60fad5500c8806ca57bf465b94b9ce"
+  },
+  "src/components/views/album-detail-view.tsx": {
+    "before": "ef01f338618ed12e02f26b7ac3ef5ae0965c021d891a35518afa80bc0f315e23",
+    "after": "e01fac33ef71f89e9b61ba62e664d52bb4615d336ff75af69269de95b46471db"
+  },
+  "public/sw.js": {
+    "before": "6fcf5310fb87cadff7653052bb9028f34d12d693db1658e2b1916d16e77afa85",
+    "after": "1fe11118e96faa63c4dbce99ae795746a6c7c88eb7636ca214e83e14fb79a23c"
+  }
+}

@@ -4,10 +4,12 @@ Tests for Phase 3: Worldwide Book Discovery, Metadata Engine, and Acquisition Co
 
 import json
 import os
+from pathlib import Path
 import shutil
 import tempfile
 import time
 import unittest
+from unittest.mock import Mock, patch
 import zipfile
 
 try:
@@ -61,6 +63,13 @@ class TestBookDiscoveryAndAcquisition(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.temp_dir, "test_books.sqlite")
         self.books_core = BooksCore(self.db_path)
+        # Metadata lookups are a separate provider contract, not live unit-test I/O.
+        metadata_patch = patch.object(self.books_core, "verify_request_metadata", return_value=None)
+        metadata_patch.start()
+        self.addCleanup(metadata_patch.stop)
+        network_patch = patch("urllib.request.urlopen", side_effect=AssertionError("Unexpected network access"))
+        self.network = network_patch.start()
+        self.addCleanup(network_patch.stop)
         self.library_dir = os.path.join(self.temp_dir, "library")
         self.books_dir = os.path.join(self.library_dir, "Books")
         self.audio_dir = os.path.join(self.library_dir, "Audiobooks")
@@ -81,6 +90,7 @@ class TestBookDiscoveryAndAcquisition(unittest.TestCase):
         )
 
     def tearDown(self):
+        self.network.assert_not_called()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_metadata_engine_epub_validation_and_tagging(self):
@@ -189,8 +199,20 @@ class TestBookDiscoveryAndAcquisition(unittest.TestCase):
 
         # 2. Run autonomous worker to process the queued task
         worker = BooksWorker(db_path=self.db_path, poll_interval=1.0)
-        # Point coordinator to test directories
+        # Route the actual worker through the fixture coordinator. Never fall back
+        # to real provider adapters or default production library directories.
         worker.books_core = self.books_core
+        self.books_core.acquisition_coordinator = self.acquisition
+
+        def acquire_fixture(title, author, staging_dir):
+            os.makedirs(staging_dir, exist_ok=True)
+            epub_path = os.path.join(staging_dir, "fixture.epub")
+            create_sample_epub(epub_path, title=title, author=author)
+            return {"acquired": True, "file_path": epub_path}
+
+        self.acquisition.standard_ebooks.search_and_acquire = Mock(side_effect=acquire_fixture)
+        self.acquisition.ia_librivox.search_and_acquire = Mock(side_effect=AssertionError("Unexpected audio acquisition"))
+        self.acquisition._trigger_abs_scan = Mock()
 
         # Process the acquisition task
         worker_res = worker.run_once()
@@ -198,7 +220,7 @@ class TestBookDiscoveryAndAcquisition(unittest.TestCase):
 
         # 3. Verify request progressed through lifecycle
         updated_req = self.books_core.get_request(req_id)
-        # Should have acquired EPUB from Standard Ebooks!
+        # A generated fixture traversed the real staging/tagging/publishing path.
         self.assertIn(updated_req["state"], ("available", "partial"))
         self.assertIn("epub", updated_req["acquired_formats"])
         self.assertEqual(updated_req["progress_percentage"], 100.0)
@@ -208,6 +230,11 @@ class TestBookDiscoveryAndAcquisition(unittest.TestCase):
         self.assertIsNotNone(work)
         self.assertEqual(work["title"], "The Time Machine")
         self.assertIn("epub", work["available_formats"])
+        self.acquisition.standard_ebooks.search_and_acquire.assert_called_once()
+        self.acquisition.ia_librivox.search_and_acquire.assert_not_called()
+        published = list(Path(self.books_dir).rglob("*.epub"))
+        self.assertEqual(len(published), 1)
+        self.assertTrue(published[0].resolve().is_relative_to(Path(self.temp_dir).resolve()))
 
 
 if __name__ == "__main__":

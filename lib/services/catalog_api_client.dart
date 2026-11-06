@@ -90,7 +90,7 @@ class CatalogApiClient {
   Future<CatalogCredentials> _requireCredentials() async {
     final credentials = await _credentials.read();
     if (credentials == null) {
-      throw const CatalogUnavailableException('Catalog connection is not configured.');
+      throw const CatalogUnavailableException('Catalog connection is not configured. Sign in again to reconnect.');
     }
     return credentials;
   }
@@ -104,7 +104,7 @@ class CatalogApiClient {
   }
 
   static void _requireSuccess(http.Response response) {
-    if (response.statusCode == 401) throw const CatalogUnavailableException('Catalog authentication failed.');
+    if (response.statusCode == 401) throw const CatalogUnavailableException('Catalog session expired or was revoked. Sign in again to reconnect.');
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw CatalogUnavailableException('Catalog is unavailable (HTTP ${response.statusCode}).');
     }

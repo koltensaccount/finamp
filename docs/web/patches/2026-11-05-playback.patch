@@ -1,0 +1,357 @@
+--- a/src/context/player-context.tsx
++++ b/src/context/player-context.tsx
+@@ -18,0 +19,14 @@
++}
++
++// Fisher-Yates with an anti-repeat guard when distinct tracks permit a new order.
++export function shuffleTracks(tracks: Track[], previousIds: string[] = tracks.map((t) => t.id), random = Math.random): Track[] {
++  const result = [...tracks];
++  for (let i = result.length - 1; i > 0; i--) {
++    const j = Math.floor(random() * (i + 1));
++    [result[i], result[j]] = [result[j], result[i]];
++  }
++  if (result.length > 1 && result.every((track, i) => track.id === previousIds[i])) {
++    const different = result.findIndex((track) => track.id !== result[0].id);
++    if (different > 0) [result[0], result[different]] = [result[different], result[0]];
++  }
++  return result;
+@@ -35,0 +50 @@
++  shuffleAndPlay: (tracks: Track[]) => void;
+@@ -67,0 +83 @@
++  shuffleAndPlay: () => {},
+@@ -87,0 +104,3 @@
++  const linearQueueRef = useRef<Track[]>([]);
++  const lastShuffleRef = useRef<string[]>([]);
++  const sleepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+@@ -113 +131,0 @@
+-    const onEnded = () => handleTrackEnded();
+@@ -119 +136,0 @@
+-    audio.addEventListener("ended", onEnded);
+@@ -126 +142,0 @@
+-      audio.removeEventListener("ended", onEnded);
+@@ -127,0 +144 @@
++      if (sleepTimeoutRef.current !== null) clearTimeout(sleepTimeoutRef.current);
+@@ -131,43 +148,13 @@
+-  // Update MediaSession
+-  useEffect(() => {
+-    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+-
+-    if (currentTrack) {
+-      navigator.mediaSession.metadata = new MediaMetadata({
+-        title: currentTrack.title,
+-        artist: currentTrack.artist,
+-        album: currentTrack.album,
+-        artwork: [
+-          { src: currentTrack.coverUrl, sizes: "512x512", type: "image/jpeg" },
+-        ],
+-      });
+-
+-      navigator.mediaSession.setActionHandler("play", () => {
+-        audioRef.current?.play().catch(() => {});
+-      });
+-      navigator.mediaSession.setActionHandler("pause", () => {
+-        audioRef.current?.pause();
+-      });
+-      navigator.mediaSession.setActionHandler("previoustrack", () => {
+-        previousTrack();
+-      });
+-      navigator.mediaSession.setActionHandler("nexttrack", () => {
+-        nextTrack();
+-      });
+-      navigator.mediaSession.setActionHandler("seekto", (details) => {
+-        if (details.seekTime !== undefined && audioRef.current) {
+-          audioRef.current.currentTime = details.seekTime;
+-          setCurrentTime(details.seekTime);
+-        }
+-      });
+-      navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+-        const skip = details.seekOffset || 15;
+-        seek(Math.max(0, currentTime - skip));
+-      });
+-      navigator.mediaSession.setActionHandler("seekforward", (details) => {
+-        const skip = details.seekOffset || 30;
+-        seek(Math.min(duration, currentTime + skip));
+-      });
+-
+-      // Update presence
+-      updatePresence(`${currentTrack.title} — ${currentTrack.artist}`);
++  const playTrack = useCallback((track: Track, newQueue?: Track[]) => {
++    if (!audioRef.current) return;
++
++    if (newQueue && newQueue.length > 0) {
++      linearQueueRef.current = [...newQueue];
++      setIsShuffle(false);
++    }
++    const targetQueue = newQueue && newQueue.length > 0 ? newQueue : queue;
++    const index = targetQueue.findIndex((item) => item === track);
++    const matchingIndex = index >= 0 ? index : targetQueue.findIndex((item) => item.id === track.id);
++    if (matchingIndex >= 0) {
++      if (newQueue) setQueue(targetQueue);
++      setQueueIndex(matchingIndex);
+@@ -175,37 +161,0 @@
+-      navigator.mediaSession.metadata = null;
+-      updatePresence("");
+-    }
+-  }, [currentTrack]);
+-
+-  // Sync position state to MediaSession
+-  useEffect(() => {
+-    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+-    if (duration > 0 && "setPositionState" in navigator.mediaSession) {
+-      try {
+-        navigator.mediaSession.setPositionState({
+-          duration: Math.max(0, duration),
+-          playbackRate: playbackRate,
+-          position: Math.min(Math.max(0, currentTime), duration),
+-        });
+-      } catch (_) {}
+-    }
+-  }, [currentTime, duration, playbackRate]);
+-
+-  // Handle track end
+-  const handleTrackEnded = () => {
+-    if (repeatMode === "one" && audioRef.current) {
+-      audioRef.current.currentTime = 0;
+-      audioRef.current.play().catch(() => {});
+-      return;
+-    }
+-    nextTrack();
+-  };
+-
+-  const playTrack = (track: Track, newQueue?: Track[]) => {
+-    if (!audioRef.current) return;
+-
+-    if (newQueue && newQueue.length > 0) {
+-      setQueue(newQueue);
+-      const idx = newQueue.findIndex((t) => t.id === track.id);
+-      setQueueIndex(idx >= 0 ? idx : 0);
+-    } else if (queue.length === 0) {
+@@ -222 +172,10 @@
+-  };
++  }, [queue, playbackRate]);
++
++  const shuffleAndPlay = useCallback((tracks: Track[]) => {
++    if (!tracks.length) return;
++    const shuffled = shuffleTracks(tracks, lastShuffleRef.current.length ? lastShuffleRef.current : tracks.map((track) => track.id));
++    lastShuffleRef.current = shuffled.map((track) => track.id);
++    playTrack(shuffled[0], shuffled);
++    linearQueueRef.current = [...tracks];
++    setIsShuffle(true);
++  }, [playTrack]);
+@@ -248 +207 @@
+-  const seek = (seconds: number) => {
++  const seek = useCallback((seconds: number) => {
+@@ -252 +211 @@
+-  };
++  }, []);
+@@ -268 +227 @@
+-  const nextTrack = () => {
++  const nextTrack = useCallback(() => {
+@@ -281,3 +240,3 @@
+-  };
+-
+-  const previousTrack = () => {
++  }, [queue, queueIndex, repeatMode, playTrack]);
++
++  const previousTrack = useCallback(() => {
+@@ -286 +245 @@
+-    if (currentTime > 3) {
++    if (audioRef.current.currentTime > 3) {
+@@ -297 +256,19 @@
+-  };
++  }, [queue, queueIndex, repeatMode, playTrack, seek]);
++
++  // Handle track end
++  const handleTrackEnded = useCallback(() => {
++    if (repeatMode === "one" && audioRef.current) {
++      audioRef.current.currentTime = 0;
++      audioRef.current.play().catch(() => {});
++      return;
++    }
++    nextTrack();
++  }, [repeatMode, nextTrack]);
++
++  useEffect(() => {
++    const audio = audioRef.current;
++    if (!audio) return;
++    audio.addEventListener("ended", handleTrackEnded);
++    return () => audio.removeEventListener("ended", handleTrackEnded);
++  }, [handleTrackEnded]);
++
+@@ -329 +306,13 @@
+-    setIsShuffle((s) => !s);
++    const historyAndCurrent = queue.slice(0, queueIndex + 1);
++    const upcoming = queue.slice(queueIndex + 1);
++    const reordered = isShuffle
++      ? [...upcoming].sort((a, b) => {
++          const rank = (track: Track) => {
++            const index = linearQueueRef.current.indexOf(track);
++            return index < 0 ? Number.MAX_SAFE_INTEGER : index;
++          };
++          return rank(a) - rank(b);
++        })
++      : shuffleTracks(upcoming);
++    setQueue([...historyAndCurrent, ...reordered]);
++    setIsShuffle(!isShuffle);
+@@ -332,0 +322,4 @@
++    if (sleepTimeoutRef.current !== null) {
++      clearTimeout(sleepTimeoutRef.current);
++      sleepTimeoutRef.current = null;
++    }
+@@ -336 +329 @@
+-    setTimeout(() => {
++    sleepTimeoutRef.current = setTimeout(() => {
+@@ -340,0 +334 @@
++      sleepTimeoutRef.current = null;
+@@ -352,0 +347,74 @@
++
++  // Update MediaSession
++  useEffect(() => {
++    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
++
++    if (currentTrack) {
++      navigator.mediaSession.metadata = new MediaMetadata({
++        title: currentTrack.title,
++        artist: currentTrack.artist,
++        album: currentTrack.album,
++        artwork: [
++          { src: currentTrack.coverUrl, sizes: "512x512", type: "image/jpeg" },
++        ],
++      });
++
++      navigator.mediaSession.setActionHandler("play", () => {
++        audioRef.current?.play().catch(() => {});
++      });
++      navigator.mediaSession.setActionHandler("pause", () => {
++        audioRef.current?.pause();
++      });
++      navigator.mediaSession.setActionHandler("previoustrack", () => {
++        previousTrack();
++      });
++      navigator.mediaSession.setActionHandler("nexttrack", () => {
++        nextTrack();
++      });
++      navigator.mediaSession.setActionHandler("seekto", (details) => {
++        if (details.seekTime !== undefined && audioRef.current) {
++          audioRef.current.currentTime = details.seekTime;
++          setCurrentTime(details.seekTime);
++        }
++      });
++      navigator.mediaSession.setActionHandler("seekbackward", currentTrack.isAudiobook ? (details) => {
++        const skip = details.seekOffset || 15;
++        seek(Math.max(0, (audioRef.current?.currentTime || 0) - skip));
++      } : null);
++      navigator.mediaSession.setActionHandler("seekforward", currentTrack.isAudiobook ? (details) => {
++        const skip = details.seekOffset || 30;
++        const audio = audioRef.current;
++        if (audio) seek(Math.min(audio.duration || 0, audio.currentTime + skip));
++      } : null);
++
++    } else {
++      navigator.mediaSession.metadata = null;
++    }
++  }, [currentTrack, nextTrack, previousTrack, seek]);
++
++  useEffect(() => {
++    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
++      navigator.mediaSession.playbackState = currentTrack ? (isPlaying ? "playing" : "paused") : "none";
++    }
++  }, [currentTrack, isPlaying]);
++
++  // Sync position state to MediaSession
++  useEffect(() => {
++    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
++    if (duration > 0 && "setPositionState" in navigator.mediaSession) {
++      try {
++        navigator.mediaSession.setPositionState({
++          duration: Math.max(0, duration),
++          playbackRate: playbackRate,
++          position: Math.min(Math.max(0, currentTime), duration),
++        });
++      } catch {}
++    }
++  }, [currentTime, duration, playbackRate]);
++
++  useEffect(() => {
++    updatePresence(
++      currentTrack ? `${currentTrack.title} — ${currentTrack.artist}` : "",
++      currentTrack ? (isPlaying ? "playing" : "paused") : "idle"
++    );
++  }, [currentTrack, isPlaying, updatePresence]);
+@@ -376,0 +445 @@
++        shuffleAndPlay,
+--- a/src/context/auth-context.tsx
++++ b/src/context/auth-context.tsx
+@@ -3 +3 @@
+-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
++import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+@@ -37 +37 @@
+-  updatePresence: (nowPlayingTitle?: string) => Promise<void>;
++  updatePresence: (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => Promise<void>;
+@@ -51,0 +52 @@
++  const presenceRef = useRef({ title: "", state: "idle" });
+@@ -177 +178,4 @@
+-  const updatePresence = useCallback(async (nowPlayingTitle?: string) => {
++  const updatePresence = useCallback(async (nowPlayingTitle?: string, state?: "playing" | "paused" | "idle") => {
++    if (nowPlayingTitle !== undefined) {
++      presenceRef.current = { title: nowPlayingTitle, state: state || (nowPlayingTitle ? "playing" : "idle") };
++    }
+@@ -188,2 +192,2 @@
+-          now_playing: nowPlayingTitle || "",
+-          state: nowPlayingTitle ? "playing" : "idle",
++          now_playing: presenceRef.current.title,
++          state: presenceRef.current.state,
+--- a/src/components/player/mini-player.tsx
++++ b/src/components/player/mini-player.tsx
+@@ -4 +4 @@
+-import { Play, Pause, SkipForward, BookOpen } from "lucide-react";
++import { Play, Pause, SkipBack, SkipForward, BookOpen } from "lucide-react";
+@@ -9 +9 @@
+-  const { currentTrack, isPlaying, togglePlay, nextTrack, setIsExpanded } =
++  const { currentTrack, isPlaying, togglePlay, previousTrack, nextTrack, setIsExpanded } =
+@@ -50,0 +51,8 @@
++          onClick={previousTrack}
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
++          aria-label="Previous track"
++        >
++          <SkipBack className="w-5 h-5 fill-current" />
++        </button>
++        <button
++          type="button"
+@@ -52 +60 @@
+-          className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-transform"
+@@ -64 +72 @@
+-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
++          className="w-11 h-11 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-90 transition-transform"
+--- a/src/components/views/album-detail-view.tsx
++++ b/src/components/views/album-detail-view.tsx
+@@ -48 +48 @@
+-  const { playTrack, currentTrack, isPlaying, togglePlay } = usePlayer();
++  const { playTrack, shuffleAndPlay, currentTrack, isPlaying, togglePlay } = usePlayer();
+@@ -297,2 +297 @@
+-      const shuffled = [...queue].sort(() => Math.random() - 0.5);
+-      playTrack(shuffled[0], shuffled);
++      shuffleAndPlay(queue);
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -1 +1 @@
+-const CACHE_NAME = 'kb-music-v1';
++const CACHE_NAME = 'kb-music-v2-workflows';
+@@ -26 +26 @@
+-          if (key !== CACHE_NAME) {
++          if (key.startsWith('kb-music-') && key !== CACHE_NAME) {
+@@ -49,0 +50,10 @@
++  // Prefer current HTML so an update cannot serve old bundle URLs indefinitely.
++  if (event.request.mode === 'navigate') {
++    event.respondWith(
++      fetch(event.request).catch(() =>
++        caches.open(CACHE_NAME).then((cache) => cache.match('/'))
++      )
++    );
++    return;
++  }
++
+@@ -51 +61 @@
+-    caches.match(event.request).then((cachedResponse) => {
++    caches.open(CACHE_NAME).then((cache) => cache.match(event.request)).then((cachedResponse) => {

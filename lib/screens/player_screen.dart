@@ -299,9 +299,9 @@ class _PlayerScreenContent extends ConsumerWidget {
                                   children: [
                                     const Spacer(flex: 4),
                                     TrackNameContent(controller),
-                                    const Spacer(flex: 4),
+                                    const SizedBox(height: 12),
                                     ControlArea(controller),
-                                    if (controller.shouldShow(PlayerHideable.bottomActions)) const Spacer(flex: 10),
+                                    if (controller.shouldShow(PlayerHideable.bottomActions)) const Spacer(flex: 2),
                                     if (controller.shouldShow(PlayerHideable.bottomActions))
                                       _buildBottomActions(
                                         context,
@@ -330,10 +330,11 @@ class _PlayerScreenContent extends ConsumerWidget {
                                 height: controller.controlsSize.height,
                                 width: controller.controlsSize.width,
                                 child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     TrackNameContent(controller),
+                                    const SizedBox(height: 12),
                                     ControlArea(controller),
                                     if (controller.shouldShow(PlayerHideable.bottomActions))
                                       _buildBottomActions(
@@ -469,7 +470,7 @@ enum PlayerHideable {
   twoLineTitle(0, 46, 3),
   features(0, 20, 3),
   loopShuffleButtons(96, 0, 0),
-  unhideableElements(144, 165, 0),
+  unhideableElements(144, 240, 0),
   controlsPaddingSmall(0, 8, 2),
   controlsPaddingBig(0, 12, 1);
 

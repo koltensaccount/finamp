@@ -1,3 +1,30 @@
+# Architecture and source discovery
+
+Product intent: [VISION](../VISION.md). Agent workflow: [AGENTS](../AGENTS.md).
+The map below reflects inspected source on 2026-11-05, not runtime certification.
+
+| Area | Owning source | Boundary |
+| --- | --- | --- |
+| Native client | `lib/`, platform directories, `pubspec.yaml` | Finamp owns playback/download/reporting; catalog/account augment it. |
+| Design | `lib/services/theme_provider.dart`, `lib/components/navigation/`, `docs/design_references/` | No verified exported cross-client token contract yet. |
+| Catalog | `backend/catalog.py`, `refresh.py`, `server.py`; `lib/models/catalog_models.dart`, `lib/services/catalog_api_client.dart` | Public identity and local availability are separate. |
+| Account client | `lib/services/kb_account_service.dart`, `lib/screens/account_screen.dart` | Login/bootstrap/pairing/device methods exist; not a playback-sync implementation. |
+| Account server | Separate deployed `catalog-index/kb_account.py`, not checked into this fork | Preferences and presence methods exist; provenance/version parity must be established before API edits. Do not fabricate a checked-in server counterpart. |
+| Books | `backend/books_core.py`, `book_discovery.py`, `book_acquisition.py`, `metadata_engine.py`, `alignment_engine.py`, `worker.py`; client Books services/screens | Stateful and potentially media-writing; not the read-only music refresh contract. Optional tools such as mutagen/ffprobe/faster-whisper have their own runtime dependencies. |
+| Web/PWA | Existing server-side Next.js source, described in `agents/WEB_WORKSPACE.md` | Independent deployment and tokens; no proven equivalence with native or running image. |
+| Tests | `test/`, `backend/tests/`, `integration_test/` | Read scoped safety guidance; not every test is hermetic or real-system evidence. |
+
+No server-only source or existing private state was imported by this guidance
+change. Coordinate API changes across both client sources and actual server
+revision. Preserve previous clients through compatible contract changes.
+
+## Retained music catalog contract
+
+The following is the original music-specific design record. Its read-only/no-tag
+and standard-library statements apply to the music catalog subsystem, not all
+later Books/acquisition code. Provider configuration and deployed state require
+fresh verification; this record is not proof of current production behavior.
+
 # Catalog identity and application contract
 
 Python standard-library backend + SQLite, separate from existing music tooling.

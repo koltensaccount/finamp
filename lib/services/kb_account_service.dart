@@ -1,3 +1,4 @@
+import 'kb_secure_storage.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -43,13 +44,7 @@ class KBAccountSession {
 }
 
 class KBAccountService extends ChangeNotifier {
-  static const _defaultStorage = FlutterSecureStorage(
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    mOptions: MacOsOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-      usesDataProtectionKeychain: false,
-    ),
-  );
+  static const _defaultStorage = kbSecureStorage;
 
   KBAccountService({FlutterSecureStorage? storage, http.Client? client})
       : _storage = storage ?? _defaultStorage,
@@ -64,6 +59,9 @@ class KBAccountService extends ChangeNotifier {
       await _storage.write(key: key, value: value);
       secureOk = true;
     } catch (e) {
+      if (Platform.isMacOS) {
+        throw StateError('Secure login storage is unavailable. Use the installed KB Music app; your existing saved data has not been deleted.');
+      }
       _logger.warning('SecureStorage write failed for $key, using SharedPreferences fallback: $e');
     }
     if (!secureOk) {
@@ -81,6 +79,7 @@ class KBAccountService extends ChangeNotifier {
       final val = await _storage.read(key: key);
       return val;
     } catch (e) {
+      if (Platform.isMacOS) return null;
       _logger.warning('SecureStorage read failed for $key, checking SharedPreferences fallback: $e');
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
@@ -357,7 +356,23 @@ class KBAccountService extends ChangeNotifier {
   }
 
   /// Refresh active session
-  Future<bool> refreshSession() async {
+  Future<bool>? _refreshInFlight;
+  String? _renewedFromToken;
+
+  Future<bool> refreshSession() {
+    return _refreshInFlight ??= _refreshSession().whenComplete(() => _refreshInFlight = null);
+  }
+
+  /// Only renew this account's token; never replace a manually configured key.
+  Future<String?> renewRejectedToken(String rejectedToken) async {
+    if (_currentSession == null || !rejectedToken.startsWith('kba_')) return null;
+    if (_currentSession!.token != rejectedToken) {
+      return _renewedFromToken == rejectedToken ? _currentSession!.token : null;
+    }
+    return await refreshSession() ? _currentSession?.token : null;
+  }
+
+  Future<bool> _refreshSession() async {
     if (_currentSession == null || _currentSession!.refreshToken.isEmpty) return false;
     try {
       final ep = await endpoint;
@@ -372,7 +387,22 @@ class KBAccountService extends ChangeNotifier {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        await applyConfigAndSignIn(data);
+        final previous = _currentSession!;
+        final store = GetIt.instance.isRegistered<CatalogCredentialStore>()
+            ? GetIt.instance<CatalogCredentialStore>()
+            : SecureCatalogCredentialStore(storage: _storage);
+        final catalog = await store.read();
+        // Refresh returns session fields, not the full login/bootstrap envelope.
+        await applyConfigAndSignIn({
+          'account': {'id': previous.accountId, 'username': previous.username, 'display_name': previous.displayName},
+          'device': {'id': previous.deviceId, 'name': previous.deviceName},
+          'session': data,
+          'config': {
+            if (catalog != null && catalog.token == previous.token)
+              'catalog': {'endpoint': catalog.endpoint.toString()},
+          },
+        });
+        _renewedFromToken = previous.token;
         return true;
       }
     } catch (e) {
@@ -563,6 +593,10 @@ class KBAccountService extends ChangeNotifier {
     final displayName = account['display_name'] as String? ?? username;
     final deviceId = device['id'] as String? ?? '';
     final deviceName = device['name'] as String? ?? 'Device';
+
+    if (token.trim().isEmpty || accountId.trim().isEmpty || username.trim().isEmpty) {
+      throw const FormatException('Server returned an incomplete account session. Please try signing in again.');
+    }
 
     // 1. Store session securely with automatic SharedPreferences fallback
     await _storeWrite(_keyToken, token);

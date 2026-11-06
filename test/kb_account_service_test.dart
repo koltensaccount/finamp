@@ -10,6 +10,30 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('KBAccountService Tests', () {
+    test('flat refresh response preserves identity and rotates catalog credentials once', () async {
+      final expiry = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600;
+      FlutterSecureStorage.setMockInitialValues({
+        'kb_account_token': 'kba_old', 'kb_account_refresh_token': 'kbr_old',
+        'kb_account_id': 'account', 'kb_account_username': 'fixture',
+        'kb_account_expires_at': expiry.toString(),
+        'catalog_api_endpoint': 'https://example.test', 'catalog_api_bearer_token': 'kba_old',
+      });
+      var calls = 0;
+      final service = KBAccountService(client: MockClient((request) async {
+        calls++;
+        return http.Response(jsonEncode({'token': 'kba_new', 'refresh_token': 'kbr_new', 'expires_at': expiry}), 200);
+      }));
+      expect(await service.init(), isTrue);
+      final results = await Future.wait([service.refreshSession(), service.refreshSession()]);
+      expect(results, [true, true]);
+      expect(calls, 1);
+      expect(service.currentSession?.accountId, 'account');
+      expect(service.currentSession?.token, 'kba_new');
+      expect(await service.renewRejectedToken('kba_foreign'), isNull);
+      expect(await service.renewRejectedToken('kba_old'), 'kba_new');
+      expect(await const FlutterSecureStorage().read(key: 'catalog_api_bearer_token'), 'kba_new');
+    });
+
     test('checkStatus returns server status from mock backend', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.path, '/v1/account/status');
@@ -121,7 +145,7 @@ void main() {
         if (request.url.path == '/v1/account/pair/approve') {
           sentAuth = request.headers['Authorization'];
           final body = jsonDecode(request.body) as Map<String, dynamic>;
-          sentCode = body['code'];
+          sentCode = body['code'] as String?;
           return http.Response(
             jsonEncode({
               'status': 'approved',
@@ -227,7 +251,7 @@ void main() {
                 'refresh_token': 'kbr_new_refresh',
                 'expires_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600,
               },
-              'config': {},
+              'config': <String, dynamic>{},
             }),
             201,
           );

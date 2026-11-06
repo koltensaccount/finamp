@@ -91,7 +91,7 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
           if (pollRes['state'] == 'approved') {
             timer.cancel();
             if (mounted) {
-              Navigator.of(context).pushReplacementNamed(ViewSelector.routeName);
+              Navigator.of(context, rootNavigator: true).pushReplacementNamed(ViewSelector.routeName);
             }
           }
         } catch (_) {} finally {
@@ -123,12 +123,13 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
     String? generalError;
     Timer? debounceTimer;
 
-    final parentNav = Navigator.of(context);
+    final parentNav = Navigator.of(context, rootNavigator: true);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
 
-    showModalBottomSheet<void>(
+    showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: bgColor,
       barrierColor: Colors.black54,
@@ -281,7 +282,7 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
                           if (ctx.mounted && isCreatingAccount) {
                             setModalState(() {
                               if (check['available'] == false) {
-                                usernameError = check['error'] ?? 'Username is already taken';
+                                usernameError = check['error']?.toString() ?? 'Username is already taken';
                               }
                             });
                           }
@@ -431,10 +432,10 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
 
                               debounceTimer?.cancel();
                               if (ctx.mounted) {
-                                Navigator.pop(ctx);
-                                parentNav.pushReplacementNamed(ViewSelector.routeName);
+                                Navigator.pop(ctx, true);
                               }
                             } catch (e) {
+                              if (!ctx.mounted) return;
                               setModalState(() {
                                 isSubmitting = false;
                                 final rawMsg = e.toString().replaceAll('Exception: ', '').trim();
@@ -484,7 +485,12 @@ class _LoginSplashPageState extends ConsumerState<LoginSplashPage> {
           );
         },
       ),
-    );
+    ).then((authenticated) {
+      debounceTimer?.cancel();
+      if ((authenticated ?? false) && mounted && parentNav.mounted) {
+        parentNav.pushReplacementNamed(ViewSelector.routeName);
+      }
+    });
   }
 
   @override

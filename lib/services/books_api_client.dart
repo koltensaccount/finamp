@@ -64,6 +64,9 @@ class BooksApiClient {
     final uri = await _buildUri('/v1/books', queryParams.isEmpty ? null : queryParams);
     final headers = await _authHeaders();
     final resp = await _client.get(uri, headers: headers);
+    if (resp.statusCode == 401) {
+      throw Exception('Books session expired or was revoked. Sign in again to reconnect.');
+    }
     if (resp.statusCode != 200) {
       throw Exception('Failed to load books: ${resp.statusCode}');
     }
