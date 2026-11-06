@@ -315,74 +315,8 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 8),
-                // Apple Music Liked Songs Artwork Card
-                Center(
-                  child: Container(
-                    width: 148,
-                    height: 148,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF6B11FF), // Deep Electric Purple
-                          Color(0xFFFA2D48), // Apple Music Red
-                          Color(0xFFFF5252), // Coral Flame
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: appleAccentColor.withValues(alpha: 0.32),
-                          blurRadius: 22,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Center(child: Icon(Icons.favorite, size: 68, color: Colors.white)),
-                  ),
-                ),
+                _buildLikedHeader(filteredTracks, totalDuration, isDark),
                 const SizedBox(height: 16),
-                const Text(
-                  'Liked Songs',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Made By You • ${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'} • $totalDuration',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? const Color(0xFF8E8E93) : const Color(0xFF6E6E73),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Dual Apple Music Action Buttons: [ ▶ Play ] [ 🔀 Shuffle ]
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildAppleActionButton(
-                          icon: Icons.play_arrow_rounded,
-                          label: 'Play',
-                          isDark: isDark,
-                          onTap: () => _playTracks(filteredTracks, shuffle: false),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildAppleActionButton(
-                          icon: TablerIcons.arrows_shuffle,
-                          label: 'Shuffle',
-                          isDark: isDark,
-                          onTap: () => _playTracks(filteredTracks, shuffle: true),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
                 // Apple-style In-Playlist Search Field
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -570,6 +504,151 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                 }, childCount: filteredTracks.length),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// One semantic collection header with adaptive presentation for every client.
+  /// Narrow views use stacked artwork and actions; wide views use a compact
+  /// desktop/table header instead of stretching the phone composition.
+  Widget _buildLikedHeader(List<BaseItemDto> filteredTracks, String totalDuration, bool isDark) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final artSide = wide ? 192.0 : 148.0;
+    final artwork = Container(
+      width: artSide,
+      height: artSide,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(wide ? 8 : 16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6B11FF), Color(0xFF9F4BBD), Color(0xFFB6E4D1)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.20),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Center(child: Icon(Icons.favorite, size: wide ? 80 : 68, color: Colors.white)),
+    );
+
+    final details = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        if (wide) ...[
+          const Text('Playlist', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+        ],
+        Text(
+          'Liked Songs',
+          style: TextStyle(
+            fontSize: wide ? 56 : 26,
+            fontWeight: FontWeight.w800,
+            letterSpacing: wide ? -2.0 : -0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Made By You · ${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'} · $totalDuration',
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w500,
+            color: isDark ? const Color(0xFFCBC8D1) : const Color(0xFF6E6E73),
+          ),
+        ),
+      ],
+    );
+
+    final playActions = wide
+        ? Row(
+            children: [
+              IconButton.filled(
+                onPressed: () => _playTracks(filteredTracks),
+                tooltip: 'Play liked songs',
+                icon: const Icon(Icons.play_arrow_rounded, size: 32),
+                iconSize: 32,
+                style: IconButton.styleFrom(
+                  backgroundColor: appleAccentColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(56, 56),
+                ),
+              ),
+              const SizedBox(width: 14),
+              OutlinedButton.icon(
+                onPressed: () => _playTracks(filteredTracks, shuffle: true),
+                icon: const Icon(TablerIcons.arrows_shuffle),
+                label: const Text('Shuffle'),
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              Expanded(
+                child: _buildAppleActionButton(
+                  icon: Icons.play_arrow_rounded,
+                  label: 'Play',
+                  isDark: isDark,
+                  onTap: () => _playTracks(filteredTracks),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildAppleActionButton(
+                  icon: TablerIcons.arrows_shuffle,
+                  label: 'Shuffle',
+                  isDark: isDark,
+                  onTap: () => _playTracks(filteredTracks, shuffle: true),
+                ),
+              ),
+            ],
+          );
+
+    if (!wide) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            artwork,
+            const SizedBox(height: 16),
+            details,
+            const SizedBox(height: 18),
+            playActions,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [const Color(0xFF35214F), const Color(0xFF19141F)]
+              : [const Color(0xFFE9DCF8), const Color(0xFFF6F4F8)],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              artwork,
+              const SizedBox(width: 24),
+              Expanded(child: details),
+            ],
+          ),
+          const SizedBox(height: 20),
+          playActions,
         ],
       ),
     );
