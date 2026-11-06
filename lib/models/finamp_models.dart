@@ -2310,7 +2310,12 @@ class QueueItemSourceName {
       case QueueItemSourceNameType.preTranslated:
         return pretranslatedName ?? "";
       case QueueItemSourceNameType.yourLikes:
-        return localizations.yourLikes(localizationParameter ?? "");
+        // A Liked Songs queue has no originating track name. Avoid rendering
+        // "Your Likes (from \\"\\")" when the parameter is missing.
+        final fromTrack = localizationParameter?.trim();
+        return fromTrack == null || fromTrack.isEmpty
+            ? localizations.favoriteTracks
+            : localizations.yourLikes(fromTrack);
       case QueueItemSourceNameType.shuffleAll:
         return localizations.shuffleAllQueueSource;
       case QueueItemSourceNameType.mix:
