@@ -5,10 +5,11 @@ UI as an unquestioned template. Choose the simplest effective outcome and align
 both clients. The matrix records the pre-fix audit baseline; tested corrections
 are in [verification](verification/2026-11-05-shared-workflows.md).
 
-1. Complete safe build/release and real iPhone checks for the staged playback
-   fixes: natural track-end, repeat, queue selection, timer cancellation,
-   Previous/Play-Pause/Next, lock screen, headset and background interruptions.
-   Source fixes are not an updated installed app or deployed image.
+1. Validate the delivered macOS 1.0.4 (204) DMG and deployed web playback changes
+   on real devices: iPhone lock screen/headset/background, interruption recovery,
+   and authenticated matched native/web screenshots. The builds, DMG verification
+   and browser playback checks already passed; do not repeat them without a new
+   change or unresolved failure. Full physical-device parity remains unverified.
 2. Enforce account identity/authorization at all PWA proxy boundaries. Remove
    unauthenticated service/master-token fallback; prove account isolation and
    revoke behavior with fixtures before deployment. Coordinate existing sessions

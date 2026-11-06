@@ -27,8 +27,8 @@ No media-library writes, acquisition or production rebuilds are part of guidance
 See [verification](verification/2026-11-05-shared-workflows.md) for the later
 61-workflow audit, native compact controls and guarded server-source playback
 patch. Tests: 82 Flutter, 14 isolated web-player, five guidance regressions;
-changed-file native analysis and macOS debug build pass. The web webpack build
-compiles but its reused dependency setup is not a certified standalone release.
+changed-file native analysis and macOS debug build pass. The local isolated webpack build had dependency-tracing limitations; the later
+guarded server Docker build used the lockfile and passed before deployment.
 The web playback image is now deployed and browser-verified; a verified universal
 macOS 1.0.4 (204) preview DMG is delivered separately. Physical controls, Books reader, authorization, persistent state and
 real device handoff remain open; do not report overall parity as complete.
