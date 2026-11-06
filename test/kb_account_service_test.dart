@@ -29,6 +29,8 @@ void main() {
       expect(calls, 1);
       expect(service.currentSession?.accountId, 'account');
       expect(service.currentSession?.token, 'kba_new');
+      expect(await service.renewRejectedToken('kba_foreign'), isNull);
+      expect(await service.renewRejectedToken('kba_old'), 'kba_new');
       expect(await const FlutterSecureStorage().read(key: 'catalog_api_bearer_token'), 'kba_new');
     });
 

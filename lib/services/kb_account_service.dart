@@ -358,6 +358,7 @@ class KBAccountService extends ChangeNotifier {
 
   /// Refresh active session
   Future<bool>? _refreshInFlight;
+  String? _renewedFromToken;
 
   Future<bool> refreshSession() {
     return _refreshInFlight ??= _refreshSession().whenComplete(() => _refreshInFlight = null);
@@ -366,7 +367,9 @@ class KBAccountService extends ChangeNotifier {
   /// Only renew this account's token; never replace a manually configured key.
   Future<String?> renewRejectedToken(String rejectedToken) async {
     if (_currentSession == null || !rejectedToken.startsWith('kba_')) return null;
-    if (_currentSession!.token != rejectedToken) return _currentSession!.token;
+    if (_currentSession!.token != rejectedToken) {
+      return _renewedFromToken == rejectedToken ? _currentSession!.token : null;
+    }
     return await refreshSession() ? _currentSession?.token : null;
   }
 
@@ -400,6 +403,7 @@ class KBAccountService extends ChangeNotifier {
               'catalog': {'endpoint': catalog.endpoint.toString()},
           },
         });
+        _renewedFromToken = previous.token;
         return true;
       }
     } catch (e) {
