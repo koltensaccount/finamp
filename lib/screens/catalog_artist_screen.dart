@@ -316,8 +316,10 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                 style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   FilledButton.icon(
                     icon: const Icon(Icons.refresh),
@@ -325,7 +327,6 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     onPressed: _loadArtist,
                   ),
                   if (_error!.contains('Sign in again')) ...[
-                    const SizedBox(width: 12),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.login),
                       label: const Text('Sign In Again'),
@@ -333,7 +334,6 @@ class _CatalogArtistScreenState extends State<CatalogArtistScreen> {
                     ),
                   ],
                   if (_fallbackArtist != null) ...[
-                    const SizedBox(width: 12),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.library_music),
                       label: const Text('Browse Downloaded'),
