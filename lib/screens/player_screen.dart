@@ -317,36 +317,50 @@ class _PlayerScreenContent extends ConsumerWidget {
                             ],
                           );
                         } else {
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                height: controller.albumSize.height,
-                                width: controller.albumSize.width,
-                                child: const PlayerScreenAlbumImage(),
+                          // Keep the artwork and transport controls as one visual group.
+                          // The previous two full-height regions produced enormous gaps
+                          // on tall phones and in portrait-sized desktop windows.
+                          final coverSide = min(
+                            constraints.maxWidth * 0.89,
+                            min(constraints.maxHeight * 0.49, 520.0),
+                          );
+                          final contentWidth = min(constraints.maxWidth, 620.0);
+                          return Center(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: coverSide,
+                                    height: coverSide,
+                                    child: const PlayerScreenAlbumImage(),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  SizedBox(
+                                    width: contentWidth,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TrackNameContent(controller),
+                                        const SizedBox(height: 16),
+                                        ControlArea(controller),
+                                        if (controller.shouldShow(PlayerHideable.bottomActions)) ...[
+                                          const SizedBox(height: 12),
+                                          _buildBottomActions(
+                                            context,
+                                            controller,
+                                            isLyricsLoading: isLyricsLoading,
+                                            isLyricsAvailable: isLyricsAvailable,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(
-                                height: controller.controlsSize.height,
-                                width: controller.controlsSize.width,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    TrackNameContent(controller),
-                                    ControlArea(controller),
-                                    if (controller.shouldShow(PlayerHideable.bottomActions))
-                                      _buildBottomActions(
-                                        context,
-                                        controller,
-                                        isLyricsLoading: isLyricsLoading,
-                                        isLyricsAvailable: isLyricsAvailable,
-                                      ),
-                                    if (!controller.shouldShow(PlayerHideable.bottomActions)) const SizedBox(height: 5),
-                                  ],
-                                ),
-                              ),
-                            ],
+                            ),
                           );
                         }
                       },
