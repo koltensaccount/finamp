@@ -1,9 +1,22 @@
+import 'dart:async';
 import 'package:finamp/services/account_retry_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('API waits for account initialization without starting a request early', () async {
+    final ready = Completer<void>();
+    var sent = false;
+    final client = AccountRetryClient(ready: ready.future, renewToken: (_) async => null,
+      inner: MockClient((_) async { sent = true; return http.Response('{}', 200); }));
+    final pending = client.get(Uri.parse('https://example.test/v1/books'));
+    await Future<void>.delayed(Duration.zero);
+    expect(sent, isFalse);
+    ready.complete();
+    expect((await pending).statusCode, 200);
+    expect(sent, isTrue);
+  });
   test('401 GET renews once and retries same destination with replacement token', () async {
     var requests = 0;
     final client = AccountRetryClient(
