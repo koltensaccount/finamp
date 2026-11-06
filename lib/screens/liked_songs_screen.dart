@@ -464,7 +464,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                         Expanded(flex: 3, child: Text('ALBUM')),
                         Expanded(flex: 2, child: Text('ADDED TO LIBRARY')),
                         SizedBox(width: 66, child: Align(alignment: Alignment.centerRight, child: Icon(Icons.schedule, size: 17))),
-                        SizedBox(width: 92),
+                        SizedBox(width: 116),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -613,7 +613,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 80,
+                  width: 104,
                   child: Row(
                     children: [
                       Consumer(
