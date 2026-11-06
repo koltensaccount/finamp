@@ -93,3 +93,22 @@ No public report includes credential values or private library manifests.
 This is a first tested correction and preview release, not full ecosystem parity.
 Canonical workflow inventory is a pre-fix audit snapshot; runtime and patch
 results live in this report so evidence is not overwritten retroactively.
+
+## Native sign-in correction (build 205)
+
+User reported that password submission dismissed the sheet without feedback.
+The login flow owns a nested navigator that does not register the library route.
+Successful sign-in now returns a typed result from the root-hosted sheet and
+replaces the root login route with library setup. Pairing uses the same root
+navigator. Failed requests retain the form and visible error; disposed forms are
+not updated. Incomplete account sessions are rejected before persistence.
+Three added widget regressions cover success through nested navigation, HTTP401,
+and malformed HTTP200. Full Flutter suite: **85 passed**. Test requests use fixture
+credentials and mocked services; this does not prove production authentication.
+
+The personal ad-hoc macOS preview requires the app-scoped
+`com.apple.security.cs.disable-library-validation` entitlement for embedded
+Flutter/Isar libraries. The first build passed static signature verification but
+failed at launch under hardened library validation. The corrected preview keeps
+system settings unchanged; signed/notarized release requirements remain separate.
+See [Apple entitlement documentation](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.cs.disable-library-validation).

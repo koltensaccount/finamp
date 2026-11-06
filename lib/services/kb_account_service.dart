@@ -564,6 +564,10 @@ class KBAccountService extends ChangeNotifier {
     final deviceId = device['id'] as String? ?? '';
     final deviceName = device['name'] as String? ?? 'Device';
 
+    if (token.trim().isEmpty || accountId.trim().isEmpty || username.trim().isEmpty) {
+      throw const FormatException('Server returned an incomplete account session. Please try signing in again.');
+    }
+
     // 1. Store session securely with automatic SharedPreferences fallback
     await _storeWrite(_keyToken, token);
     await _storeWrite(_keyRefreshToken, refreshToken);
