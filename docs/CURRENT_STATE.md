@@ -29,8 +29,8 @@ See [verification](verification/2026-11-05-shared-workflows.md) for the later
 patch. Tests: 82 Flutter, 14 isolated web-player, five guidance regressions;
 changed-file native analysis and macOS debug build pass. The web webpack build
 compiles but its reused dependency setup is not a certified standalone release.
-Installed native app and deployed image have not been validated with these
-changes. Physical controls, Books reader, authorization, persistent state and
+The web playback image is now deployed and browser-verified; a verified universal
+macOS 1.0.4 (204) preview DMG is delivered separately. Physical controls, Books reader, authorization, persistent state and
 real device handoff remain open; do not report overall parity as complete.
 
 ## Historical report (pre-guidance; claims require dated supporting evidence)
