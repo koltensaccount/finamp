@@ -32,3 +32,13 @@ network access and uses temporary library roots. Other legacy tests can still
 perform metadata-provider lookups; inspect/mock those before treating the entire
 suite as hermetic. Never execute a worker against a deployed database to verify
 behavior. Record exclusions/failures and use the shared quality gates.
+
+## MAM integration hold
+
+The user explicitly requires compliance with MAM's current official rules.
+Until those rules and the actual client setup are verified, keep new MAM
+acquisition/automation paused. Do not test-grab, change tracker/client identity,
+move/delete seeded content, alter seeding/ratio settings, or add monitoring as a
+side effect of unrelated work. Do not guess rules or use evasion. Existing
+seeding must be preserved. This hold does not disable authorized public-domain
+providers such as Standard Ebooks and LibriVox.

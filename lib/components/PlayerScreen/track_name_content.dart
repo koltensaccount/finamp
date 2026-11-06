@@ -39,71 +39,57 @@ class TrackNameContent extends ConsumerWidget {
     final title = currentTrack.item.title;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Left: Apple Music Left-Aligned Title and Artist Subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Track Title
-                Semantics(
-                  label: "$title (${AppLocalizations.of(context)!.title})",
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          Tooltip(
+            message: title,
+            child: Semantics(
+              label: "$title (${AppLocalizations.of(context)!.title})",
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  color: Colors.white,
                 ),
-                const SizedBox(height: 3),
-                // Artist Name
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    ArtistResolutionHelper.navigateToArtist(
-                      context,
-                      artistItem: artistTarget,
-                      artistName: artistName.isNotEmpty ? artistName : null,
-                    );
-                  },
-                  child: Text(
-                    artistName.isNotEmpty ? artistName : AppLocalizations.of(context)!.unknownArtist,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
-                      color: Colors.white.withValues(alpha: 0.72),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+                maxLines: 3,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          // Right: Favorite Heart & Three Dots Menu
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FavoriteButton(
-                item: trackBaseItemDto,
-                color: isFav ? appleAccentColor : Colors.white.withValues(alpha: 0.65),
-                size: 26,
+          const SizedBox(height: 4),
+          Row(children: [
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => ArtistResolutionHelper.navigateToArtist(
+                  context,
+                  artistItem: artistTarget,
+                  artistName: artistName.isNotEmpty ? artistName : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    artistName.isNotEmpty ? artistName : AppLocalizations.of(context)!.unknownArtist,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white.withValues(alpha: 0.72)),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              const SizedBox(width: 4),
-              PlayerButtonsMore(item: trackBaseItemDto, queueItem: currentTrack),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            FavoriteButton(
+              item: trackBaseItemDto,
+              color: isFav ? appleAccentColor : Colors.white.withValues(alpha: 0.65),
+              size: 24,
+            ),
+            PlayerButtonsMore(item: trackBaseItemDto, queueItem: currentTrack),
+          ]),
         ],
       ),
     );
