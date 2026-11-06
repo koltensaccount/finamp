@@ -9,16 +9,13 @@ void main() {
     });
 
     test('new swipe enum value is appended without renumbering existing actions', () {
-      expect(
-        ItemSwipeActions.values,
-        [
-          ItemSwipeActions.nothing,
-          ItemSwipeActions.addToQueue,
-          ItemSwipeActions.addToNextUp,
-          ItemSwipeActions.playNext,
-          ItemSwipeActions.toggleFavorite,
-        ],
-      );
+      expect(ItemSwipeActions.values, [
+        ItemSwipeActions.nothing,
+        ItemSwipeActions.addToQueue,
+        ItemSwipeActions.addToNextUp,
+        ItemSwipeActions.playNext,
+        ItemSwipeActions.toggleFavorite,
+      ]);
     });
   });
 }

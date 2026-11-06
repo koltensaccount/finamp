@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -14,13 +15,15 @@ import '../models/jellyfin_models.dart';
 import '../models/music_models.dart';
 import '../services/favorite_provider.dart';
 import '../services/finamp_settings_helper.dart';
+import '../services/kb_account_service.dart';
 import '../services/liked_songs_service.dart';
 import '../services/queue_service.dart';
 
-enum _LikedSongsSort { libraryNewest, libraryOldest, title, artist, album, lastPlayed }
+enum _LikedSongsSort { dateLiked, libraryNewest, libraryOldest, title, artist, album, lastPlayed }
 
 extension _LikedSongsSortLabel on _LikedSongsSort {
   String get label => switch (this) {
+    _LikedSongsSort.dateLiked => 'Date Liked',
     _LikedSongsSort.libraryNewest => 'Recently added to library',
     _LikedSongsSort.libraryOldest => 'Oldest in library',
     _LikedSongsSort.title => 'Title',
@@ -44,15 +47,24 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
 
   String _query = '';
   String? _selectedGenre;
-  _LikedSongsSort _sort = _LikedSongsSort.libraryNewest;
+  _LikedSongsSort _sort = _LikedSongsSort.dateLiked;
+  Map<String, String> _likedDates = {};
 
   static const Color appleAccentColor = Color(0xFFFA2D48);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(likedSongsProvider).syncWithJellyfin();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      unawaited(ref.read(likedSongsProvider).syncWithJellyfin());
+      if (GetIt.instance.isRegistered<KBAccountService>()) {
+        final map = await GetIt.instance<KBAccountService>().getLikedHistory();
+        if (mounted && map.isNotEmpty) {
+          setState(() {
+            _likedDates = map;
+          });
+        }
+      }
     });
   }
 
@@ -149,10 +161,20 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
 
     filteredTracks.sort((a, b) {
       final order = switch (_sort) {
+        _LikedSongsSort.dateLiked => () {
+          final normA = a.id.raw.toLowerCase().replaceAll('-', '');
+          final normB = b.id.raw.toLowerCase().replaceAll('-', '');
+          final dateA = _likedDates[normA] ?? a.dateCreated;
+          final dateB = _likedDates[normB] ?? b.dateCreated;
+          return compareDate(dateB, dateA);
+        }(),
         _LikedSongsSort.libraryNewest => compareDate(b.dateCreated, a.dateCreated),
         _LikedSongsSort.libraryOldest => compareDate(a.dateCreated, b.dateCreated),
         _LikedSongsSort.title => compareText(a.name, b.name),
-        _LikedSongsSort.artist => compareText(a.artists?.firstOrNull ?? a.albumArtist, b.artists?.firstOrNull ?? b.albumArtist),
+        _LikedSongsSort.artist => compareText(
+          a.artists?.firstOrNull ?? a.albumArtist,
+          b.artists?.firstOrNull ?? b.albumArtist,
+        ),
         _LikedSongsSort.album => compareText(a.album, b.album),
         _LikedSongsSort.lastPlayed => compareDate(b.userData?.lastPlayedDate, a.userData?.lastPlayedDate),
       };
@@ -365,10 +387,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                     children: [
                       Text(
                         '${filteredTracks.length} ${filteredTracks.length == 1 ? 'song' : 'songs'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white54 : Colors.black54,
-                        ),
+                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54),
                       ),
                       const Spacer(),
                       PopupMenuButton<_LikedSongsSort>(
@@ -376,16 +395,18 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                         tooltip: 'Sort liked songs',
                         onSelected: (value) => setState(() => _sort = value),
                         itemBuilder: (context) => _LikedSongsSort.values
-                            .map((value) => PopupMenuItem<_LikedSongsSort>(
-                                  value: value,
-                                  child: Row(
-                                    children: [
-                                      if (_sort == value) const Icon(Icons.check, size: 16),
-                                      if (_sort == value) const SizedBox(width: 8),
-                                      Text(value.label),
-                                    ],
-                                  ),
-                                ))
+                            .map(
+                              (value) => PopupMenuItem<_LikedSongsSort>(
+                                value: value,
+                                child: Row(
+                                  children: [
+                                    if (_sort == value) const Icon(Icons.check, size: 16),
+                                    if (_sort == value) const SizedBox(width: 8),
+                                    Text(value.label),
+                                  ],
+                                ),
+                              ),
+                            )
                             .toList(),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -462,8 +483,11 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                         SizedBox(width: 38, child: Text('#')),
                         Expanded(flex: 5, child: Text('TITLE')),
                         Expanded(flex: 3, child: Text('ALBUM')),
-                        Expanded(flex: 2, child: Text('ADDED TO LIBRARY')),
-                        SizedBox(width: 66, child: Align(alignment: Alignment.centerRight, child: Icon(Icons.schedule, size: 17))),
+                        Expanded(flex: 2, child: Text('DATE LIKED / ADDED')),
+                        SizedBox(
+                          width: 66,
+                          child: Align(alignment: Alignment.centerRight, child: Icon(Icons.schedule, size: 17)),
+                        ),
                         SizedBox(width: 116),
                       ],
                     ),
@@ -548,6 +572,18 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
     return date == null ? '—' : '${date.month}/${date.day}/${date.year}';
   }
 
+  String _formatLikedDate(BaseItemDto item) {
+    final normId = item.id.raw.toLowerCase().replaceAll('-', '');
+    final dateStr = _likedDates[normId];
+    if (dateStr != null) {
+      final d = DateTime.tryParse(dateStr)?.toLocal();
+      if (d != null) {
+        return '${d.month}/${d.day}/${d.year}';
+      }
+    }
+    return _formatLibraryAdded(item.dateCreated);
+  }
+
   String _formatTrackDuration(int? ticks) {
     if (ticks == null || ticks <= 0) return '—';
     final seconds = ticks ~/ 10000000;
@@ -564,12 +600,16 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(5),
           onTap: () => _playTracks(tracks, startingIndex: index),
-          onSecondaryTap: () => showModalTrackMenu(context: context, item: item),
+          onSecondaryTapDown: (details) =>
+              showModalTrackMenu(context: context, item: item, position: details.globalPosition),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
-                SizedBox(width: 38, child: Text('${index + 1}', style: TextStyle(color: textSecondary))),
+                SizedBox(
+                  width: 38,
+                  child: Text('${index + 1}', style: TextStyle(color: textSecondary)),
+                ),
                 Expanded(
                   flex: 5,
                   child: Row(
@@ -586,8 +626,12 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                           children: [
                             Text(item.name ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 2),
-                            Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: textSecondary)),
+                            Text(
+                              artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: textSecondary),
+                            ),
                           ],
                         ),
                       ),
@@ -597,19 +641,24 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 3,
-                  child: Text(item.album ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: textSecondary)),
+                  child: Text(
+                    item.album ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: textSecondary),
+                  ),
                 ),
                 Expanded(
                   flex: 2,
-                  child: Text(_formatLibraryAdded(item.dateCreated),
-                      style: TextStyle(fontSize: 12, color: textSecondary)),
+                  child: Text(_formatLikedDate(item), style: TextStyle(fontSize: 12, color: textSecondary)),
                 ),
                 SizedBox(
                   width: 66,
-                  child: Text(_formatTrackDuration(item.runTimeTicks),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 12, color: textSecondary)),
+                  child: Text(
+                    _formatTrackDuration(item.runTimeTicks),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: 12, color: textSecondary),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
@@ -623,7 +672,12 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
                             icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, size: 19),
                             color: isFav ? appleAccentColor : textSecondary,
                             tooltip: isFav ? 'Remove Favorite' : 'Add Favorite',
-                            onPressed: () => ref.read(isFavoriteProvider(item).notifier).updateFavorite(!isFav),
+                            onPressed: () {
+                              ref.read(isFavoriteProvider(item).notifier).updateFavorite(!isFav);
+                              if (GetIt.instance.isRegistered<KBAccountService>()) {
+                                GetIt.instance<KBAccountService>().recordLikedEvent(item.id.raw, !isFav);
+                              }
+                            },
                           );
                         },
                       ),
@@ -659,15 +713,11 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
           end: Alignment.bottomRight,
           colors: [Color(0xFF6B11FF), Color(0xFF9F4BBD), Color(0xFFB6E4D1)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.20), blurRadius: 22, offset: const Offset(0, 8))],
       ),
-      child: Center(child: Icon(Icons.favorite, size: wide ? 80 : 68, color: Colors.white)),
+      child: Center(
+        child: Icon(Icons.favorite, size: wide ? 80 : 68, color: Colors.white),
+      ),
     );
 
     final details = Column(
@@ -680,11 +730,7 @@ class _LikedSongsScreenState extends ConsumerState<LikedSongsScreen> {
         ],
         Text(
           'Liked Songs',
-          style: TextStyle(
-            fontSize: wide ? 56 : 26,
-            fontWeight: FontWeight.w800,
-            letterSpacing: wide ? -2.0 : -0.5,
-          ),
+          style: TextStyle(fontSize: wide ? 56 : 26, fontWeight: FontWeight.w800, letterSpacing: wide ? -2.0 : -0.5),
         ),
         const SizedBox(height: 6),
         Text(

@@ -46,7 +46,8 @@ Future<T?> showThemedBottomSheet<T>({
     isScrollControlled: true,
     clipBehavior: Clip.hardEdge,
     constraints: BoxConstraints(
-      maxWidth: maxWidth ?? ((Platform.isIOS || Platform.isAndroid) ? 500 : min(500, MediaQuery.widthOf(context) * 0.9)),
+      maxWidth:
+          maxWidth ?? ((Platform.isIOS || Platform.isAndroid) ? 500 : min(500, MediaQuery.widthOf(context) * 0.9)),
     ),
     useRootNavigator: useRootNavigator,
     isDismissible: true,

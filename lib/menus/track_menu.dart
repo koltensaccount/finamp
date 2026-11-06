@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:finamp/components/PlayerScreen/queue_list.dart';
 import 'package:finamp/components/PlayerScreen/sleep_timer_cancel_dialog.dart';
+import 'package:finamp/components/global_snackbar.dart';
 import 'package:finamp/components/themed_bottom_sheet.dart';
 import 'package:finamp/l10n/app_localizations.dart';
 import 'package:finamp/menus/components/menuEntries/adaptive_download_lock_delete_menu_entry.dart';
@@ -23,12 +25,20 @@ import 'package:finamp/menus/components/playbackActions/playback_action.dart';
 import 'package:finamp/menus/components/playbackActions/playback_action_row.dart';
 import 'package:finamp/menus/components/radio_mode_menu.dart';
 import 'package:finamp/menus/components/speed_menu.dart';
+import 'package:finamp/menus/playlist_actions_menu.dart';
 import 'package:finamp/menus/sleep_timer_menu.dart';
 import 'package:finamp/models/finamp_models.dart';
 import 'package:finamp/models/jellyfin_models.dart';
+import 'package:finamp/models/music_slices.dart';
+import 'package:finamp/screens/album_screen.dart';
+import 'package:finamp/services/artist_resolution_helper.dart';
 import 'package:finamp/services/current_track_metadata_provider.dart';
+import 'package:finamp/services/downloads_service.dart';
+import 'package:finamp/services/favorite_provider.dart';
 import 'package:finamp/services/feedback_helper.dart';
 import 'package:finamp/services/finamp_settings_helper.dart';
+import 'package:finamp/services/jellyfin_api_helper.dart';
+import 'package:finamp/services/kb_account_service.dart';
 import 'package:finamp/services/metadata_provider.dart';
 import 'package:finamp/services/music_player_background_task.dart';
 import 'package:finamp/services/queue_service.dart';
@@ -57,8 +67,23 @@ Future<void> showModalTrackMenu({
   FinampStorableQueueInfo? queueInfo,
   FinampQueueItem? queueItem,
   QueueItemSource? source,
+  Offset? position,
 }) async {
-  await showThemedBottomSheet(
+  final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+  if (position != null || isDesktop) {
+    final handled = await showTrackContextMenu(
+      context: context,
+      item: item,
+      position: position,
+      parentItem: parentItem,
+      onRemoveFromList: onRemoveFromList,
+      queueItem: queueItem,
+      source: source,
+    );
+    if (handled) return;
+  }
+
+  await showThemedBottomSheet<void>(
     context: context,
     item: item,
     routeName: TrackMenu.routeName,
@@ -81,6 +106,228 @@ Future<void> showModalTrackMenu({
       );
     },
   );
+}
+
+Future<bool> showTrackContextMenu({
+  required BuildContext context,
+  required BaseItemDto item,
+  Offset? position,
+  BaseItemDto? parentItem,
+  VoidCallback? onRemoveFromList,
+  FinampQueueItem? queueItem,
+  QueueItemSource? source,
+}) async {
+  final overlay = Overlay.maybeOf(context)?.context.findRenderObject() as RenderBox?;
+  if (overlay == null) return false;
+
+  final RenderBox? targetBox = context.findRenderObject() as RenderBox?;
+  final Rect anchorRect;
+  if (position != null) {
+    anchorRect = Rect.fromLTWH(position.dx, position.dy, 1, 1);
+  } else if (targetBox != null && targetBox.hasSize) {
+    final origin = targetBox.localToGlobal(Offset.zero);
+    anchorRect = origin & targetBox.size;
+  } else {
+    anchorRect = Rect.fromLTWH(overlay.size.width / 2, overlay.size.height / 2, 1, 1);
+  }
+
+  final queueService = GetIt.instance<QueueService>();
+  final isFavorite = item.userData?.isFavorite ?? false;
+
+  final selected = await showMenu<String>(
+    context: context,
+    position: RelativeRect.fromRect(anchorRect, Offset.zero & overlay.size),
+    elevation: 8,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+    ),
+    items: [
+      PopupMenuItem(
+        value: 'play_next',
+        height: 38,
+        child: Row(
+          children: const [
+            Icon(TablerIcons.player_play, size: 17, color: Color(0xFF007AFF)),
+            SizedBox(width: 10),
+            Text('Play Next', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+      PopupMenuItem(
+        value: 'add_queue',
+        height: 38,
+        child: Row(
+          children: const [
+            Icon(Icons.queue_music, size: 17),
+            SizedBox(width: 10),
+            Text('Add to Queue', style: TextStyle(fontSize: 13)),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(height: 8),
+      PopupMenuItem(
+        value: 'toggle_fav',
+        height: 38,
+        child: Row(
+          children: [
+            Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              size: 17,
+              color: isFavorite ? const Color(0xFFFA2D48) : null,
+            ),
+            SizedBox(width: 10),
+            Text(isFavorite ? 'Remove Favorite' : 'Add to Favorites', style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+      ),
+      PopupMenuItem(
+        value: 'add_playlist',
+        height: 38,
+        child: Row(
+          children: const [
+            Icon(TablerIcons.playlist_add, size: 17),
+            SizedBox(width: 10),
+            Text('Add to Playlist', style: TextStyle(fontSize: 13)),
+          ],
+        ),
+      ),
+      const PopupMenuDivider(height: 8),
+      PopupMenuItem(
+        value: 'go_artist',
+        height: 38,
+        child: Row(
+          children: const [
+            Icon(TablerIcons.user, size: 17),
+            SizedBox(width: 10),
+            Text('Go to Artist', style: TextStyle(fontSize: 13)),
+          ],
+        ),
+      ),
+      if (item.albumId != null)
+        PopupMenuItem(
+          value: 'go_album',
+          height: 38,
+          child: Row(
+            children: const [
+              Icon(TablerIcons.disc, size: 17),
+              SizedBox(width: 10),
+              Text('Go to Album', style: TextStyle(fontSize: 13)),
+            ],
+          ),
+        ),
+      if (parentItem?.type == 'Playlist' || onRemoveFromList != null) ...[
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem(
+          value: 'remove_playlist',
+          height: 38,
+          child: Row(
+            children: const [
+              Icon(TablerIcons.trash, size: 17, color: Colors.redAccent),
+              SizedBox(width: 10),
+              Text('Remove from Playlist', style: TextStyle(fontSize: 13, color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ],
+      if (queueItem != null) ...[
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem(
+          value: 'remove_queue',
+          height: 38,
+          child: Row(
+            children: const [
+              Icon(TablerIcons.x, size: 17, color: Colors.redAccent),
+              SizedBox(width: 10),
+              Text('Remove from Queue', style: TextStyle(fontSize: 13, color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      ],
+    ],
+  );
+
+  if (selected == null) return true;
+
+  final slice = PlayableSlice.simple([item], source ?? QueueItemSource.fromBaseItem(item));
+
+  switch (selected) {
+    case 'play_next':
+      await queueService.addNext(slice);
+      break;
+    case 'add_queue':
+      await queueService.addToQueue(slice);
+      break;
+    case 'toggle_fav':
+      if (context.mounted) {
+        ProviderScope.containerOf(context).read(isFavoriteProvider(item).notifier).updateFavorite(!isFavorite);
+        if (GetIt.instance.isRegistered<KBAccountService>()) {
+          unawaited(GetIt.instance<KBAccountService>().recordLikedEvent(item.id.raw, !isFavorite));
+        }
+      }
+      break;
+    case 'add_playlist':
+      if (context.mounted) {
+        unawaited(
+          showPlaylistActionsMenu(
+            context: context,
+            items: [item],
+            parentPlaylist: parentItem?.type == 'Playlist' ? parentItem : null,
+          ),
+        );
+      }
+      break;
+    case 'go_artist':
+      final artistItem = ArtistResolutionHelper.resolveGenuineArtist(
+        artistItems: item.artistItems,
+        albumArtists: item.albumArtists,
+      );
+      if (artistItem != null && artistItem.id.raw.isNotEmpty && context.mounted) {
+        final jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
+        late BaseItemDto artist;
+        try {
+          if (FinampSettingsHelper.finampSettings.isOffline) {
+            final downloadsService = GetIt.instance<DownloadsService>();
+            artist = (await downloadsService.getCollectionInfo(id: artistItem.id))!.baseItem!;
+          } else {
+            artist = await jellyfinApiHelper.getItemById(artistItem.id);
+          }
+          if (context.mounted) {
+            await ArtistResolutionHelper.navigateToArtist(
+              context,
+              artistItem: artist,
+              jellyfinId: artistItem.id.raw,
+              artistName: artistItem.name,
+            );
+          }
+        } catch (e) {
+          GlobalSnackbar.error(e);
+        }
+      }
+      break;
+    case 'go_album':
+      if (context.mounted && item.albumId != null) {
+        final jellyfinApiHelper = GetIt.instance<JellyfinApiHelper>();
+        try {
+          final album = await jellyfinApiHelper.getItemById(item.albumId!);
+          if (context.mounted) {
+            await Navigator.of(context).pushNamed(AlbumScreen.routeName, arguments: album);
+          }
+        } catch (e) {
+          GlobalSnackbar.error(e);
+        }
+      }
+      break;
+    case 'remove_playlist':
+      onRemoveFromList?.call();
+      break;
+    case 'remove_queue':
+      if (queueItem != null) {
+        unawaited(queueService.removeQueueItem(queueItem));
+      }
+      break;
+  }
+  return true;
 }
 
 enum SubMenu { speed, sleepTimer }
@@ -528,16 +775,18 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
           sliver: SliverList(
             delegate: SliverChildListDelegate(
               menuEntries
-                  .map((entry) => Theme(
-                        data: Theme.of(context).copyWith(
-                          listTileTheme: const ListTileThemeData(
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                            minVerticalPadding: 0,
-                          ),
+                  .map(
+                    (entry) => Theme(
+                      data: Theme.of(context).copyWith(
+                        listTileTheme: const ListTileThemeData(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          minVerticalPadding: 0,
                         ),
-                        child: entry,
-                      ))
+                      ),
+                      child: entry,
+                    ),
+                  )
                   .toList(),
             ),
           ),
