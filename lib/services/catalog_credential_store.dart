@@ -47,7 +47,9 @@ class SecureCatalogCredentialStore implements CatalogCredentialStore {
     try {
       return await _storage.read(key: key);
     } catch (_) {
-      if (Platform.isMacOS) return null;
+      if (Platform.isMacOS) {
+        throw StateError('macOS Keychain could not read the saved catalog connection. Reconnect in Account settings; your existing credentials have not been deleted.');
+      }
       try {
         final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
         return prefs.getString('kb_sec_$key');
