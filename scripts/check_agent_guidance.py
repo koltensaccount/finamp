@@ -17,6 +17,9 @@ DOCS = (
     'docs/agents/QUALITY_GATES.md', 'docs/agents/WEB_WORKSPACE.md',
     'docs/verification/TEMPLATE.md', '.github/PULL_REQUEST_TEMPLATE.md',
     'docs/WORKFLOWS.md', 'docs/agents/workflow-parity.json',
+    'docs/verification/2026-11-05-agent-guidance.md',
+    'docs/verification/2026-11-05-shared-workflows.md',
+    'scripts/check_agent_guidance.py',
 )
 
 

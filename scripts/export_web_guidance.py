@@ -26,6 +26,9 @@ follow the PWA scope. Record task evidence under this workspace's
 `docs/verification/` and coordinate compatibility with native/server revisions.
 Check `.kb-guidance/manifest.json` against the current canonical revision before
 cross-client changes; refresh through the exporter, never by hand-editing copies.
+For guidance validation in this web workspace, run
+`python3 .kb-guidance/scripts/check_agent_guidance.py`. Flutter/backend test
+commands apply in the canonical fork, not in this Next.js workspace.
 The adjacent Compose/auto-update scripts target Aubrey; do not run them for KB Music.
 '''
 
