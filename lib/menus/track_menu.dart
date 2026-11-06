@@ -62,6 +62,8 @@ Future<void> showModalTrackMenu({
     context: context,
     item: item,
     routeName: TrackMenu.routeName,
+    minDraggableHeight: 0.38,
+    maxWidth: MediaQuery.widthOf(context) >= 700 ? 420 : null,
     buildWrapper: (context, dragController, childBuilder) {
       return TrackMenu(
         key: ValueKey(item.id),
@@ -225,6 +227,8 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
       extraHeight: widget.showPlaybackControls ? 100 : 00,
       includePlaybackRow: true,
       includePlaybackRowPageIndicator: widget.queueItem != null,
+      compactHeader: true,
+      compactEntries: true,
     );
 
     final metadata = ref.watch(currentTrackMetadataProvider).unwrapPrevious();
@@ -241,9 +245,10 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
 
     return [
       if (widget.queueInfo != null) RestoreQueueMenuEntry(queueInfo: widget.queueInfo!),
+      ToggleFavoriteMenuEntry(baseItem: widget.item),
+      AddToPlaylistMenuEntry(item: playableItem, queueItem: queueItem),
       GoToArtistMenuEntry(baseItem: widget.item),
       GoToAlbumMenuEntry(baseItem: widget.item),
-      AddToPlaylistMenuEntry(item: playableItem, queueItem: queueItem),
       RemoveFromCurrentPlaylistMenuEntry(
         baseItem: widget.item,
         parentItem: widget.parentItem,
@@ -254,7 +259,6 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
       InstantMixMenuEntry(baseItem: widget.item),
       StartRadioMenuEntry(baseItem: widget.item),
       AdaptiveDownloadLockDeleteMenuEntry(baseItem: widget.item),
-      ToggleFavoriteMenuEntry(baseItem: widget.item),
       if (widget.showQueueActions) CreatePlaylistFromCurrentQueueMenuEntry(),
       if (widget.showQueueActions) ClearQueueMenuEntry(baseItem: widget.item),
       DeleteFromServerMenuEntry(baseItem: widget.item),
@@ -510,18 +514,33 @@ class _TrackMenuState extends ConsumerState<TrackMenu> with TickerProviderStateM
           ),
         ),
       ],
-      SliverPersistentHeader(delegate: MenuItemInfoSliverHeader(item: playableItem), pinned: true),
+      SliverPersistentHeader(delegate: MenuItemInfoSliverHeader.condensed(item: playableItem), pinned: true),
       MenuMask(
-        height: MenuItemInfoSliverHeader.defaultHeight,
+        height: MenuItemInfoSliverHeader.condensedHeight,
         child: SliverToBoxAdapter(
-          child: PlaybackActionRow(item: playableItem, queueItem: widget.queueItem),
+          child: PlaybackActionRow(item: playableItem, queueItem: widget.queueItem, compactLayout: true),
         ),
       ),
       MenuMask(
-        height: MenuItemInfoSliverHeader.defaultHeight,
+        height: MenuItemInfoSliverHeader.condensedHeight,
         child: SliverPadding(
           padding: const EdgeInsets.only(left: 8.0),
-          sliver: SliverList(delegate: SliverChildListDelegate(menuEntries)),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate(
+              menuEntries
+                  .map((entry) => Theme(
+                        data: Theme.of(context).copyWith(
+                          listTileTheme: const ListTileThemeData(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            minVerticalPadding: 0,
+                          ),
+                        ),
+                        child: entry,
+                      ))
+                  .toList(),
+            ),
+          ),
         ),
       ),
     ];
