@@ -11,6 +11,7 @@ import '../components/now_playing_bar.dart';
 import '../menus/track_menu.dart';
 import '../models/finamp_models.dart';
 import '../models/jellyfin_models.dart';
+import '../models/music_models.dart';
 import '../services/favorite_provider.dart';
 import '../services/finamp_settings_helper.dart';
 import '../services/liked_songs_service.dart';
